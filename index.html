@@ -6,6 +6,12 @@
 <title>Firetiger Fishing Log</title>
 <meta name="description" content="Log every fishing trip and see which waters, times, temperatures and lures actually produce fish. Works offline.">
 <meta name="theme-color" content="#0D1A20">
+<meta property="og:title" content="Firetiger Fishing Log">
+<meta property="og:description" content="Log every fishing trip. Find out where to fish for today's conditions. Free, works offline.">
+<meta property="og:image" content="https://firetiger-fishing-log.pages.dev/og.png">
+<meta property="og:url" content="https://firetiger-fishing-log.pages.dev/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Firetiger">
@@ -18,6 +24,20 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- Shown when a friend's shared catch link is opened -->
+<section class="shared-catch" id="sharedCatch" hidden aria-labelledby="scTitle">
+  <div class="wrap sc-in">
+    <img id="scImg" class="sc-card" alt="Shared catch card">
+    <canvas id="scCanvas" hidden></canvas>
+    <div class="sc-text">
+      <div class="kicker">Shared from Firetiger Fishing Log</div>
+      <h2 id="scTitle"></h2>
+      <p id="scMeta" class="sc-meta"></p>
+      <p>Firetiger logs every trip, and once you have a few in it, tells you where to fish for the conditions you're in. Free, no sign-up, works with no signal.</p>
+      <div class="btn-row"><button type="button" class="btn-log" id="scStart">Start my own fishing log</button><button type="button" class="btn sc-ghost" id="scSample">See a sample season</button></div>
+    </div>
+  </div>
+</section>
 <div class="band"><div class="wrap">
   <div class="band-top">
     <div>

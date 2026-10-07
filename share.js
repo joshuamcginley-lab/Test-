@@ -27,11 +27,10 @@ function openShare(sid, photoId) {
 function closeShare() { $("shareSheet").hidden = true; $("scrim").hidden = true; shareCtx = null; }
 
 function shareText() {
-  const { s, idx } = shareCtx, c = s.catches[idx];
-  const size = [c.lb != null ? fmtW(c.lb) : "", c.inches != null ? fmtL(c.inches) : ""].filter(Boolean).join(", ");
-  const what = `${c.count > 1 ? `${c.count} ` : ""}${c.species.toLowerCase()}${size ? ` (${size})` : ""}`;
-  const where = $("shWater").checked ? ` at ${s.water}` : "";
-  return `${what}${c.lure ? ` on a ${c.lure.toLowerCase()}` : ""}${where}, ${fmtDate(s.date)}. Logged with Firetiger: https://${APP_URL}`;
+  const d = cardData();
+  const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(", ");
+  const what = `${d.ct > 1 ? `${d.ct} ` : ""}${d.sp.toLowerCase()}${size ? ` (${size})` : ""}`;
+  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it and start your own log: ${catchLink(d)}`;
 }
 
 function cover(ctx, img, x, y, w, h) {
@@ -53,37 +52,50 @@ function fitText(ctx, text, font, max, start) {
   let size = start; do { ctx.font = font.replace("{s}", size); size -= 4; } while (ctx.measureText(text).width > max && size > 24);
 }
 
-async function drawCard() {
-  if (!shareCtx) return;
-  const { s, idx } = shareCtx, c = s.catches[idx];
-  const W = 1080, H = 1350, cv = $("shCanvas"), ctx = cv.getContext("2d");
+// The catch as a plain object: what goes on the card and into the shared link.
+function cardData() {
+  const { s, idx } = shareCtx, c = s.catches[idx], t = avgT(s);
+  return { n: state.settings.name || null, d: s.date, w: $("shWater").checked ? s.water : null, sp: c.species, ct: c.count || 1,
+    lb: c.lb ?? null, in: c.inches ?? null, lu: c.lure || s.lureText || null, t: t == null ? null : r(t, 1), photo: c.photo || null };
+}
+const b64url = s => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64url = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0)));
+function catchLink(d) { const { photo, ...pub } = d; for (const k in pub) if (pub[k] == null) delete pub[k]; return `https://${APP_URL}/#catch=${b64url(JSON.stringify({ v: 1, ...pub }))}`; }
+function readCatchLink() {
+  const m = location.hash.match(/^#catch=([A-Za-z0-9_-]+)$/); if (!m) return null;
+  try {
+    const d = JSON.parse(unb64url(m[1]));
+    if (typeof d.sp !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.d)) return null;
+    const num = v => typeof v === "number" && isFinite(v) ? v : null, str = (v, n) => typeof v === "string" ? v.slice(0, n) : null;
+    return { n: str(d.n, 40), d: d.d, w: str(d.w, 80), sp: d.sp.slice(0, 60), ct: Math.max(1, Math.min(999, num(d.ct) || 1)), lb: num(d.lb), in: num(d.in), lu: str(d.lu, 80), t: num(d.t), photo: null };
+  } catch (e) { return null; }
+}
+
+async function renderCard(cv, d) {
+  const W = 1080, H = 1350, ctx = cv.getContext("2d");
   cv.width = W; cv.height = H;
   try { await Promise.all(["italic 900 120px Archivo", "600 30px 'Martian Mono'", "600 36px 'Libre Franklin'"].map(f => document.fonts.load(f))); } catch (e) {}
   const DISPLAY = "Archivo, 'Arial Black', sans-serif", MONO = "'Martian Mono', ui-monospace, monospace", BODY = "'Libre Franklin', system-ui, sans-serif";
   ctx.fillStyle = "#0D1A20"; ctx.fillRect(0, 0, W, H);
 
   const photoH = 780;
-  const url = c.photo ? await photoURL(c.photo) : null;
-  if (url) {
-    const img = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
-    if (img) cover(ctx, img, 0, 0, W, photoH); else tigerStripe(ctx, 0, 0, W, photoH, 4.5);
-  } else {
-    tigerStripe(ctx, 0, 0, W, photoH, 4.5);
-  }
+  const url = d.photo ? await photoURL(d.photo) : null;
+  const img = url ? await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; }) : null;
+  if (img) cover(ctx, img, 0, 0, W, photoH); else tigerStripe(ctx, 0, 0, W, photoH, 4.5);
   tigerStripe(ctx, 0, photoH, W, 34);
 
   const pad = 64; let y = photoH + 34 + 92;
   ctx.fillStyle = "#C8E62E"; ctx.font = `600 26px ${MONO}`; ctx.textBaseline = "alphabetic";
-  ctx.fillText(`${fmtDate(s.date).toUpperCase()}${$("shWater").checked ? ` · ${s.water.toUpperCase()}` : ""}`.slice(0, 60), pad, y - 6);
+  ctx.fillText(`${fmtDate(d.d).toUpperCase()}${d.w ? ` · ${d.w.toUpperCase()}` : ""}`.slice(0, 60), pad, y - 6);
   y += 96;
   ctx.fillStyle = "#EDF2EA";
-  const name = (c.count > 1 ? `${c.count}× ` : "") + c.species.toUpperCase();
+  const name = (d.ct > 1 ? `${d.ct}× ` : "") + d.sp.toUpperCase();
   fitText(ctx, name, `italic 900 {s}px ${DISPLAY}`, W - pad * 2, 104); ctx.fillText(name, pad, y);
 
   const stats = [];
-  if (c.lb != null) stats.push([String(wtOut(c.lb)), wU()]);
-  if (c.inches != null) stats.push([String(lenOut(c.inches)), U() === "metric" ? "cm" : "in"]);
-  const t = avgT(s); if (t != null) stats.push([String(tOut(r(t, 0))), `°${T()}`]);
+  if (d.lb != null) stats.push([String(wtOut(d.lb)), wU()]);
+  if (d.in != null) stats.push([String(lenOut(d.in)), U() === "metric" ? "cm" : "in"]);
+  if (d.t != null) stats.push([String(tOut(r(d.t, 0))), `°${T()}`]);
   y += 132; let x = pad;
   for (const [k, [v, u]] of stats.slice(0, 3).entries()) {
     ctx.fillStyle = k === 0 ? "#C8E62E" : "#EDF2EA";
@@ -91,12 +103,15 @@ async function drawCard() {
     ctx.fillStyle = "#8FA3A6"; ctx.font = `italic 800 44px ${DISPLAY}`; ctx.fillText(u, x, y); x += ctx.measureText(u).width + 54;
   }
   ctx.fillStyle = "#EDF2EA"; ctx.font = `600 36px ${BODY}`;
-  const lure = c.lure || s.lureText; if (lure) { y += 74; let L = `On a ${lure.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
+  if (d.lu) { y += 74; let L = `On a ${d.lu.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
 
   ctx.fillStyle = "#8FA3A6"; ctx.font = `600 22px ${MONO}`;
   ctx.fillText(`LOGGED WITH FIRETIGER · ${APP_URL.toUpperCase()}`, pad, H - 52);
-
-  $("shPreview").src = cv.toDataURL("image/jpeg", 0.9);
+}
+async function drawCard() {
+  if (!shareCtx) return;
+  await renderCard($("shCanvas"), cardData());
+  $("shPreview").src = $("shCanvas").toDataURL("image/jpeg", 0.9);
 }
 
 async function doShare(saveOnly) {
@@ -128,3 +143,26 @@ $("viewerShare").onclick = () => { const [sid, pid] = ($("viewer").dataset.key |
 // Share buttons on log entries (handled before the entry's own tap-to-edit).
 $("entries").addEventListener("click", e => { const b = e.target.closest("[data-share]"); if (b) { e.stopImmediatePropagation(); openShare(b.dataset.share); } }, true);
 $("entries").addEventListener("keydown", e => { const b = e.target.closest("[data-share]"); if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopImmediatePropagation(); openShare(b.dataset.share); } }, true);
+
+/* ---------- someone opened a shared catch link ---------- */
+async function showSharedCatch() {
+  const d = readCatchLink(); if (!d) return;
+  const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(" · ");
+  $("scTitle").textContent = `${d.n ? `${d.n} caught` : "Check out this catch:"} ${d.ct > 1 ? `${d.ct} ${d.sp.toLowerCase()}` : /^[aeiou]/i.test(d.sp) ? `an ${d.sp.toLowerCase()}` : `a ${d.sp.toLowerCase()}`}`;
+  $("scMeta").textContent = [size, d.lu ? `on a ${d.lu.toLowerCase()}` : "", d.w, fmtDate(d.d), d.t != null ? fmtT(r(d.t, 0)) : ""].filter(Boolean).join(" · ");
+  const hasLog = state.sessions.length > 0;
+  $("scStart").textContent = hasLog ? "Back to my log" : "Start my own fishing log";
+  $("scSample").hidden = hasLog;
+  $("sharedCatch").hidden = false;
+  await renderCard($("scCanvas"), d);
+  $("scImg").src = $("scCanvas").toDataURL("image/jpeg", 0.88);
+}
+function leaveShared(then) {
+  $("sharedCatch").hidden = true;
+  history.replaceState(null, "", location.pathname + location.search);
+  then?.();
+}
+$("scStart").onclick = () => leaveShared(() => { if (!state.sessions.length) openSheet(null); });
+$("scSample").onclick = () => leaveShared(loadSample);
+window.addEventListener("hashchange", showSharedCatch);
+showSharedCatch();
