@@ -1,5 +1,5 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "fishr-v8";
+const VERSION = "fishr-v9";
 const APP = ["./", "index.html", "styles.css", "app.js", "forecast.js", "share.js", "sample.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

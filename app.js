@@ -19,12 +19,17 @@ const KEY = "firetiger.v1";
 
 /* ---------- storage ---------- */
 let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null, maps: "auto" } };
+let demo = null; // the person's own trips, set aside while the sample season is on screen
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
   catch (e) { console.warn("Could not read saved log", e); }
+  // The sample used to be saved into the log; it's view-only now.
+  state.sessions = state.sessions.filter(s => !s.sample);
+  if (state.notes.join() === SAMPLE_NOTES.join()) state.notes = [];
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); return true; }
+  const out = demo ? { ...state, sessions: demo.sessions, notes: demo.notes, settings: { ...state.settings, season: demo.season } } : state;
+  try { localStorage.setItem(KEY, JSON.stringify(out)); return true; }
   catch (e) { toast("Couldn't save. Your phone may be out of storage."); return false; }
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -155,12 +160,15 @@ function render() {
   if (!state.settings.season || (state.settings.season !== "all" && !ys.includes(state.settings.season))) state.settings.season = ys[0] || "all";
   $("seasonSel").innerHTML = ys.map(y => `<option value="${y}">${y}</option>`).join("") + `<option value="all">All time</option>`;
   $("seasonSel").value = state.settings.season;
-  $("ownerLine").textContent = state.settings.name ? `${state.settings.name}'s workspace` : "Your workspace";
+  $("wsLine").textContent = state.sessions.length === 0 ? "" : demo ? "Sample season" : state.settings.name ? `${state.settings.name}'s workspace` : "";
+  $("topSample").hidden = !!demo;
   document.title = state.settings.name ? `${state.settings.name}'s workspace · fishr.ai` : "fishr.ai · Know where they're biting";
 
   const empty = state.sessions.length === 0;
   $("welcome").hidden = !empty; $("main").hidden = empty; $("seasonSel").parentElement.hidden = empty;
-  $("sampleBar").hidden = !state.sessions.some(s => s.sample);
+  $("hero").hidden = !empty; $("gauges").hidden = empty; $("topSample").hidden = !!demo || empty;
+  $("sampleBar").hidden = !demo;
+  document.body.classList.toggle("has-dock", !empty);
 
   const list = view();
   const total = list.reduce((a, s) => a + fishOf(s), 0), n = list.length, sk = list.filter(s => !fishOf(s)).length;
@@ -343,7 +351,8 @@ function openSheet(s) {
   const d = new Date(), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   $("fDate").value = s?.date || iso; $("fStart").value = s?.start || ""; $("fEnd").value = s?.end || "";
   $("fWaterIn").value = s?.water || ""; $("fSpot").value = s?.spot || "";
-  $("tloLabel").textContent = `Temp low °${T()}`; $("thiLabel").textContent = `Temp high °${T()}`;
+  $("tloLabel").textContent = `Temp °${T()}`; $("thiLabel").textContent = `Temp later °${T()}`;
+  $("moreDetails").open = !!(s && (s.start || s.end || s.notes || s.lat != null || (s.conditions || []).length || s.lureText || s.combo));
   $("fTlo").value = tOut(s?.tempLow) ?? ""; $("fThi").value = s && s.tempHigh !== s.tempLow ? (tOut(s.tempHigh) ?? "") : "";
   $("fCombo").value = s?.combo || ""; $("fLureText").value = s?.lureText || ""; $("fNotes").value = s?.notes || "";
   segSet($("segMethod"), [s?.method || "Spin"]); segSet($("segCond"), s?.conditions || []);
@@ -353,14 +362,18 @@ function openSheet(s) {
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
 }
 function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; editingId = null; }
-$("openNew").onclick = () => openSheet(null);
+function startNewTrip() { if (demo) exitSample(); openSheet(null); }
+$("openNew").onclick = startNewTrip;
+$("dockLog").onclick = startNewTrip;
 $("welcomeNew").onclick = () => openSheet(null);
 $("cancelBtn").onclick = closeSheets; $("scrim").onclick = closeSheets;
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("viewer").hidden) closeViewer(); else closeSheets(); } });
 $("entries").addEventListener("click", e => {
   const m = e.target.closest("[data-map]"); if (m) { e.stopPropagation(); openMap(m); return; }
   const v = e.target.closest("[data-view]"); if (v) { e.stopPropagation(); openViewer(v.dataset.view); return; }
-  const b = e.target.closest(".entry"); if (b) openSheet(state.sessions.find(s => s.id === b.dataset.id));
+  const b = e.target.closest(".entry"); if (!b) return;
+  if (demo) { toast("Sample trips can't be edited"); return; }
+  openSheet(state.sessions.find(s => s.id === b.dataset.id));
 });
 function openMap(el) { const [lat, lon] = el.dataset.map.split(",").map(Number); window.open(mapsUrl(lat, lon, el.dataset.label), "_blank", "noopener"); }
 $("entries").addEventListener("keydown", e => { const m = e.target.closest("[data-map]"); if (m && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openMap(m); return; } const v = e.target.closest("[data-view]"); if (v && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openViewer(v.dataset.view); } });
@@ -432,26 +445,36 @@ $("form").addEventListener("submit", async e => {
 });
 
 /* ---------- notes ---------- */
-$("editNotes").onclick = () => { $("notesText").value = state.notes.join("\n"); $("notesEditor").hidden = false; $("notesList").hidden = true; $("editNotes").hidden = true; };
+$("editNotes").onclick = () => {
+  if (demo) { toast("Exit the sample to write your own notes"); return; } $("notesText").value = state.notes.join("\n"); $("notesEditor").hidden = false; $("notesList").hidden = true; $("editNotes").hidden = true; };
 $("cancelNotes").onclick = () => { $("notesEditor").hidden = true; $("notesList").hidden = false; $("editNotes").hidden = false; };
 $("saveNotes").onclick = () => { state.notes = $("notesText").value.split("\n").map(s => s.trim()).filter(Boolean); save(); $("cancelNotes").onclick(); render(); toast("Notes saved"); };
 
 /* ---------- sample season ---------- */
+// The sample season is shown in place of your trips but never saved over them.
 async function loadSample() {
+  if (demo) return;
   try {
     const res = await fetch("sample.json"); const data = await res.json();
-    state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026"; save(); render(); showTab("season");
+    demo = { sessions: state.sessions, notes: state.notes, season: state.settings.season };
+    state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
+    render(); window.scrollTo(0, 0);
+    if (typeof showSampleCopilot === "function") showSampleCopilot(); else showTab("season");
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }
 }
+function exitSample() {
+  if (!demo) return;
+  state.sessions = demo.sessions; state.notes = demo.notes; state.settings.season = demo.season; demo = null;
+  if (typeof resetAdviceInputs === "function") resetAdviceInputs();
+  render(); window.scrollTo(0, 0);
+}
 $("welcomeSample").onclick = loadSample;
-$("clearSample").onclick = () => {
-  state.sessions = state.sessions.filter(s => !s.sample);
-  if (state.notes.join() === SAMPLE_NOTES.join()) state.notes = [];
-  save(); render(); toast("Sample cleared");
-};
+$("topSample").onclick = loadSample;
+$("clearSample").onclick = exitSample;
 
 /* ---------- settings ---------- */
 $("openSettings").onclick = () => {
+  if (demo) exitSample();
   $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
   $("wipeBtn").hidden = false; $("wipeConfirm").hidden = true; $("backupMsg").hidden = true;
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;

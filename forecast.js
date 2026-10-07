@@ -155,6 +155,18 @@ function renderAdvice() {
 }
 
 /* ---------- wire up ---------- */
+function resetAdviceInputs() {
+  const now = new Date();
+  $("aTemp").value = ""; segSet($("aSky"), []);
+  $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  $("aDate").value = isoDate(now); $("aWeatherMsg").textContent = "";
+}
+// Opening the sample lands on Copilot with a summer evening filled in, so the call shows straight away.
+function showSampleCopilot() {
+  $("aTemp").value = tOut(22); $("aTime").value = "18:30"; $("aDate").value = "2026-07-15"; segSet($("aSky"), []);
+  $("aWeatherMsg").textContent = "Sample conditions: a July evening at 22°C. Change them to try others.";
+  showTab("advice"); renderAdvice();
+}
 (function initAdvice() {
   const now = new Date();
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;

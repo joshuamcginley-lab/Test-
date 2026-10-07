@@ -42,40 +42,49 @@
   <div class="topbar">
     <div class="logo"><span class="mark" aria-hidden="true">✦</span><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
     <div class="top-actions">
+      <button type="button" class="btn sm" id="topSample">👀 Sample season</button>
       <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
       <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
   </div>
   <div class="band-top">
-    <div class="hero">
+    <div class="hero" id="hero">
       <span class="pill live">Bite Intelligence™ is live</span>
-      <h1><span class="own" id="ownerLine">Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
+      <h1><span class="own" id="ownerLine" hidden>Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
       <div class="cr" id="tagline">Your AI fishing copilot. Log trips, train your model, get the call.</div>
     </div>
-    <button class="btn-log" id="openNew" type="button">✦ Log a trip</button>
+    <button class="btn-log desk-only" id="openNew" type="button">✦ Log a trip</button>
   </div>
+  <div class="ws-line" id="wsLine"></div>
   <div class="board" id="gauges"></div>
 </div></div>
 <div class="tiger" aria-hidden="true"></div>
 
 <div class="wrap">
   <div class="welcome" id="welcome" hidden>
-    <span class="pill live">Welcome to the beta</span>
-    <h2>Train your own <span class="grad-text">fishing model.</span></h2>
-    <p>Log a trip in under a minute: where, when, temperature, what you caught and on what. After 10 trips, fishr Copilot starts telling you where to fish and when.</p>
-    <p>Everything stays on your device. Works with no signal. Skunks count as training data.</p>
-    <div class="acts"><button class="btn-log" id="welcomeNew" type="button">✦ Log your first trip</button><button class="btn" id="welcomeSample" type="button">Try the demo workspace</button></div>
+    <button type="button" class="choice primary-choice" id="welcomeNew">
+      <span class="choice-icon">+</span>
+      <span><b>Log your first trip</b><span>Takes under a minute. Skunks count.</span></span>
+    </button>
+    <button type="button" class="choice" id="welcomeSample">
+      <span class="choice-icon">👀</span>
+      <span><b>See a sample season</b><span>47 real trips, so you can see what Copilot does before you log your own.</span></span>
+    </button>
+    <p class="welcome-note">Your trips stay on this phone. Works with no signal.</p>
   </div>
 
   <div id="main">
-    <div class="sample-bar" id="sampleBar" hidden><span>✦ Demo workspace: 47 real trips from New Brunswick.</span><button type="button" id="clearSample">Start my own workspace</button></div>
+    <div class="sample-bar" id="sampleBar" hidden><span><b>You're viewing a sample season.</b> 47 real trips from New Brunswick. Nothing here is saved.</span><button type="button" id="clearSample">Exit sample</button></div>
 
+    <div class="dock">
     <nav class="tabs" role="tablist">
-      <button role="tab" id="tab-advice" aria-selected="false" data-tab="advice"><span><span class="ai">✦</span>Copilot</span></button>
-      <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><span>Dashboard</span></button>
-      <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><span>Insights</span></button>
-      <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><span>Trips</span></button>
+      <button role="tab" id="tab-advice" aria-selected="false" data-tab="advice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><span>Copilot</span></button>
+      <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Stats</span></button>
+      <button type="button" class="dock-log" id="dockLog" aria-label="Log a trip">+</button>
+      <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Insights</span></button>
+      <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>Trips</span></button>
     </nav>
+    </div>
 
     <div id="panel-advice" role="tabpanel" hidden>
       <div id="advice"></div>
@@ -136,30 +145,37 @@
     <h2 id="sheetTitle">Log a trip</h2>
     <div class="row">
       <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
-      <label class="field"><span class="label">Start</span><input type="time" id="fStart"></label>
-      <label class="field"><span class="label">End</span><input type="time" id="fEnd"></label>
+      <label class="field"><span class="label" id="tloLabel">Temp</span><input type="number" id="fTlo" inputmode="decimal" step="1" placeholder="22"></label>
     </div>
     <div class="row">
       <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Keswick River" autocomplete="off" required></label>
-      <label class="field"><span class="label">Spot</span><input id="fSpot" list="dlSpot" placeholder="Fallen tree by the island" autocomplete="off"></label>
+      <label class="field"><span class="label">Spot (optional)</span><input id="fSpot" list="dlSpot" placeholder="Fallen tree by the island" autocomplete="off"></label>
     </div>
-    <div class="field"><span class="label">Location</span>
-      <div class="loc-row"><button type="button" class="btn" id="pinLoc">Pin my location</button><input id="fLocPaste" placeholder="or paste a map link / coordinates" autocomplete="off" aria-label="Paste a map link or coordinates"></div>
-      <div class="loc-row" id="locText"></div>
-    </div>
-    <div class="row">
-      <label class="field"><span class="label" id="tloLabel">Temp low</span><input type="number" id="fTlo" inputmode="decimal" step="1"></label>
-      <label class="field"><span class="label" id="thiLabel">Temp high</span><input type="number" id="fThi" inputmode="decimal" step="1" placeholder="same"></label>
-      <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="Medium spinning" autocomplete="off"></label>
-    </div>
-    <div class="field"><span class="label">Method</span><div class="seg" id="segMethod"><button type="button" data-v="Spin" aria-pressed="true">Spin</button><button type="button" data-v="Bait" aria-pressed="false">Bait</button><button type="button" data-v="Fly" aria-pressed="false">Fly</button><button type="button" data-v="Ice" aria-pressed="false">Ice</button><button type="button" data-v="Troll" aria-pressed="false">Troll</button></div></div>
-    <div class="field"><span class="label">Conditions</span><div class="seg" id="segCond"></div></div>
-    <div class="field"><span class="label">Catch (leave empty if skunked)</span>
+    <div class="field"><span class="label">What did you catch? Leave empty if you got skunked.</span>
       <div id="catchRows" style="display:grid;gap:8px"></div>
-      <button type="button" class="add-catch" id="addCatch">+ Add fish</button>
+      <button type="button" class="add-catch" id="addCatch">+ Add another fish</button>
     </div>
-    <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='2.5" white curly tail grub'></label>
-    <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="Water high after rain, missed 2 hits on the frog"></textarea></label>
+    <details class="more" id="moreDetails">
+      <summary><span>More details</span><span class="more-hint">time, location, sky, method, notes</span></summary>
+      <div class="more-in">
+        <div class="row">
+          <label class="field"><span class="label">Start</span><input type="time" id="fStart"></label>
+          <label class="field"><span class="label">End</span><input type="time" id="fEnd"></label>
+          <label class="field"><span class="label" id="thiLabel">Temp later</span><input type="number" id="fThi" inputmode="decimal" step="1" placeholder="same"></label>
+        </div>
+        <div class="field"><span class="label">Location</span>
+          <div class="loc-row"><button type="button" class="btn" id="pinLoc">Pin my location</button><input id="fLocPaste" placeholder="or paste a map link / coordinates" autocomplete="off" aria-label="Paste a map link or coordinates"></div>
+          <div class="loc-row" id="locText"></div>
+        </div>
+        <div class="field"><span class="label">Conditions</span><div class="seg" id="segCond"></div></div>
+        <div class="field"><span class="label">Method</span><div class="seg" id="segMethod"><button type="button" data-v="Spin" aria-pressed="true">Spin</button><button type="button" data-v="Bait" aria-pressed="false">Bait</button><button type="button" data-v="Fly" aria-pressed="false">Fly</button><button type="button" data-v="Ice" aria-pressed="false">Ice</button><button type="button" data-v="Troll" aria-pressed="false">Troll</button></div></div>
+        <div class="row">
+          <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="Medium spinning" autocomplete="off"></label>
+          <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='2.5" white curly tail grub'></label>
+        </div>
+        <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="Water high after rain, missed 2 hits on the frog"></textarea></label>
+      </div>
+    </details>
     <div class="err" id="formErr" hidden></div>
     <div class="sheet-actions">
       <div><button type="button" class="btn danger" id="delBtn" hidden>Delete</button><span id="delConfirm" hidden><span style="margin-right:8px">Delete this trip?</span><button type="button" class="btn danger" id="delYes">Yes, delete</button></span></div>
