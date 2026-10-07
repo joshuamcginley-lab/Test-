@@ -24,7 +24,9 @@ function similarity(s, q) {
   const wS = 0.3 + 0.7 * gauss(dd, 40 * k);
   const sky = skyOf(s);
   const wC = q.sky && sky ? (sky === q.sky || (q.sky !== "Clear" && sky !== "Clear") ? 1.25 : 0.8) : 1;
-  return wT * wH * wS * wC;
+  const wP = q.press && s.wx?.trend ? (s.wx.trend === q.press ? 1.3 : 0.75) : 1;
+  const lvl = waterLevelOf(s), wF = q.flow && lvl ? (lvl === q.flow ? 1.35 : 0.7) : 1;
+  return wT * wH * wS * wC * wP * wF;
 }
 
 function rankWaters(q) {
@@ -92,10 +94,13 @@ async function loadWeather(useGps) {
   if (!where) { msg.textContent = "Allow location, or pin a spot on a trip, to pull the weather. You can also type the temperature."; return; }
   msg.textContent = "Syncing live conditions…";
   try {
-    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`;
-    const d = await (await fetch(u)).json();
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,weather_code,pressure_msl&hourly=temperature_2m,weather_code,pressure_msl&past_days=1&forecast_days=2&timezone=auto`;
+    const [d, flow] = await Promise.all([(await fetch(u)).json(), typeof fetchWater === "function" ? fetchWater(where.lat, where.lon).catch(() => null) : null]);
+    const nowIdx = d.hourly.time.findIndex(t => new Date(t) > new Date()) - 1;
+    const p0 = d.current.pressure_msl, p3 = nowIdx >= 3 ? d.hourly.pressure_msl[nowIdx - 3] : null;
+    const press = p0 != null && p3 != null ? (p0 - p3 >= 1 ? "Rising" : p0 - p3 <= -1 ? "Falling" : "Steady") : null;
     wx = {
-      ...where, current: { temp: d.current.temperature_2m, sky: skyFromCode(d.current.weather_code) },
+      ...where, current: { temp: d.current.temperature_2m, sky: skyFromCode(d.current.weather_code), p: p0 == null ? null : Math.round(p0), press }, flow,
       hourly: d.hourly.time.map((t, i) => ({ time: new Date(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]) })),
     };
     const now = new Date();
@@ -103,7 +108,9 @@ async function loadWeather(useGps) {
     $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     $("aDate").value = isoDate(now);
     segSet($("aSky"), [wx.current.sky]);
-    msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}.`;
+    segSet($("aPress"), press ? [press] : []);
+    segSet($("aFlow"), flow ? [flow.status] : []);
+    msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
     renderAdvice();
   } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; }
 }
@@ -136,10 +143,11 @@ function renderAdvice() {
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
   if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Tap “Use current weather” or enter a temperature and time.</p>`; return; }
-  const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: $("aSky").querySelector('[aria-pressed="true"]')?.dataset.v || null };
+  const pick = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v || null;
+  const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: pick("aSky"), press: pick("aPress"), flow: pick("aFlow") };
   const { res, rows, k } = bestRanking(q);
   const top = rows[0], second = rows[1], widened = k > 1;
-  const when = `${fmtT(q.temp)} at ${fmtTime(tm)}${q.sky ? `, ${q.sky.toLowerCase()}` : ""}`;
+  const when = `${fmtT(q.temp)} at ${fmtTime(tm)}${q.sky ? `, ${q.sky.toLowerCase()}` : ""}${q.press ? `, pressure ${q.press.toLowerCase()}` : ""}${q.flow ? `, ${q.flow.toLowerCase()} water` : ""}`;
   let html = "";
   if (!top) {
     html = `<div class="verdict"><span class="chip info">Training</span><h3>Log a few more trips</h3><p>Copilot needs trips at a couple of different waters before it can compare them.</p></div>`;
@@ -159,6 +167,7 @@ function renderAdvice() {
       <p class="v-say">Expect about <b>${top.est.toFixed(1)} fish</b>${species ? `, mostly ${esc(species.toLowerCase())}` : ""}. ${evidence}</p>`}
       <ul class="v-tips">${spot ? `<li><span class="label">Spot</span>${esc(spot)}</li>` : ""}${lure ? `<li><span class="label">Tie on</span>${esc(lure)}</li>` : ""}${second ? `<li><span class="label">Backup plan</span>${esc(second.water)} · ~${second.est.toFixed(1)} fish</li>` : ""}</ul>
       ${widenNote}
+      ${conditionFacts(q)}
       ${slow && !tough ? `<p class="v-warn"><b>Heads up:</b> ${Math.round(res.skunkSimilar * 100)}% of your trips in conditions like this were skunks, wherever you went.</p>` : ""}
       ${!res.anySeason ? `<p class="v-warn">You haven't logged trips at this time of year, so this is based on temperature and time of day only.</p>` : ""}
     </div>`;
@@ -171,16 +180,32 @@ function renderAdvice() {
   box.innerHTML = html;
 }
 
+// What your own log says about pressure and river level, once there are enough trips to compare.
+function conditionFacts(q) {
+  const out = [], all = state.sessions;
+  const avg = xs => xs.reduce((a, s) => a + fishOf(s), 0) / xs.length;
+  if (q.press) {
+    const same = all.filter(s => s.wx?.trend === q.press), other = all.filter(s => s.wx?.trend && s.wx.trend !== q.press);
+    if (same.length >= 3 && other.length >= 3) out.push(`Your ${q.press.toLowerCase()}-pressure trips average <b>${avg(same).toFixed(1)} fish</b> (${same.length} trips) vs ${avg(other).toFixed(1)} otherwise.`);
+  }
+  if (q.flow) {
+    const same = all.filter(s => waterLevelOf(s) === q.flow), other = all.filter(s => waterLevelOf(s) && waterLevelOf(s) !== q.flow);
+    if (same.length >= 2 && other.length >= 2) out.push(`Your ${q.flow.toLowerCase()}-water trips average <b>${avg(same).toFixed(1)} fish</b> (${same.length} trips) vs ${avg(other).toFixed(1)} otherwise.`);
+  }
+  if (wx?.flow && q.flow === wx.flow.status) out.push(`Nearest gauge: ${esc(wx.flow.station)} (${wx.flow.distKm} km), ${wx.flow.status.toLowerCase()} for the last two weeks and ${wx.flow.trend}.`);
+  return out.length ? `<p class="v-note">${out.join(" ")}</p>` : "";
+}
+
 /* ---------- wire up ---------- */
 function resetAdviceInputs() {
   const now = new Date();
-  $("aTemp").value = ""; segSet($("aSky"), []);
+  $("aTemp").value = ""; segSet($("aSky"), []); segSet($("aPress"), []); segSet($("aFlow"), []);
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   $("aDate").value = isoDate(now); $("aWeatherMsg").textContent = "";
 }
 // Opening the sample lands on Copilot with a summer evening filled in, so the call shows straight away.
 function showSampleCopilot() {
-  $("aTemp").value = tOut(22); $("aTime").value = "18:30"; $("aDate").value = "2026-07-15"; segSet($("aSky"), []);
+  $("aTemp").value = tOut(22); $("aTime").value = "18:30"; $("aDate").value = "2026-07-15"; segSet($("aSky"), []); segSet($("aPress"), []); segSet($("aFlow"), []);
   $("aWeatherMsg").textContent = "Sample conditions: a July evening at 22°C. Change them to try others.";
   showTab("advice"); renderAdvice();
 }
@@ -189,8 +214,11 @@ function showSampleCopilot() {
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   $("aDate").value = isoDate(now);
   $("aTempLabel").textContent = `Temp °${T()}`;
-  $("aSky").innerHTML = ["Clear", "Overcast", "Rain"].map(c => `<button type="button" data-v="${c}" aria-pressed="false">${c}</button>`).join("");
-  $("aSky").onclick = e => { const b = e.target.closest("button"); if (!b) return; const on = b.getAttribute("aria-pressed") !== "true"; segSet($("aSky"), on ? [b.dataset.v] : []); renderAdvice(); };
+  const single = (id, opts) => {
+    $(id).innerHTML = opts.map(c => `<button type="button" data-v="${c}" aria-pressed="false">${c}</button>`).join("");
+    $(id).onclick = e => { const b = e.target.closest("button"); if (!b) return; const on = b.getAttribute("aria-pressed") !== "true"; segSet($(id), on ? [b.dataset.v] : []); renderAdvice(); };
+  };
+  single("aSky", ["Clear", "Overcast", "Rain"]); single("aPress", ["Rising", "Steady", "Falling"]); single("aFlow", ["Low", "Normal", "High"]);
   ["aTemp", "aTime", "aDate"].forEach(id => $(id).addEventListener("input", () => { $("aWeatherMsg").textContent = ""; renderAdvice(); }));
   $("aWeather").onclick = () => loadWeather(true);
   const _render = render;

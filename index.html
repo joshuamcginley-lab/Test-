@@ -94,6 +94,8 @@
         <label class="field"><span class="label">Time</span><input id="aTime" type="time"></label>
         <label class="field"><span class="label">Date</span><input id="aDate" type="date"></label>
         <div class="field"><span class="label">Sky</span><div class="seg" id="aSky"></div></div>
+        <div class="field"><span class="label">Pressure</span><div class="seg" id="aPress"></div></div>
+        <div class="field"><span class="label">River level</span><div class="seg" id="aFlow"></div></div>
       </div>
       <div class="loc-row" style="margin:10px 0 18px"><button type="button" class="btn" id="aWeather">✦ Sync live conditions</button><span id="aWeatherMsg" class="photo-msg"></span></div>
     </div>
@@ -123,6 +125,8 @@
         <section class="card"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
         <section class="card"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
         <section class="card"><h2>By lure</h2><div class="tbl-wrap"><table id="tLure"></table></div></section>
+        <section class="card"><h2>By pressure</h2><div class="tbl-wrap"><table id="tPress"></table></div></section>
+        <section class="card"><h2>By river level</h2><div class="tbl-wrap"><table id="tFlow"></table></div></section>
       </div>
     </div>
 
@@ -146,6 +150,10 @@
     <div class="row">
       <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
       <label class="field"><span class="label" id="tloLabel">Temp</span><input type="number" id="fTlo" inputmode="decimal" step="1" placeholder="22"></label>
+    </div>
+    <div class="cond-strip">
+      <div class="loc-row"><button type="button" class="btn sm" id="fillWx">✦ Auto-fill conditions</button><span id="wxText" class="photo-msg"></span></div>
+      <div class="wx-chips" id="wxChips"></div>
     </div>
     <div class="row">
       <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Keswick River" autocomplete="off" required></label>
@@ -202,6 +210,12 @@
       <div class="btn-row"><button class="btn primary" id="installBtn" type="button" hidden>Install app</button></div>
     </div>
     <div class="set-group">
+      <h3>Conditions</h3>
+      <p>New trips pull weather, pressure, wind, recent rain and the nearest river gauge automatically. Add weather and pressure to trips you logged before this existed:</p>
+      <div class="btn-row"><button class="btn" id="backfillWx" type="button">✦ Add weather to past trips</button></div>
+      <p id="backfillMsg" hidden></p>
+    </div>
+    <div class="set-group">
       <h3>Backup</h3>
       <p>Your workspace lives on this device only. Save a backup now and then, and use it to move to a new phone. Backups include your photos.</p>
       <div class="btn-row">
@@ -242,6 +256,7 @@
 <div class="toast" id="toast" hidden role="status"></div>
 <script src="app.js"></script>
 <script src="forecast.js"></script>
+<script src="conditions.js"></script>
 <script src="share.js"></script>
 </body>
 </html>

@@ -292,4 +292,10 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-varia
 .field input[type="date"],.field input[type="time"]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:44px;text-align:left}
 input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date-and-time-value{text-align:left}
 .now-row{grid-template-columns:repeat(2,minmax(0,1fr))}
-.now-row > .field:last-child{grid-column:1/-1}
+.now-row > div.field{grid-column:1/-1}
+
+/* Auto-filled conditions */
+.cond-strip{display:grid;gap:8px;padding:12px;border:1px dashed var(--line-2);border-radius:14px}
+.wx-chips{display:flex;gap:6px;flex-wrap:wrap}
+.wx-chips:empty{display:none}
+.wx-chip{font:500 12px/1 var(--f-mono);padding:7px 10px;border-radius:999px;background:var(--grad-soft);border:1px solid var(--line);color:var(--ink)}

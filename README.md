@@ -42,3 +42,8 @@ When you change `app.js` or `styles.css`, bump `VERSION` in `sw.js` so installed
 - `GET /img/<id>` serves the stored image.
 
 They need an R2 bucket named `firetiger-catches` bound to the Pages project as `CATCHES`. Until that binding exists, sharing falls back to the long `#catch=` link.
+
+## Conditions (weather, pressure, river levels)
+
+- `conditions.js` pulls weather, barometric pressure (and its 3-hour trend), wind and 48-hour rain from Open-Meteo for each trip, using the forecast API for recent dates and the archive for older ones. Settings → "Add weather to past trips" fills in older trips.
+- `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Copilot and Insights use both.

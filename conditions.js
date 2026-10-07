@@ -1,0 +1,138 @@
+"use strict";
+/* Conditions: weather, barometric pressure, wind and recent rain from Open-Meteo (free, no key),
+   plus the nearest river gauge from Environment Canada via /api/water. Fills the trip form
+   automatically and stores the readings on each trip as `wx` and `flow`. Uses globals from app.js. */
+
+const WX_VARS = "temperature_2m,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,precipitation";
+const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+const compass = deg => deg == null ? "" : COMPASS[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const skyName = c => c == null ? null : c <= 1 ? "Sunny" : c <= 48 ? "Overcast" : "Rain";
+const pressureTrend = dp => dp == null ? null : dp >= 1 ? "Rising" : dp <= -1 ? "Falling" : "Steady";
+const PERIOD_MID = { Morning: 8, Midday: 13, Afternoon: 16, Evening: 19 };
+
+// Hourly weather for a place and time. Recent and future dates use the forecast API; older ones the archive.
+async function fetchWeather(lat, lon, date, hour) {
+  const day = new Date(date + "T12:00:00"), daysAgo = (Date.now() - day) / 864e5;
+  const from = ymd(new Date(day - 2 * 864e5));
+  const base = daysAgo > 60 ? "https://archive-api.open-meteo.com/v1/archive" : "https://api.open-meteo.com/v1/forecast";
+  const res = await fetch(`${base}?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&hourly=${WX_VARS}&start_date=${from}&end_date=${date}&timezone=auto`);
+  if (!res.ok) throw new Error("weather " + res.status);
+  const h = (await res.json()).hourly;
+  const i = h.time.indexOf(`${date}T${String(Math.min(23, Math.max(0, Math.round(hour)))).padStart(2, "0")}:00`);
+  if (i < 0 || h.temperature_2m[i] == null) throw new Error("no weather for that hour");
+  const p = h.pressure_msl[i], p3 = i >= 3 ? h.pressure_msl[i - 3] : null;
+  const rain48 = h.precipitation.slice(Math.max(0, i - 47), i + 1).reduce((a, v) => a + (v || 0), 0);
+  return {
+    t: r(h.temperature_2m[i], 1), code: h.weather_code[i], sky: skyName(h.weather_code[i]),
+    p: p == null ? null : Math.round(p), dp3: p != null && p3 != null ? r(p - p3, 1) : null,
+    trend: p != null && p3 != null ? pressureTrend(p - p3) : null,
+    wind: h.wind_speed_10m[i] == null ? null : Math.round(h.wind_speed_10m[i]), windDir: compass(h.wind_direction_10m[i]),
+    rain48: r(rain48, 1), at: `${date}T${String(Math.round(hour)).padStart(2, "0")}:00`,
+  };
+}
+
+// Nearest river gauge and how today's flow compares with the last two weeks.
+async function fetchWater(lat, lon) {
+  if (location.protocol === "file:") return null;
+  const res = await fetch(`/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`);
+  if (!res.ok) return null;
+  const d = await res.json();
+  if (!d || !d.station || !["High", "Normal", "Low"].includes(d.status)) return null;
+  return { station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time };
+}
+
+/* ---------- where to look up conditions ---------- */
+function coordsForWater(name) {
+  if (!name) return null;
+  const hits = state.sessions.filter(s => s.water && s.water.toLowerCase() === name.toLowerCase() && s.lat != null);
+  return hits.length ? { lat: hits[hits.length - 1].lat, lon: hits[hits.length - 1].lon } : null;
+}
+function knownLocation(waterName) {
+  return pinned || coordsForWater(waterName) || state.settings.home || null;
+}
+function askDevice() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => {
+      const c = { lat: r(p.coords.latitude, 3), lon: r(p.coords.longitude, 3) };
+      state.settings.home = c; save(); res(c);
+    }, () => res(null), { timeout: 12000, maximumAge: 600000 });
+  });
+}
+const tripHourOf = (date, start, period) => start ? hourOf(start) : date === ymd(new Date()) ? new Date().getHours() : PERIOD_MID[period] ?? 12;
+
+/* ---------- trip form ---------- */
+let formCond = { wx: null, flow: null };
+function condChips(wx, flow) {
+  const c = [];
+  if (wx) {
+    c.push(`${fmtT(wx.t)}${wx.sky ? ` · ${wx.sky.toLowerCase()}` : ""}`);
+    if (wx.p) c.push(`${wx.p} hPa${wx.trend ? ` ${wx.trend === "Rising" ? "↑" : wx.trend === "Falling" ? "↓" : "→"} ${wx.trend.toLowerCase()}` : ""}`);
+    if (wx.wind != null) c.push(`wind ${wx.wind} km/h ${wx.windDir}`);
+    if (wx.rain48 != null) c.push(wx.rain48 >= 0.5 ? `${wx.rain48} mm rain, last 48 h` : "dry last 48 h");
+  }
+  if (flow) c.push(`${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}`);
+  return c;
+}
+function showFormChips() {
+  const chips = condChips(formCond.wx, formCond.flow);
+  $("wxChips").innerHTML = chips.map(t => `<span class="wx-chip">${esc(t)}</span>`).join("");
+  $("fillWx").textContent = chips.length ? "↻ Refresh conditions" : "✦ Auto-fill conditions";
+}
+function applyToForm(wx, flow) {
+  if (wx && $("fTlo").value === "") $("fTlo").value = tOut(r(wx.t, 0));
+  const on = new Set([...$("segCond").querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.v));
+  if (wx?.sky && !on.has("Sunny") && !on.has("Overcast") && !on.has("Rain")) on.add(wx.sky);
+  if (wx?.wind != null) { if (wx.wind >= 20) on.add("Windy"); else if (wx.wind <= 5) on.add("Calm"); }
+  if (flow?.status === "High") on.add("High water");
+  if (flow?.status === "Low") on.add("Low water");
+  segSet($("segCond"), [...on]);
+}
+async function fillConditions(allowPrompt) {
+  const date = $("fDate").value; if (!date) return;
+  let where = knownLocation($("fWaterIn").value.trim());
+  if (!where && allowPrompt) { $("wxText").textContent = "Locating…"; where = await askDevice(); }
+  if (!where) { $("wxText").textContent = allowPrompt ? "Allow location or pin the spot to auto-fill conditions." : ""; return; }
+  if (!navigator.onLine) { $("wxText").textContent = "No signal. Conditions can be filled in later from Settings."; return; }
+  $("wxText").textContent = "Pulling conditions…";
+  const hour = tripHourOf(date, $("fStart").value, null);
+  const recent = (Date.now() - new Date(date + "T12:00:00")) / 864e5 <= 2;
+  const [wx, flow] = await Promise.all([
+    fetchWeather(where.lat, where.lon, date, hour).catch(() => null),
+    recent ? fetchWater(where.lat, where.lon).catch(() => null) : Promise.resolve(null),
+  ]);
+  formCond = { wx: wx || formCond.wx, flow: flow || formCond.flow };
+  applyToForm(wx, flow);
+  showFormChips();
+  $("wxText").textContent = wx || flow ? "" : "Couldn't reach the weather service. Type the temperature instead.";
+}
+// Called by openSheet: show stored readings, or fetch quietly for a new trip when the location is already known.
+function onSheetOpen(s) {
+  formCond = { wx: s?.wx || null, flow: s?.flow || null };
+  $("wxText").textContent = ""; showFormChips();
+  if (!s && knownLocation("")) fillConditions(false);
+}
+$("fillWx").onclick = () => fillConditions(true);
+$("fWaterIn").addEventListener("change", () => { if (!formCond.wx && coordsForWater($("fWaterIn").value.trim())) fillConditions(false); });
+["fDate", "fStart"].forEach(id => $(id).addEventListener("change", () => { if (formCond.wx) { formCond = { wx: null, flow: null }; showFormChips(); fillConditions(false); } }));
+
+/* ---------- add weather to past trips ---------- */
+$("backfillWx").onclick = async () => {
+  const msg = $("backfillMsg"); msg.hidden = false;
+  if (demo) { msg.textContent = "Exit the sample first."; return; }
+  const todo = state.sessions.filter(s => !s.wx && s.date <= ymd(new Date()));
+  if (!todo.length) { msg.textContent = "Every trip already has weather."; return; }
+  let home = state.settings.home;
+  if (!home && todo.some(s => s.lat == null && !coordsForWater(s.water))) { msg.textContent = "Locating you, for trips without a pinned spot…"; home = await askDevice(); }
+  let done = 0, failed = 0;
+  for (const s of todo) {
+    const where = (s.lat != null ? { lat: s.lat, lon: s.lon } : null) || coordsForWater(s.water) || home;
+    if (!where) { failed++; continue; }
+    msg.textContent = `Adding weather… ${done + failed + 1} of ${todo.length}`;
+    try { s.wx = await fetchWeather(where.lat, where.lon, s.date, tripHourOf(s.date, s.start, s.period)); done++; }
+    catch (e) { failed++; }
+  }
+  save(); render();
+  msg.textContent = `Added weather to ${done} trip${done === 1 ? "" : "s"}.${failed ? ` ${failed} couldn't be looked up (no location or no signal).` : ""} Pressure and wind now show in Insights and feed Copilot.`;
+};

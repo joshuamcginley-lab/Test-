@@ -137,6 +137,8 @@ function sizeOf(c) {
   return [c.lb != null ? fmtW(c.lb) : "", c.inches != null ? fmtL(c.inches) : ""].filter(Boolean).join(" · ");
 }
 const isPeriod = s => s.period || periodOf(s.start, s.end);
+// River level from the gauge reading, or from the High water / Low water tags people set themselves.
+const waterLevelOf = s => s.flow?.status || ((s.conditions || []).includes("High water") ? "High" : (s.conditions || []).includes("Low water") ? "Low" : null);
 
 /* ---------- season filter ---------- */
 const years = () => [...new Set(state.sessions.map(s => s.date.slice(0, 4)))].sort().reverse();
@@ -223,6 +225,12 @@ function renderPatterns(list) {
   $("tWater").innerHTML = tableHTML(water, "Water");
   $("tPeriod").innerHTML = tableHTML(period, "Time");
   $("tTemp").innerHTML = tableHTML(temp, "Avg temp");
+  const order = (a, list) => list.indexOf(a.k);
+  const press = group(list, s => s.wx?.trend || null).sort((a, b) => order(a, ["Falling", "Steady", "Rising"]) - order(b, ["Falling", "Steady", "Rising"]));
+  const flow = group(list, waterLevelOf).sort((a, b) => order(a, ["Low", "Normal", "High"]) - order(b, ["Low", "Normal", "High"]));
+  const emptyRow = msg => `<tr><td style="white-space:normal;color:var(--muted)">${msg}</td></tr>`;
+  $("tPress").innerHTML = press.length ? tableHTML(press, "Pressure") : emptyRow("Trips logged with auto-filled conditions show here. For older trips, use Settings → Add weather to past trips.");
+  $("tFlow").innerHTML = flow.length ? tableHTML(flow, "River") : emptyRow("Trips logged with auto-filled conditions show here, or tag trips High water / Low water.");
 
   const lu = {};
   for (const s of list) for (const c of s.catches || []) { if (!c.lure) continue; lu[c.lure] ??= { fish: 0, trips: new Set(), big: 0 }; lu[c.lure].fish += +c.count || 0; lu[c.lure].trips.add(s); lu[c.lure].big = Math.max(lu[c.lure].big, +c.lb || 0); }
@@ -252,7 +260,7 @@ function renderLog() {
   $("entries").innerHTML = shown.map(s => {
     const f = fishOf(s), isPb = pbLb && (s.catches || []).some(c => c.lb === pbLb);
     const temp = s.tempLow != null ? (s.tempHigh != null && s.tempHigh !== s.tempLow ? `${tOut(s.tempLow)}–${fmtT(s.tempHigh)}` : fmtT(s.tempLow)) : null;
-    const t = [s.start ? fmtTime(s.start) + (s.end ? "–" + fmtTime(s.end) : "") : null, temp, s.method && s.method !== "Spin" ? s.method : null, s.event, ...(s.conditions || [])].filter(Boolean).join(" · ");
+    const t = [s.start ? fmtTime(s.start) + (s.end ? "–" + fmtTime(s.end) : "") : null, temp, s.wx?.p ? `${s.wx.p} hPa ${s.wx.trend === "Rising" ? "↑" : s.wx.trend === "Falling" ? "↓" : "→"}` : null, s.method && s.method !== "Spin" ? s.method : null, s.event, ...(s.conditions || [])].filter(Boolean).join(" · ");
     const sizes = (s.catches || []).map(sizeOf).filter(Boolean);
     return `<button class="entry${isPb ? " pb" : ""}" type="button" data-id="${esc(s.id)}"><span class="date"><b>${+s.date.slice(8)}</b><span class="m">${MONTHS[+s.date.slice(5, 7) - 1]}</span><small>${esc(isPeriod(s) || "")}</small></span>
       <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>${s.lat != null ? ` <span class="maplink" role="link" tabindex="0" data-map="${s.lat},${s.lon}" data-label="${esc([s.water, s.spot].filter(Boolean).join(" · "))}">Map ↗</span>` : ""}
@@ -360,6 +368,7 @@ function openSheet(s) {
   $("catchRows").innerHTML = ""; (s ? s.catches || [] : [{}]).forEach(c => $("catchRows").append(catchRow(c)));
   $("delBtn").hidden = !s; $("delConfirm").hidden = true; $("formErr").hidden = true;
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
+  if (typeof onSheetOpen === "function") onSheetOpen(s);
 }
 function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; editingId = null; }
 function startNewTrip() { if (demo) exitSample(); openSheet(null); }
@@ -434,6 +443,8 @@ $("form").addEventListener("submit", async e => {
     period: periodOf(start, end) || prev?.period || null, notes: $("fNotes").value.trim(),
     conditions: [...$("segCond").querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.v),
     lat: pinned?.lat ?? null, lon: pinned?.lon ?? null, updatedAt: new Date().toISOString(),
+    wx: (typeof formCond !== "undefined" && formCond.wx) || prev?.wx || null,
+    flow: (typeof formCond !== "undefined" && formCond.flow) || prev?.flow || null,
   };
   if (prev) state.sessions = state.sessions.map(s => s.id === prev.id ? doc : s); else state.sessions.push(doc);
   if (!save()) return;
