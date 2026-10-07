@@ -26,11 +26,28 @@ function openShare(sid, photoId) {
 }
 function closeShare() { $("shareSheet").hidden = true; $("scrim").hidden = true; shareCtx = null; }
 
-function shareText() {
+// Upload the card so the link shows the real photo. Returns a short link, or null to fall back to the long one.
+let uploaded = { key: null, url: null };
+async function uploadCard(blob, d) {
+  const { photo, ...meta } = d, key = JSON.stringify(meta) + "|" + (photo || "") + "|" + blob.size;
+  if (uploaded.key === key) return uploaded.url;
+  if (!navigator.onLine || location.protocol === "file:") return null;
+  const fd = new FormData(); fd.append("image", blob, "catch.jpg"); fd.append("meta", JSON.stringify(meta));
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const res = await fetch("/api/share", { method: "POST", body: fd, signal: ctl.signal });
+    if (!res.ok) return null;
+    const { url } = await res.json();
+    if (typeof url !== "string" || !/^https?:\/\/[^ ]+\/c\/[A-Za-z0-9]{10}$/.test(url)) return null;
+    uploaded = { key, url }; return url;
+  } catch (e) { return null; } finally { clearTimeout(timer); }
+}
+
+function shareText(link) {
   const d = cardData();
   const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(", ");
   const what = `${d.ct > 1 ? `${d.ct} ` : ""}${d.sp.toLowerCase()}${size ? ` (${size})` : ""}`;
-  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it and start your own log: ${catchLink(d)}`;
+  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it and start your own log: ${link || catchLink(d)}`;
 }
 
 function cover(ctx, img, x, y, w, h) {
@@ -62,12 +79,12 @@ const b64url = s => btoa(String.fromCharCode(...new TextEncoder().encode(s))).re
 const unb64url = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0)));
 function catchLink(d) { const { photo, ...pub } = d; for (const k in pub) if (pub[k] == null) delete pub[k]; return `https://${APP_URL}/#catch=${b64url(JSON.stringify({ v: 1, ...pub }))}`; }
 function readCatchLink() {
-  const m = location.hash.match(/^#catch=([A-Za-z0-9_-]+)$/); if (!m) return null;
+  const m = location.hash.match(/^#catch=([A-Za-z0-9_-]+)(?:&img=([A-Za-z0-9]{10}))?$/); if (!m) return null;
   try {
     const d = JSON.parse(unb64url(m[1]));
     if (typeof d.sp !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.d)) return null;
     const num = v => typeof v === "number" && isFinite(v) ? v : null, str = (v, n) => typeof v === "string" ? v.slice(0, n) : null;
-    return { n: str(d.n, 40), d: d.d, w: str(d.w, 80), sp: d.sp.slice(0, 60), ct: Math.max(1, Math.min(999, num(d.ct) || 1)), lb: num(d.lb), in: num(d.in), lu: str(d.lu, 80), t: num(d.t), photo: null };
+    return { n: str(d.n, 40), d: d.d, w: str(d.w, 80), sp: d.sp.slice(0, 60), ct: Math.max(1, Math.min(999, num(d.ct) || 1)), lb: num(d.lb), in: num(d.in), lu: str(d.lu, 80), t: num(d.t), photo: null, img: m[2] || null };
   } catch (e) { return null; }
 }
 
@@ -117,7 +134,10 @@ async function drawCard() {
 async function doShare(saveOnly) {
   if (!shareCtx) return;
   const blob = await new Promise(res => $("shCanvas").toBlob(res, "image/jpeg", 0.92));
-  const name = `catch-${shareCtx.s.date}.jpg`, text = shareText();
+  $("shMsg").textContent = "Preparing link…";
+  const link = await uploadCard(blob, cardData());
+  $("shMsg").textContent = "";
+  const name = `catch-${shareCtx.s.date}.jpg`, text = shareText(link);
   const file = new File([blob], name, { type: "image/jpeg" });
   if (!saveOnly && navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], text }); $("shMsg").textContent = ""; return; }
@@ -154,8 +174,9 @@ async function showSharedCatch() {
   $("scStart").textContent = hasLog ? "Back to my log" : "Start my own fishing log";
   $("scSample").hidden = hasLog;
   $("sharedCatch").hidden = false;
-  await renderCard($("scCanvas"), d);
-  $("scImg").src = $("scCanvas").toDataURL("image/jpeg", 0.88);
+  const drawn = async () => { await renderCard($("scCanvas"), d); $("scImg").src = $("scCanvas").toDataURL("image/jpeg", 0.88); };
+  if (d.img) { $("scImg").onerror = () => { $("scImg").onerror = null; drawn(); }; $("scImg").src = `/img/${d.img}`; }
+  else await drawn();
 }
 function leaveShared(then) {
   $("sharedCatch").hidden = true;

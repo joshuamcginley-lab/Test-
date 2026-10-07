@@ -1,5 +1,5 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "firetiger-v6";
+const VERSION = "firetiger-v7";
 const APP = ["./", "index.html", "styles.css", "app.js", "forecast.js", "share.js", "sample.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -12,6 +12,7 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  if (url.origin === location.origin && /^\/(api|c|img)\//.test(url.pathname)) return;
   if (url.origin === location.origin) {
     // Network first so updates arrive when online; cache when offline.
     e.respondWith(fetch(req).then(res => {

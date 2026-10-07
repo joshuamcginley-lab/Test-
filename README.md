@@ -32,3 +32,13 @@ Then open http://localhost:8000.
 Hosted on Cloudflare Pages. It's a static site with no build step: framework preset None, build command empty, output directory `/`. `_headers` sets caching for the offline worker.
 
 When you change `app.js` or `styles.css`, bump `VERSION` in `sw.js` so installed copies pick up the update.
+
+## Shared catch links (server)
+
+`functions/` holds Cloudflare Pages Functions that store shared catch cards in an R2 bucket:
+
+- `POST /api/share` saves the card JPEG (max 1.5 MB) and returns a short link.
+- `GET /c/<id>` serves link-preview tags with the real photo, then opens the app's catch page.
+- `GET /img/<id>` serves the stored image.
+
+They need an R2 bucket named `firetiger-catches` bound to the Pages project as `CATCHES`. Until that binding exists, sharing falls back to the long `#catch=` link.
