@@ -180,12 +180,27 @@
 </div>
 
 <datalist id="dlWater"></datalist><datalist id="dlSpot"></datalist><datalist id="dlCombo"></datalist><datalist id="dlSpecies"></datalist><datalist id="dlLure"></datalist>
+<!-- Share a catch -->
+<div class="sheet" id="shareSheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="sheet-in">
+    <h2 id="shTitle">Share catch</h2>
+    <img id="shPreview" class="share-preview" alt="Preview of the catch card">
+    <canvas id="shCanvas" hidden></canvas>
+    <label class="field" id="shFishRow"><span class="label">Fish</span><select id="shFish"></select></label>
+    <label class="check"><input type="checkbox" id="shWater" checked> Show the water name</label>
+    <p class="label" style="margin:0">Your exact spot and GPS location are never shared.</p>
+    <p id="shMsg" class="photo-msg"></p>
+    <div class="sheet-actions"><button type="button" class="btn" id="shClose">Cancel</button><div class="btn-row"><button type="button" class="btn" id="shSave">Save image</button><button type="button" class="btn primary" id="shGo">Share</button></div></div>
+  </div>
+</div>
+
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Fish photo">
   <figure><img id="viewerImg" alt=""><figcaption id="viewerCap"></figcaption></figure>
-  <button type="button" class="btn primary" id="viewerClose">Close</button>
+  <div class="btn-row" style="justify-content:center"><button type="button" class="btn primary" id="viewerShare">Share catch</button><button type="button" class="btn" id="viewerClose" style="color:#EDF2EA;border-color:#EDF2EA">Close</button></div>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
 <script src="app.js"></script>
 <script src="forecast.js"></script>
+<script src="share.js"></script>
 </body>
 </html>

@@ -202,3 +202,11 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px)}
 .window{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:12px 0 14px;border-bottom:1px solid var(--hair);margin-bottom:22px;font-size:16px}
 #panel-advice .card{margin-bottom:26px}
 .cond-h{font-style:italic;font-weight:900;font-size:20px;text-transform:uppercase;margin:4px 0 10px;padding-bottom:6px;border-bottom:3px solid var(--rule)}
+
+/* Share */
+.share-chip{margin-top:10px;font:italic 900 12px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;background:var(--tiger);color:var(--tiger-ink);padding:6px 9px;cursor:pointer;transform:skewX(-10deg)}
+.share-chip:focus-visible{outline:3px solid var(--belly)}
+.share-preview{width:100%;max-width:360px;justify-self:center;aspect-ratio:4/5;object-fit:cover;background:var(--band);border:2px solid var(--rule)}
+.check{display:flex;gap:10px;align-items:center;font-weight:600}
+.check input{width:20px;height:20px;accent-color:var(--water)}
+.field select{font:inherit;font-size:16px;padding:9px 10px;border:2px solid var(--hair);border-radius:0;background:var(--bg);color:var(--ink);width:100%}

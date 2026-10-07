@@ -251,7 +251,7 @@ function renderLog() {
       <div class="catch">${esc(catchSummary(s))}${sizes.length ? ` <span class="meta">(${esc(sizes.join(", "))})</span>` : ""}</div>
       ${photoIdsOf(s).length ? `<span class="thumbs">${(s.catches || []).filter(c => c.photo).map(c => `<span class="thumb" role="button" tabindex="0" data-view="${esc(s.id)}|${esc(c.photo)}" aria-label="View ${esc(c.species)} photo"><img data-photo="${esc(c.photo)}" alt=""></span>`).join("")}</span>` : ""}
       ${s.lureText ? `<div class="lures">${esc(s.lureText)}</div>` : ""}${s.notes ? `<div class="lures"><i>${esc(s.notes)}</i></div>` : ""}</span>
-      <span class="tally">${f ? `<b>${f}</b><span>fish</span>` : `<span class="stamp">Skunked</span>`}</span></button>`;
+      <span class="tally">${f ? `<b>${f}</b><span>fish</span><span class="share-chip" role="button" tabindex="0" data-share="${esc(s.id)}" aria-label="Share this catch">Share</span>` : `<span class="stamp">Skunked</span>`}</span></button>`;
   }).join("") || `<p class="status">No trips match these filters.</p>`;
   hydratePhotos($("entries"));
 }
@@ -352,7 +352,7 @@ function openSheet(s) {
   $("delBtn").hidden = !s; $("delConfirm").hidden = true; $("formErr").hidden = true;
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
 }
-function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; editingId = null; }
+function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; editingId = null; }
 $("openNew").onclick = () => openSheet(null);
 $("welcomeNew").onclick = () => openSheet(null);
 $("cancelBtn").onclick = closeSheets; $("scrim").onclick = closeSheets;
@@ -372,7 +372,7 @@ async function openViewer(key) {
   const u = await photoURL(pid); if (!u) { toast("Photo not found on this device"); return; }
   $("viewerImg").src = u;
   $("viewerCap").textContent = [c?.species, c ? sizeOf(c) : "", c?.lure, s ? `${s.water} · ${fmtDate(s.date)}` : ""].filter(Boolean).join(" · ");
-  $("viewer").hidden = false; $("viewerClose").focus();
+  $("viewer").dataset.key = key; $("viewer").hidden = false; $("viewerClose").focus();
 }
 const closeViewer = () => { $("viewer").hidden = true; };
 $("viewerClose").onclick = closeViewer;
