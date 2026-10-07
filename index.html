@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Firetiger Fishing Log</title>
+<meta name="description" content="Log every fishing trip and see which waters, times, temperatures and lures actually produce fish. Works offline.">
+<meta name="theme-color" content="#0D1A20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Firetiger">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Libre+Franklin:wght@400;500;600;700&family=Martian+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <div class="band-top">
+    <div>
+      <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
+      <h1><span class="own" id="ownerLine">Your</span>Fishing Log</h1>
+      <div class="cr" id="tagline">Every trip counts. Skunks too.</div>
+    </div>
+    <div class="band-actions">
+      <button class="btn-log" id="openNew" type="button">+ Log a trip</button>
+      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </div>
+  <div class="board" id="gauges"></div>
+</div></div>
+<div class="tiger" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="welcome" id="welcome" hidden>
+    <h2>Start your log</h2>
+    <p>Log each trip in under a minute: where, when, water temp, what you caught and on what. After a few trips the app shows you which spots, times and lures actually produce fish.</p>
+    <p>Your log is saved on this device and works with no signal.</p>
+    <div class="acts"><button class="btn primary" id="welcomeNew" type="button">+ Log your first trip</button><button class="btn" id="welcomeSample" type="button">Explore a sample season</button></div>
+  </div>
+
+  <div id="main">
+    <div class="sample-bar" id="sampleBar" hidden><span>You're looking at a sample season (47 trips in New Brunswick).</span><button type="button" id="clearSample">Clear sample, start my own</button></div>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><span>Season</span></button>
+      <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><span>Patterns</span></button>
+      <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><span>Log</span></button>
+    </nav>
+
+    <div id="panel-season" role="tabpanel">
+      <div class="grid2">
+        <section class="card"><h2>By species</h2><div class="bars" id="speciesBars"></div></section>
+        <section class="card"><h2>Fish per trip by month</h2><div id="monthChart"></div></section>
+      </div>
+      <div class="grid2">
+        <section class="card"><h2>Biggest fish</h2><div class="tbl-wrap"><table id="bigFish"></table></div></section>
+        <section class="card">
+          <h2>Field notes <button class="linkbtn" id="editNotes" type="button">Edit</button></h2>
+          <ul class="notes-list" id="notesList"></ul>
+          <div id="notesEditor" hidden>
+            <textarea class="notes-edit" id="notesText" aria-label="Field notes, one per line"></textarea>
+            <div class="btn-row" style="margin-top:8px"><button class="btn primary" id="saveNotes" type="button">Save notes</button><button class="btn" id="cancelNotes" type="button">Cancel</button></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="panel-patterns" role="tabpanel" hidden>
+      <div class="callouts" id="callouts"></div>
+      <div class="grid2">
+        <section class="card"><h2>By water</h2><div class="tbl-wrap"><table id="tWater"></table></div></section>
+        <section class="card"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
+        <section class="card"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
+        <section class="card"><h2>By lure</h2><div class="tbl-wrap"><table id="tLure"></table></div></section>
+      </div>
+    </div>
+
+    <div id="panel-log" role="tabpanel" hidden>
+      <div class="filters">
+        <select id="fWater" aria-label="Filter by water"></select>
+        <select id="fSpecies" aria-label="Filter by species"></select>
+        <select id="fResult" aria-label="Filter by result"><option value="">All trips</option><option value="fish">Caught fish</option><option value="skunk">Skunked</option></select>
+      </div>
+      <div class="entries" id="entries"></div>
+    </div>
+  </div>
+  <div class="foot">Firetiger Fishing Log · Your data stays on this device. Back it up from Settings.</div>
+</div>
+
+<!-- Trip form -->
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <form class="sheet-in" id="form" novalidate>
+    <h2 id="sheetTitle">Log a trip</h2>
+    <div class="row">
+      <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
+      <label class="field"><span class="label">Start</span><input type="time" id="fStart"></label>
+      <label class="field"><span class="label">End</span><input type="time" id="fEnd"></label>
+    </div>
+    <div class="row">
+      <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Keswick River" autocomplete="off" required></label>
+      <label class="field"><span class="label">Spot</span><input id="fSpot" list="dlSpot" placeholder="Fallen tree by the island" autocomplete="off"></label>
+    </div>
+    <div class="loc-row"><button type="button" class="btn" id="pinLoc">Pin my location</button><span id="locText"></span></div>
+    <div class="row">
+      <label class="field"><span class="label" id="tloLabel">Temp low</span><input type="number" id="fTlo" inputmode="decimal" step="1"></label>
+      <label class="field"><span class="label" id="thiLabel">Temp high</span><input type="number" id="fThi" inputmode="decimal" step="1" placeholder="same"></label>
+      <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="Medium spinning" autocomplete="off"></label>
+    </div>
+    <div class="field"><span class="label">Method</span><div class="seg" id="segMethod"><button type="button" data-v="Spin" aria-pressed="true">Spin</button><button type="button" data-v="Bait" aria-pressed="false">Bait</button><button type="button" data-v="Fly" aria-pressed="false">Fly</button><button type="button" data-v="Ice" aria-pressed="false">Ice</button><button type="button" data-v="Troll" aria-pressed="false">Troll</button></div></div>
+    <div class="field"><span class="label">Conditions</span><div class="seg" id="segCond"></div></div>
+    <div class="field"><span class="label">Catch (leave empty if skunked)</span>
+      <div id="catchRows" style="display:grid;gap:8px"></div>
+      <button type="button" class="add-catch" id="addCatch">+ Add fish</button>
+    </div>
+    <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='2.5" white curly tail grub'></label>
+    <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="Water high after rain, missed 2 hits on the frog"></textarea></label>
+    <div class="err" id="formErr" hidden></div>
+    <div class="sheet-actions">
+      <div><button type="button" class="btn danger" id="delBtn" hidden>Delete</button><span id="delConfirm" hidden><span style="margin-right:8px">Delete this trip?</span><button type="button" class="btn danger" id="delYes">Yes, delete</button></span></div>
+      <div class="btn-row"><button type="button" class="btn" id="cancelBtn">Cancel</button><button type="submit" class="btn primary" id="saveBtn">Save trip</button></div>
+    </div>
+  </form>
+</div>
+
+<!-- Settings -->
+<div class="sheet" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="sheet-in">
+    <h2 id="setTitle">Settings</h2>
+    <div class="set-group">
+      <label class="field"><span class="label">Your name</span><input id="sName" placeholder="Josh" autocomplete="given-name"></label>
+      <div class="row">
+        <label class="field"><span class="label">Weight &amp; length</span><select id="sUnits"><option value="imperial">lb &amp; inches</option><option value="metric">kg &amp; cm</option></select></label>
+        <label class="field"><span class="label">Temperature</span><select id="sTemp"><option value="C">°C</option><option value="F">°F</option></select></label>
+      </div>
+    </div>
+    <div class="set-group" id="installGroup">
+      <h3>Put it on your home screen</h3>
+      <p id="installHelp">iPhone: tap Share, then “Add to Home Screen”. Android: tap ⋮, then “Add to Home screen” or “Install app”.</p>
+      <div class="btn-row"><button class="btn primary" id="installBtn" type="button" hidden>Install app</button></div>
+    </div>
+    <div class="set-group">
+      <h3>Backup</h3>
+      <p>Your log lives on this phone only. Save a backup file now and then, and use it to move your log to a new phone.</p>
+      <div class="btn-row">
+        <button class="btn" id="exportJson" type="button">Save backup</button>
+        <button class="btn" id="exportCsv" type="button">Export spreadsheet (CSV)</button>
+        <label class="btn" for="importFile" style="cursor:pointer">Restore backup</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <p id="backupMsg" hidden></p>
+    </div>
+    <div class="set-group">
+      <h3>Start over</h3>
+      <div class="btn-row"><button class="btn danger" id="wipeBtn" type="button">Delete all trips</button><span id="wipeConfirm" hidden><span style="margin-right:8px">This can't be undone.</span><button class="btn danger" id="wipeYes" type="button">Yes, delete everything</button></span></div>
+    </div>
+    <div class="sheet-actions"><span></span><button class="btn primary" id="closeSettings" type="button">Done</button></div>
+  </div>
+</div>
+
+<datalist id="dlWater"></datalist><datalist id="dlSpot"></datalist><datalist id="dlCombo"></datalist><datalist id="dlSpecies"></datalist><datalist id="dlLure"></datalist>
+<div class="toast" id="toast" hidden role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
