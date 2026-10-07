@@ -299,3 +299,14 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 .wx-chips{display:flex;gap:6px;flex-wrap:wrap}
 .wx-chips:empty{display:none}
 .wx-chip{font:500 12px/1 var(--f-mono);padding:7px 10px;border-radius:999px;background:var(--grad-soft);border:1px solid var(--line);color:var(--ink)}
+
+/* Species picker */
+.combo{position:relative}
+.combo input{padding-right:44px!important}
+.combo-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;background:none;color:var(--muted);display:grid;place-items:center;border-radius:8px}
+.combo-btn:hover{color:var(--ink);background:var(--glass-2)}
+.combo-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:5;max-height:280px;overflow-y:auto;overscroll-behavior:contain;background:var(--solid);border:1px solid var(--line-2);border-radius:14px;padding:6px;box-shadow:0 16px 40px -12px rgba(0,0,0,.55)}
+.combo-group{font:500 10.5px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 10px 6px}
+.combo-opt{display:block;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:11px 10px;font-size:15px;color:var(--ink)}
+.combo-opt:hover,.combo-opt:focus-visible{background:var(--glass-2)}
+.combo-opt.custom{color:var(--v);font-weight:600}

@@ -2,7 +2,18 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const SPECIES = ["Smallmouth bass","Largemouth bass","Brook trout","Rainbow trout","Brown trout","Lake trout","Atlantic salmon","Walleye","Northern pike","Pickerel","Muskie","Yellow perch","Perch","Crappie","Bluegill","Rock bass","Pumpkinseed","Chub","Striped bass","Catfish","Carp","Shad"];
+// Common North American sport fish, grouped for the species picker. People can still type anything.
+const SPECIES_GROUPS = [
+  ["Bass", ["Smallmouth bass", "Largemouth bass", "Spotted bass", "Striped bass", "White bass", "Rock bass"]],
+  ["Trout, salmon & char", ["Brook trout", "Rainbow trout", "Brown trout", "Lake trout", "Cutthroat trout", "Steelhead", "Atlantic salmon", "Chinook salmon", "Coho salmon", "Sockeye salmon", "Pink salmon", "Arctic char", "Splake"]],
+  ["Pike & muskie", ["Northern pike", "Muskie", "Tiger muskie", "Pickerel"]],
+  ["Walleye & perch", ["Walleye", "Sauger", "Yellow perch", "White perch"]],
+  ["Panfish", ["Bluegill", "Pumpkinseed", "Black crappie", "White crappie", "Redear sunfish", "Green sunfish"]],
+  ["Catfish", ["Channel catfish", "Blue catfish", "Flathead catfish", "Bullhead"]],
+  ["Other freshwater", ["Common carp", "Chub", "Fallfish", "Freshwater drum", "Lake whitefish", "Burbot", "Bowfin", "Gar", "Sturgeon", "American shad"]],
+  ["Saltwater", ["Striped bass", "Bluefish", "Mackerel", "Red drum", "Snook", "Tarpon", "Atlantic cod", "Halibut", "Flounder"]],
+];
+const SPECIES = [...new Set(SPECIES_GROUPS.flatMap(g => g[1]))];
 const LURES = ["Curly tail grub","Chatterbait","Spinnerbait","Crankbait","Jerkbait","Paddle tail","Swimbait","Wacky worm","Ned rig","Drop shot","Texas rig","Tube","Jig","Inline spinner","Spoon","Topwater frog","Popper","Walking bait","Live bait","Worm","Dry fly","Nymph","Streamer","Wet fly"];
 const CONDS = ["Sunny","Overcast","Rain","Windy","Calm","High water","Low water","Warm water","Cold front"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -298,7 +309,7 @@ $("seasonSel").addEventListener("change", () => { state.settings.season = $("sea
 let editingId = null, pinned = null;
 function catchRow(c = {}) {
   const d = document.createElement("div"); d.className = "catch-row";
-  d.innerHTML = `<label class="field sp"><span class="label">Species</span><input class="c-sp" list="dlSpecies" autocomplete="off" value="${esc(c.species || "")}" placeholder="Smallmouth bass"></label>
+  d.innerHTML = `<div class="field sp"><span class="label">Species</span><div class="combo"><input class="c-sp" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(c.species || "")}" placeholder="Type or pick a fish" aria-label="Species"><button type="button" class="combo-btn" aria-label="Show fish list" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="combo-list" role="listbox" hidden></div></div></div>
   <label class="field"><span class="label">Count</span><input class="c-n" type="number" min="1" inputmode="numeric" value="${esc(c.count || 1)}"></label>
   <label class="field"><span class="label">${wU()} each</span><input class="c-lb" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(wtOut(c.lb) ?? "")}"></label>
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
@@ -306,6 +317,7 @@ function catchRow(c = {}) {
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
   <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" hidden><span>+ Add photo</span></label><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
+  speciesPicker(d.querySelector(".combo"));
   const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
   const showThumb = url => { thumb.hidden = !url; if (url) tImg.src = url; rm.hidden = !url; btnTxt.textContent = url ? "Change photo" : "+ Add photo"; };
   if (c.photo) { d.dataset.photo = c.photo; photoURL(c.photo).then(showThumb); }
@@ -321,6 +333,36 @@ function catchRow(c = {}) {
   if (c.inches != null) d.dataset.in = c.inches;
   return d;
 }
+/* ---------- species picker: type freely, or open a grouped list of common fish ---------- */
+function recentSpecies() {
+  const n = {}; for (const s of state.sessions) for (const c of s.catches || []) if (c.species) n[c.species] = (n[c.species] || 0) + 1;
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
+}
+function speciesPicker(box) {
+  const input = box.querySelector("input"), list = box.querySelector(".combo-list"), btn = box.querySelector(".combo-btn");
+  const draw = (q = "") => {
+    const ql = q.trim().toLowerCase(), match = s => !ql || s.toLowerCase().includes(ql);
+    const groups = [["Your fish", recentSpecies()], ...SPECIES_GROUPS].map(([g, xs]) => [g, xs.filter(match)]).filter(([, xs]) => xs.length);
+    const exact = ql && [...recentSpecies(), ...SPECIES].some(s => s.toLowerCase() === ql);
+    list.innerHTML = (ql && !exact ? `<button type="button" class="combo-opt custom" data-v="${esc(q.trim())}">Use “${esc(q.trim())}”</button>` : "")
+      + groups.map(([g, xs]) => `<div class="combo-group">${esc(g)}</div>` + xs.map(s => `<button type="button" class="combo-opt" role="option" data-v="${esc(s)}">${esc(s)}</button>`).join("")).join("")
+      || `<div class="combo-group">No match. Keep typing to use your own name.</div>`;
+  };
+  const open = q => { draw(q); list.hidden = false; input.setAttribute("aria-expanded", "true"); };
+  const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); };
+  input.addEventListener("focus", () => open(input.value === "" ? "" : ""));
+  input.addEventListener("input", () => open(input.value));
+  input.addEventListener("blur", () => setTimeout(close, 150));
+  input.addEventListener("keydown", e => {
+    if (e.key === "Escape") { close(); e.stopPropagation(); }
+    if (e.key === "Enter" && !list.hidden) { e.preventDefault(); const first = list.querySelector(".combo-opt"); if (first && input.value.trim()) { input.value = first.dataset.v; close(); } }
+  });
+  btn.addEventListener("pointerdown", e => e.preventDefault());
+  btn.addEventListener("click", () => { if (list.hidden) { open(""); list.scrollTop = 0; } else close(); });
+  list.addEventListener("pointerdown", e => e.preventDefault());
+  list.addEventListener("click", e => { const o = e.target.closest(".combo-opt"); if (!o) return; input.value = o.dataset.v; close(); input.dispatchEvent(new Event("change", { bubbles: true })); });
+}
+
 $("addCatch").onclick = () => {
   const rows = $("catchRows").querySelectorAll(".catch-row"), last = rows[rows.length - 1];
   const r = catchRow({ species: last?.querySelector(".c-sp").value, lure: last?.querySelector(".c-lu").value });
