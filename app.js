@@ -44,6 +44,48 @@ const fmtW = lb => lb == null ? "" : `${wtOut(lb)} ${wU()}`;
 const fmtL = i => i == null ? "" : U() === "metric" ? `${lenOut(i)} cm` : `${i}"`;
 const fmtT = c => c == null ? "" : `${tOut(c)}°${T()}`;
 
+/* ---------- photos (IndexedDB) ---------- */
+// Photos are too big for localStorage, so each one is a JPEG blob in IndexedDB keyed by id; catches store the id.
+let idbP = null;
+function idb() {
+  return idbP ??= new Promise((res, rej) => {
+    const rq = indexedDB.open("firetiger-photos", 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore("photos");
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbDo(mode, fn) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("photos", mode), rq = fn(tx.objectStore("photos"));
+    tx.oncomplete = () => res(rq?.result); tx.onerror = tx.onabort = () => rej(tx.error);
+  });
+}
+const photoPut = (id, blob) => idbDo("readwrite", s => s.put(blob, id));
+const photoGet = id => idbDo("readonly", s => s.get(id));
+const photoDel = ids => ids.length ? idbDo("readwrite", s => { ids.forEach(i => s.delete(i)); }) : Promise.resolve();
+const photoClear = () => idbDo("readwrite", s => s.clear());
+const photoUrls = new Map();
+async function photoURL(id) {
+  if (photoUrls.has(id)) return photoUrls.get(id);
+  const blob = await photoGet(id).catch(() => null); if (!blob) return null;
+  const u = URL.createObjectURL(blob); photoUrls.set(id, u); return u;
+}
+const photoIdsOf = s => (s?.catches || []).map(c => c.photo).filter(Boolean);
+async function shrinkPhoto(file, max = 1600) {
+  let img;
+  try { img = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch (e) { img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
+  const w = img.width, h = img.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("encode")), "image/jpeg", 0.82));
+}
+// Fill every <img data-photo> on the page from storage.
+function hydratePhotos(root = document) {
+  root.querySelectorAll("img[data-photo]:not([src])").forEach(async im => { const u = await photoURL(im.dataset.photo); if (u) im.src = u; else im.closest(".thumb")?.remove(); });
+}
+
 /* ---------- derived ---------- */
 const fishOf = s => (s.catches || []).reduce((a, c) => a + (+c.count || 0), 0);
 const avgT = s => s.tempLow == null ? null : (s.tempLow + (s.tempHigh ?? s.tempLow)) / 2;
@@ -133,8 +175,9 @@ function render() {
 
   const big = []; for (const s of list) for (const c of s.catches || []) if (c.lb || c.inches) big.push({ c, s });
   big.sort((a, b) => (b.c.lb || 0) - (a.c.lb || 0) || (b.c.inches || 0) - (a.c.inches || 0));
-  $("bigFish").innerHTML = `<tr><th>Fish</th><th class="r">${wU()}</th><th class="r">${lU()}</th><th>Where</th><th>Lure</th></tr>` + big.slice(0, 8).map(({ c, s }) => `<tr><td>${esc(c.species)}</td><td class="r">${wtOut(c.lb) ?? "—"}</td><td class="r">${lenOut(c.inches) ?? "—"}</td><td>${esc(s.water)} · ${fmtDate(s.date)}</td><td>${esc(c.lure || "—")}</td></tr>`).join("");
+  $("bigFish").innerHTML = `<tr><th>Fish</th><th class="r">${wU()}</th><th class="r">${lU()}</th><th>Where</th><th>Lure</th></tr>` + big.slice(0, 8).map(({ c, s }) => `<tr><td>${c.photo ? `<button type="button" class="thumb sm" data-view="${esc(s.id)}|${esc(c.photo)}" aria-label="View photo"><img data-photo="${esc(c.photo)}" alt=""></button>` : ""}${esc(c.species)}</td><td class="r">${wtOut(c.lb) ?? "—"}</td><td class="r">${lenOut(c.inches) ?? "—"}</td><td>${esc(s.water)} · ${fmtDate(s.date)}</td><td>${esc(c.lure || "—")}</td></tr>`).join("");
 
+  hydratePhotos($("bigFish"));
   $("notesList").innerHTML = state.notes.length ? state.notes.map(t => `<li>${esc(t)}</li>`).join("") : `<li style="display:block;color:var(--muted)">Write down the patterns you've confirmed on the water. They show up here, next to the numbers.</li>`;
 
   renderPatterns(list); renderLog(); fillLists();
@@ -189,9 +232,11 @@ function renderLog() {
     return `<button class="entry${isPb ? " pb" : ""}" type="button" data-id="${esc(s.id)}"><span class="date"><b>${+s.date.slice(8)}</b><span class="m">${MONTHS[+s.date.slice(5, 7) - 1]}</span><small>${esc(isPeriod(s) || "")}</small></span>
       <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>
       <div class="catch">${esc(catchSummary(s))}${sizes.length ? ` <span class="meta">(${esc(sizes.join(", "))})</span>` : ""}</div>
+      ${photoIdsOf(s).length ? `<span class="thumbs">${(s.catches || []).filter(c => c.photo).map(c => `<span class="thumb" role="button" tabindex="0" data-view="${esc(s.id)}|${esc(c.photo)}" aria-label="View ${esc(c.species)} photo"><img data-photo="${esc(c.photo)}" alt=""></span>`).join("")}</span>` : ""}
       ${s.lureText ? `<div class="lures">${esc(s.lureText)}</div>` : ""}${s.notes ? `<div class="lures"><i>${esc(s.notes)}</i></div>` : ""}</span>
       <span class="tally">${f ? `<b>${f}</b><span>fish</span>` : `<span class="stamp">Skunked</span>`}</span></button>`;
   }).join("") || `<p class="status">No trips match these filters.</p>`;
+  hydratePhotos($("entries"));
 }
 
 function fillLists() {
@@ -225,8 +270,19 @@ function catchRow(c = {}) {
   <label class="field"><span class="label">${wU()} each</span><input class="c-lb" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(wtOut(c.lb) ?? "")}"></label>
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
   <label class="field lu"><span class="label">Lure</span><input class="c-lu" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
-  <button type="button" class="x" aria-label="Remove this fish">✕</button>`;
+  <button type="button" class="x" aria-label="Remove this fish">✕</button>
+  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" hidden><span>+ Add photo</span></label><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
+  const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
+  const showThumb = url => { thumb.hidden = !url; if (url) tImg.src = url; rm.hidden = !url; btnTxt.textContent = url ? "Change photo" : "+ Add photo"; };
+  if (c.photo) { d.dataset.photo = c.photo; photoURL(c.photo).then(showThumb); }
+  d.querySelector(".c-photo input").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    msg.textContent = "Preparing photo…";
+    try { d._photoBlob = await shrinkPhoto(f); d.dataset.photoRemoved = ""; showThumb(URL.createObjectURL(d._photoBlob)); msg.textContent = ""; }
+    catch (err) { msg.textContent = "Couldn't read that image. Try a JPEG or PNG."; }
+  });
+  rm.onclick = () => { d._photoBlob = null; d.dataset.photoRemoved = "1"; showThumb(null); };
   if (c.size) d.dataset.size = c.size;
   if (c.lb != null) d.dataset.lb = c.lb;
   if (c.inches != null) d.dataset.in = c.inches;
@@ -276,24 +332,55 @@ function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("
 $("openNew").onclick = () => openSheet(null);
 $("welcomeNew").onclick = () => openSheet(null);
 $("cancelBtn").onclick = closeSheets; $("scrim").onclick = closeSheets;
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheets(); });
-$("entries").addEventListener("click", e => { const b = e.target.closest(".entry"); if (b) openSheet(state.sessions.find(s => s.id === b.dataset.id)); });
-$("delBtn").onclick = () => { $("delBtn").hidden = true; $("delConfirm").hidden = false; };
-$("delYes").onclick = () => { state.sessions = state.sessions.filter(s => s.id !== editingId); save(); closeSheets(); render(); toast("Trip deleted"); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("viewer").hidden) closeViewer(); else closeSheets(); } });
+$("entries").addEventListener("click", e => {
+  const v = e.target.closest("[data-view]"); if (v) { e.stopPropagation(); openViewer(v.dataset.view); return; }
+  const b = e.target.closest(".entry"); if (b) openSheet(state.sessions.find(s => s.id === b.dataset.id));
+});
+$("entries").addEventListener("keydown", e => { const v = e.target.closest("[data-view]"); if (v && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openViewer(v.dataset.view); } });
+$("bigFish").addEventListener("click", e => { const v = e.target.closest("[data-view]"); if (v) openViewer(v.dataset.view); });
 
-$("form").addEventListener("submit", e => {
+/* ---------- photo viewer ---------- */
+async function openViewer(key) {
+  const [sid, pid] = key.split("|"), s = state.sessions.find(x => x.id === sid), c = s?.catches.find(x => x.photo === pid);
+  const u = await photoURL(pid); if (!u) { toast("Photo not found on this device"); return; }
+  $("viewerImg").src = u;
+  $("viewerCap").textContent = [c?.species, c ? sizeOf(c) : "", c?.lure, s ? `${s.water} · ${fmtDate(s.date)}` : ""].filter(Boolean).join(" · ");
+  $("viewer").hidden = false; $("viewerClose").focus();
+}
+const closeViewer = () => { $("viewer").hidden = true; };
+$("viewerClose").onclick = closeViewer;
+$("viewer").addEventListener("click", e => { if (e.target === $("viewer")) closeViewer(); });
+$("delBtn").onclick = () => { $("delBtn").hidden = true; $("delConfirm").hidden = false; };
+$("delYes").onclick = () => {
+  const gone = photoIdsOf(state.sessions.find(s => s.id === editingId));
+  state.sessions = state.sessions.filter(s => s.id !== editingId); save(); closeSheets(); render(); toast("Trip deleted");
+  photoDel(gone).catch(() => {});
+};
+
+$("form").addEventListener("submit", async e => {
   e.preventDefault(); $("formErr").hidden = true;
   const date = $("fDate").value, water = $("fWaterIn").value.trim();
   if (!date || !water) { $("formErr").hidden = false; $("formErr").textContent = "Add a date and the water you fished."; return; }
   const num = v => v === "" || v == null ? null : Number(v);
-  const catches = [...$("catchRows").querySelectorAll(".catch-row")].map(row => {
+  const rowsEl = [...$("catchRows").querySelectorAll(".catch-row")].filter(row => row.querySelector(".c-sp").value.trim());
+  // Save any new photos first; a catch keeps its old photo unless it was removed or replaced.
+  $("saveBtn").disabled = true;
+  try {
+    for (const row of rowsEl) if (row._photoBlob) { const id = `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`; await photoPut(id, row._photoBlob); row._photoBlob = null; row.dataset.newPhoto = id; }
+  } catch (err) {
+    $("saveBtn").disabled = false; $("formErr").hidden = false; $("formErr").textContent = "Couldn't save the photo. Your phone may be out of storage."; return;
+  }
+  $("saveBtn").disabled = false;
+  const catches = rowsEl.map(row => {
     const lbV = num(row.querySelector(".c-lb").value), inV = num(row.querySelector(".c-in").value);
     // keep stored precision if the shown value wasn't changed
     const lb = row.dataset.lb != null && lbV === wtOut(+row.dataset.lb) ? +row.dataset.lb : wtIn(lbV);
     const inches = row.dataset.in != null && inV === lenOut(+row.dataset.in) ? +row.dataset.in : lenIn(inV);
     const unchanged = row.dataset.lb != null ? lb === +row.dataset.lb : lb == null;
-    return { species: row.querySelector(".c-sp").value.trim(), count: Math.max(1, parseInt(row.querySelector(".c-n").value) || 1), lb, inches, lure: row.querySelector(".c-lu").value.trim() || null, size: unchanged ? row.dataset.size || null : null };
-  }).filter(c => c.species);
+    return { species: row.querySelector(".c-sp").value.trim(), count: Math.max(1, parseInt(row.querySelector(".c-n").value) || 1), lb, inches, lure: row.querySelector(".c-lu").value.trim() || null, size: unchanged ? row.dataset.size || null : null,
+      photo: row.dataset.newPhoto || (row.dataset.photoRemoved ? null : row.dataset.photo || null) };
+  });
   const tlo = num($("fTlo").value), thi = num($("fThi").value);
   const start = $("fStart").value || null, end = $("fEnd").value || null;
   const prev = state.sessions.find(s => s.id === editingId);
@@ -311,6 +398,7 @@ $("form").addEventListener("submit", e => {
   };
   if (prev) state.sessions = state.sessions.map(s => s.id === prev.id ? doc : s); else state.sessions.push(doc);
   if (!save()) return;
+  const kept = new Set(photoIdsOf(doc)); photoDel(photoIdsOf(prev).filter(id => !kept.has(id))).catch(() => {});
   state.settings.season = date.slice(0, 4); save();
   closeSheets(); render();
   const fc = catches.reduce((a, c) => a + c.count, 0);
@@ -358,15 +446,20 @@ function download(name, text, type) {
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 const stamp = () => new Date().toISOString().slice(0, 10);
-$("exportJson").onclick = () => download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "firetiger", version: 1, exportedAt: new Date().toISOString(), ...state }, null, 1), "application/json");
+const toDataURL = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+$("exportJson").onclick = async () => {
+  const photos = {};
+  for (const id of state.sessions.flatMap(photoIdsOf)) { const b = await photoGet(id).catch(() => null); if (b) photos[id] = await toDataURL(b); }
+  download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "firetiger", version: 2, exportedAt: new Date().toISOString(), ...state, photos }), "application/json");
+};
 $("exportCsv").onclick = () => {
   const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const rows = [["Date", "Start", "End", "Water", "Spot", "Latitude", "Longitude", "Temp low (°C)", "Temp high (°C)", "Method", "Conditions", "Combo", "Species", "Count", "Weight each (lb)", "Length (in)", "Lure", "Lures used", "Notes"]];
+  const rows = [["Date", "Start", "End", "Water", "Spot", "Latitude", "Longitude", "Temp low (°C)", "Temp high (°C)", "Method", "Conditions", "Combo", "Species", "Count", "Weight each (lb)", "Length (in)", "Lure", "Has photo", "Lures used", "Notes"]];
   for (const s of [...state.sessions].sort((a, b) => a.date.localeCompare(b.date))) {
     const base = [s.date, s.start, s.end, s.water, s.spot, s.lat, s.lon, s.tempLow, s.tempHigh, s.method, (s.conditions || []).join("; "), s.combo];
     const tail = [s.lureText, s.notes];
-    if (!(s.catches || []).length) rows.push([...base, "(skunked)", 0, "", "", "", ...tail]);
-    for (const c of s.catches || []) rows.push([...base, c.species, c.count, c.lb, c.inches, c.lure, ...tail]);
+    if (!(s.catches || []).length) rows.push([...base, "(skunked)", 0, "", "", "", "", ...tail]);
+    for (const c of s.catches || []) rows.push([...base, c.species, c.count, c.lb, c.inches, c.lure, c.photo ? "yes" : "", ...tail]);
   }
   download(`fishing-log-${stamp()}.csv`, rows.map(r => r.map(q).join(",")).join("\n"), "text/csv");
 };
@@ -379,6 +472,7 @@ $("importFile").addEventListener("change", async e => {
     let added = 0;
     for (const s of data.sessions) { if (!s || !s.id || !s.date || !s.water) continue; if (!byId.has(s.id)) added++; byId.set(s.id, s); }
     state.sessions = [...byId.values()];
+    if (data.photos && typeof data.photos === "object") for (const [id, url] of Object.entries(data.photos)) { if (typeof url === "string" && url.startsWith("data:image/")) await photoPut(id, await (await fetch(url)).blob()); }
     if (Array.isArray(data.notes) && !state.notes.length) state.notes = data.notes.filter(x => typeof x === "string");
     save(); render();
     $("backupMsg").hidden = false; $("backupMsg").textContent = `Restored. ${added} new trip${added === 1 ? "" : "s"} added.`;
@@ -388,7 +482,7 @@ $("importFile").addEventListener("change", async e => {
   e.target.value = "";
 });
 $("wipeBtn").onclick = () => { $("wipeBtn").hidden = true; $("wipeConfirm").hidden = false; };
-$("wipeYes").onclick = () => { state.sessions = []; state.notes = []; save(); closeSheets(); render(); toast("All trips deleted"); };
+$("wipeYes").onclick = () => { state.sessions = []; state.notes = []; save(); photoClear().catch(() => {}); photoUrls.clear(); closeSheets(); render(); toast("All trips deleted"); };
 
 /* ---------- install ---------- */
 let installEvt = null;

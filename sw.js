@@ -1,5 +1,5 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "firetiger-v1";
+const VERSION = "firetiger-v2";
 const APP = ["./", "index.html", "styles.css", "app.js", "sample.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

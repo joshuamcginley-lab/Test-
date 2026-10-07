@@ -145,7 +145,7 @@
     </div>
     <div class="set-group">
       <h3>Backup</h3>
-      <p>Your log lives on this phone only. Save a backup file now and then, and use it to move your log to a new phone.</p>
+      <p>Your log lives on this phone only. Save a backup file now and then, and use it to move your log to a new phone. Backups include your photos.</p>
       <div class="btn-row">
         <button class="btn" id="exportJson" type="button">Save backup</button>
         <button class="btn" id="exportCsv" type="button">Export spreadsheet (CSV)</button>
@@ -163,6 +163,10 @@
 </div>
 
 <datalist id="dlWater"></datalist><datalist id="dlSpot"></datalist><datalist id="dlCombo"></datalist><datalist id="dlSpecies"></datalist><datalist id="dlLure"></datalist>
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Fish photo">
+  <figure><img id="viewerImg" alt=""><figcaption id="viewerCap"></figcaption></figure>
+  <button type="button" class="btn primary" id="viewerClose">Close</button>
+</div>
 <div class="toast" id="toast" hidden role="status"></div>
 <script src="app.js"></script>
 </body>
