@@ -195,7 +195,7 @@ function render() {
     let g = ""; const step = Math.max(1, Math.round(max / 4));
     for (let v = 0; v <= max; v += step) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="Geist Mono,monospace">${v}</text>`;
     mk.forEach((m, i) => { const rt = rate[i], x = P.l + i * bw + bw * .18, w = bw * .64; g += `<rect x="${x}" y="${y(rt)}" width="${w}" height="${H - P.b - y(rt)}" rx="6" fill="url(#barGrad)"/><text x="${x + w / 2}" y="${y(rt) - 6}" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="Geist Mono,monospace">${rt.toFixed(1)}</text><text x="${x + w / 2}" y="${H - 10}" text-anchor="middle" font-size="12" fill="var(--muted)">${MONTHS[m - 1]} (${months[m].n})</text>`; });
-    $("monthChart").innerHTML = `<svg class="month-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fish per trip by month"><defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--c)"/><stop offset="1" style="stop-color:var(--v)"/></linearGradient></defs>${g}</svg><p class="label" style="margin:6px 0 0">Trips per month in brackets</p>`;
+    $("monthChart").innerHTML = `<svg class="month-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fish per trip by month"><defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--v)"/><stop offset="1" style="stop-color:var(--m)"/></linearGradient></defs>${g}</svg><p class="label" style="margin:6px 0 0">Trips per month in brackets</p>`;
   }
 
   const big = []; for (const s of list) for (const c of s.catches || []) if (c.lb || c.inches) big.push({ c, s });

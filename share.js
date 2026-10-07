@@ -79,15 +79,15 @@ function readCatchLink() {
 
 function roundRect(ctx, x, y, w, h, rad) { ctx.beginPath(); ctx.moveTo(x + rad, y); ctx.arcTo(x + w, y, x + w, y + h, rad); ctx.arcTo(x + w, y + h, x, y + h, rad); ctx.arcTo(x, y + h, x, y, rad); ctx.arcTo(x, y, x + w, y, rad); ctx.closePath(); }
 function glow(ctx, x, y, rad, color) { const g = ctx.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, color); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
-function gradH(ctx, x0, x1) { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#8B6CFF"); g.addColorStop(.55, "#22D3EE"); g.addColorStop(1, "#34F5C5"); return g; }
+function gradH(ctx, x0, x1) { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#C4FF2E"); g.addColorStop(.45, "#7DEB3A"); g.addColorStop(.75, "#FFB21A"); g.addColorStop(1, "#FF6A13"); return g; }
 
 async function renderCard(cv, d) {
   const W = 1080, H = 1350, ctx = cv.getContext("2d");
   cv.width = W; cv.height = H;
   try { await Promise.all(["700 120px Geist", "500 30px 'Geist Mono'", "500 36px Geist"].map(f => document.fonts.load(f))); } catch (e) {}
   const SANS = "Geist, ui-sans-serif, system-ui, sans-serif", MONO = "'Geist Mono', ui-monospace, monospace";
-  ctx.fillStyle = "#09090B"; ctx.fillRect(0, 0, W, H);
-  glow(ctx, 180, 160, 620, "rgba(139,108,255,.38)"); glow(ctx, 900, 260, 560, "rgba(34,211,238,.24)"); glow(ctx, 600, 1200, 600, "rgba(52,245,197,.12)");
+  ctx.fillStyle = "#070A14"; ctx.fillRect(0, 0, W, H);
+  glow(ctx, 180, 160, 620, "rgba(155,240,60,.26)"); glow(ctx, 900, 260, 560, "rgba(255,122,26,.26)"); glow(ctx, 600, 1200, 600, "rgba(196,255,46,.08)");
 
   // header: wordmark + beta pill
   const pad = 64;
@@ -95,10 +95,10 @@ async function renderCard(cv, d) {
   ctx.save(); roundRect(ctx, pad, 50, 48, 48, 12); ctx.clip();
   if (mark) ctx.drawImage(mark, pad, 50, 48, 48); else { ctx.fillStyle = gradH(ctx, pad, pad + 48); ctx.fillRect(pad, 50, 48, 48); }
   ctx.restore();
-  ctx.fillStyle = "#EDEDF3"; ctx.font = `650 34px ${SANS}`; ctx.fillText("fishr", pad + 60, 86);
+  ctx.fillStyle = "#EEF2E8"; ctx.font = `650 34px ${SANS}`; ctx.fillText("fishr", pad + 60, 86);
   let wx = pad + 60 + ctx.measureText("fishr").width; ctx.fillStyle = "#8C8CA0"; ctx.fillText(".ai", wx, 86);
-  wx += ctx.measureText(".ai").width + 16; ctx.strokeStyle = "rgba(34,211,238,.5)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
-  ctx.fillStyle = "#22D3EE"; ctx.font = `500 16px ${MONO}`; ctx.fillText("BETA", wx + 15, 82);
+  wx += ctx.measureText(".ai").width + 16; ctx.strokeStyle = "rgba(155,240,60,.55)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
+  ctx.fillStyle = "#9BF03C"; ctx.font = `500 16px ${MONO}`; ctx.fillText("BETA", wx + 15, 82);
 
   // photo panel
   const px = pad, py = 128, pw = W - pad * 2, ph = 640;
@@ -107,8 +107,8 @@ async function renderCard(cv, d) {
   ctx.save(); roundRect(ctx, px, py, pw, ph, 36); ctx.clip();
   if (img) cover(ctx, img, px, py, pw, ph);
   else {
-    ctx.fillStyle = "#101016"; ctx.fillRect(px, py, pw, ph);
-    glow(ctx, px + pw * .3, py + ph * .35, 520, "rgba(139,108,255,.55)"); glow(ctx, px + pw * .75, py + ph * .6, 480, "rgba(34,211,238,.4)"); glow(ctx, px + pw * .5, py + ph, 420, "rgba(52,245,197,.25)");
+    ctx.fillStyle = "#0D111D"; ctx.fillRect(px, py, pw, ph);
+    glow(ctx, px + pw * .3, py + ph * .35, 520, "rgba(155,240,60,.30)"); glow(ctx, px + pw * .75, py + ph * .6, 480, "rgba(255,122,26,.32)"); glow(ctx, px + pw * .5, py + ph, 420, "rgba(196,255,46,.12)");
     const big = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = "icons/mark-512.png"; });
     if (big) ctx.drawImage(big, px + pw / 2 - 210, py + ph / 2 - 210, 420, 420);
   }

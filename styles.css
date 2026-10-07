@@ -2,45 +2,45 @@
    Layout: aurora-glow header with gradient wordmark and glass stat tiles, pill tab switcher, glass cards below.
    Dark-first; light values under prefers-color-scheme: light. */
 :root{
-  --bg:#09090B; --bg-2:#101016; --glass:rgba(255,255,255,.035); --glass-2:rgba(255,255,255,.06); --solid:#131319;
+  --bg:#070A14; --bg-2:#0D111D; --glass:rgba(255,255,255,.035); --glass-2:rgba(255,255,255,.065); --solid:#0F1322;
   --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16);
-  --ink:#EDEDF3; --muted:#8C8CA0; --faint:#5E5E72;
-  --v:#8B6CFF; --c:#22D3EE; --m:#34F5C5;
-  --grad:linear-gradient(120deg,#8B6CFF 0%,#22D3EE 55%,#34F5C5 100%);
-  --grad-soft:linear-gradient(120deg,rgba(139,108,255,.18),rgba(34,211,238,.12) 55%,rgba(52,245,197,.12));
-  --good:#34F5C5; --warn:#FBBF24; --bad:#FB7185; --bad-soft:rgba(251,113,133,.12);
-  --on-grad:#07070A; --glow:0 0 0 1px rgba(139,108,255,.25),0 12px 40px -12px rgba(139,108,255,.45);
-  --scrim:rgba(4,4,8,.66);
+  --ink:#EEF2E8; --muted:#8D96A3; --faint:#5C6573;
+  --v:#C4FF2E; --c:#9BF03C; --m:#FF7A1A;
+  --grad:linear-gradient(120deg,#C4FF2E 0%,#7DEB3A 40%,#FFB21A 75%,#FF6A13 100%);
+  --grad-soft:linear-gradient(120deg,rgba(196,255,46,.16),rgba(255,122,26,.12));
+  --good:#9BF03C; --warn:#FFB21A; --bad:#FF5470; --bad-soft:rgba(255,84,112,.12);
+  --on-grad:#0B1004; --glow:0 0 0 1px rgba(155,240,60,.28),0 12px 40px -12px rgba(255,122,26,.45);
+  --scrim:rgba(3,5,10,.68);
   --f-body:"Geist",ui-sans-serif,system-ui,sans-serif;
   --f-mono:"Geist Mono",ui-monospace,SFMono-Regular,monospace;
   --r:16px; color-scheme:dark;
 }
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
-  --bg:#FAFAFC; --bg-2:#F2F2F7; --glass:rgba(255,255,255,.75); --glass-2:#FFFFFF; --solid:#FFFFFF;
-  --line:rgba(12,12,30,.09); --line-2:rgba(12,12,30,.18);
-  --ink:#0B0B12; --muted:#5E5E72; --faint:#9A9AAE;
-  --v:#6D4AFF; --c:#0891B2; --m:#059669;
-  --grad:linear-gradient(120deg,#6D4AFF 0%,#0891B2 60%,#059669 100%);
-  --grad-soft:linear-gradient(120deg,rgba(109,74,255,.10),rgba(8,145,178,.08) 55%,rgba(5,150,105,.08));
-  --good:#059669; --warn:#B45309; --bad:#E11D48; --bad-soft:rgba(225,29,72,.08);
-  --on-grad:#FFFFFF; --glow:0 0 0 1px rgba(109,74,255,.18),0 12px 32px -14px rgba(109,74,255,.35);
-  --scrim:rgba(20,20,40,.35); color-scheme:light}}
+  --bg:#F8FAF4; --bg-2:#EFF3E8; --glass:rgba(255,255,255,.78); --glass-2:#FFFFFF; --solid:#FFFFFF;
+  --line:rgba(14,22,10,.09); --line-2:rgba(14,22,10,.18);
+  --ink:#0C1208; --muted:#5A6455; --faint:#9AA394;
+  --v:#4E9A00; --c:#3F8A00; --m:#E2570B;
+  --grad:linear-gradient(120deg,#5BB300 0%,#3F9A12 40%,#E08A00 75%,#E2570B 100%);
+  --grad-soft:linear-gradient(120deg,rgba(91,179,0,.10),rgba(226,87,11,.08));
+  --good:#3F8A00; --warn:#B45309; --bad:#E11D48; --bad-soft:rgba(225,29,72,.08);
+  --on-grad:#FFFFFF; --glow:0 0 0 1px rgba(91,179,0,.22),0 12px 32px -14px rgba(226,87,11,.35);
+  --scrim:rgba(20,30,10,.35); color-scheme:light}}
 :root[data-theme="light"]{
-  --bg:#FAFAFC; --bg-2:#F2F2F7; --glass:rgba(255,255,255,.75); --glass-2:#FFFFFF; --solid:#FFFFFF;
-  --line:rgba(12,12,30,.09); --line-2:rgba(12,12,30,.18);
-  --ink:#0B0B12; --muted:#5E5E72; --faint:#9A9AAE;
-  --v:#6D4AFF; --c:#0891B2; --m:#059669;
-  --grad:linear-gradient(120deg,#6D4AFF 0%,#0891B2 60%,#059669 100%);
-  --grad-soft:linear-gradient(120deg,rgba(109,74,255,.10),rgba(8,145,178,.08) 55%,rgba(5,150,105,.08));
-  --good:#059669; --warn:#B45309; --bad:#E11D48; --bad-soft:rgba(225,29,72,.08);
-  --on-grad:#FFFFFF; --glow:0 0 0 1px rgba(109,74,255,.18),0 12px 32px -14px rgba(109,74,255,.35);
-  --scrim:rgba(20,20,40,.35); color-scheme:light}
+  --bg:#F8FAF4; --bg-2:#EFF3E8; --glass:rgba(255,255,255,.78); --glass-2:#FFFFFF; --solid:#FFFFFF;
+  --line:rgba(14,22,10,.09); --line-2:rgba(14,22,10,.18);
+  --ink:#0C1208; --muted:#5A6455; --faint:#9AA394;
+  --v:#4E9A00; --c:#3F8A00; --m:#E2570B;
+  --grad:linear-gradient(120deg,#5BB300 0%,#3F9A12 40%,#E08A00 75%,#E2570B 100%);
+  --grad-soft:linear-gradient(120deg,rgba(91,179,0,.10),rgba(226,87,11,.08));
+  --good:#3F8A00; --warn:#B45309; --bad:#E11D48; --bad-soft:rgba(225,29,72,.08);
+  --on-grad:#FFFFFF; --glow:0 0 0 1px rgba(91,179,0,.22),0 12px 32px -14px rgba(226,87,11,.35);
+  --scrim:rgba(20,30,10,.35); color-scheme:light}
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-top:env(safe-area-inset-top,0px);padding-bottom:96px;-webkit-font-smoothing:antialiased;position:relative;min-height:100vh}
 body::before{content:"";position:fixed;inset:-20vh -10vw auto -10vw;height:70vh;pointer-events:none;z-index:-1;
-  background:radial-gradient(40% 50% at 20% 30%,rgba(139,108,255,.28),transparent 70%),radial-gradient(35% 45% at 75% 20%,rgba(34,211,238,.18),transparent 70%),radial-gradient(30% 40% at 55% 60%,rgba(52,245,197,.10),transparent 70%);filter:blur(10px)}
+  background:radial-gradient(40% 50% at 18% 28%,rgba(155,240,60,.20),transparent 70%),radial-gradient(35% 45% at 78% 18%,rgba(255,122,26,.20),transparent 70%),radial-gradient(30% 40% at 55% 62%,rgba(196,255,46,.08),transparent 70%);filter:blur(10px)}
 [hidden]{display:none!important}
 .wrap{max-width:1080px;margin:0 auto;padding-inline:16px}
 h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.02em;line-height:1.1;text-wrap:balance}
@@ -70,7 +70,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .season-pick label{font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .season-pick select{font:500 13px/1 var(--f-mono);background:var(--glass);color:var(--ink);border:1px solid var(--line-2);padding:7px 10px;border-radius:999px}
 .btn-log{border:0;border-radius:999px;padding:12px 20px;font:600 15px/1 var(--f-body);color:var(--on-grad);background:var(--grad);box-shadow:var(--glow);transition:transform .15s,box-shadow .15s;white-space:nowrap}
-.btn-log:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(139,108,255,.4),0 16px 48px -12px rgba(34,211,238,.5)}
+.btn-log:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(155,240,60,.45),0 16px 48px -12px rgba(255,122,26,.55)}
 .icon-btn{width:42px;height:42px;border-radius:12px;border:1px solid var(--line-2);background:var(--glass);color:var(--ink);display:grid;place-items:center}
 .icon-btn svg{width:19px;height:19px}
 .board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -82,7 +82,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .stat .d{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .stat.pb{border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box}
 .stat.pb .v{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.tiger{height:1px;max-width:1080px;margin:0 auto;background:linear-gradient(90deg,transparent,var(--v),var(--c),var(--m),transparent);opacity:.6}
+.tiger{height:1px;max-width:1080px;margin:0 auto;background:linear-gradient(90deg,transparent,var(--v),var(--m),transparent);opacity:.6}
 
 /* ---------- tabs ---------- */
 nav.tabs{display:inline-flex;gap:2px;margin-block:22px 20px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--glass);max-width:100%;overflow-x:auto;scrollbar-width:none}
@@ -170,13 +170,13 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-varia
 /* ---------- copilot ---------- */
 .verdict{position:relative;padding:22px 20px 20px;display:grid;gap:12px;margin-bottom:14px;border-radius:20px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow)}
 .verdict::before{content:"✦ fishr Copilot";font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.verdict.slow{background:linear-gradient(var(--solid),var(--solid)) padding-box,linear-gradient(120deg,var(--bad),var(--warn)) border-box;box-shadow:none}
+.verdict.slow{background:linear-gradient(var(--solid),var(--solid)) padding-box,linear-gradient(120deg,var(--bad),#FF7A1A) border-box;box-shadow:none}
 .verdict h3{font-size:clamp(28px,6vw,46px);font-weight:700;letter-spacing:-.04em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.05;padding-bottom:2px}
-.verdict.slow h3{background:linear-gradient(120deg,var(--bad),var(--warn));-webkit-background-clip:text;background-clip:text}
+.verdict.slow h3{background:linear-gradient(120deg,var(--bad),#FF7A1A);-webkit-background-clip:text;background-clip:text}
 .verdict.locked h3{font-size:clamp(20px,4.5vw,28px);color:var(--ink);background:none;-webkit-background-clip:initial;background-clip:initial}
 .verdict p{margin:0;font-size:16px;max-width:62ch;color:var(--ink)}
 .v-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.v-say b{color:var(--c)}
+.v-say b{color:var(--v)}
 .v-tips{list-style:none;margin:2px 0 0;padding:0;display:flex;gap:10px;flex-wrap:wrap}
 .v-tips li{display:grid;gap:4px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--glass);font-weight:500}
 .v-warn{font-size:14px!important;color:var(--warn)!important;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent)}
