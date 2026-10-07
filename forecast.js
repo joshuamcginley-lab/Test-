@@ -94,14 +94,18 @@ async function loadWeather(useGps) {
   if (!where) { msg.textContent = "Allow location, or pin a spot on a trip, to pull the weather. You can also type the temperature."; return; }
   msg.textContent = "Syncing live conditions…";
   try {
-    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,weather_code,pressure_msl&hourly=temperature_2m,weather_code,pressure_msl&past_days=1&forecast_days=2&timezone=auto`;
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,pressure_msl,wind_speed_10m,precipitation,precipitation_probability&daily=sunrise,sunset&past_days=2&forecast_days=2&timezone=auto`;
     const [d, flow] = await Promise.all([(await fetch(u)).json(), typeof fetchWater === "function" ? fetchWater(where.lat, where.lon).catch(() => null) : null]);
     const nowIdx = d.hourly.time.findIndex(t => new Date(t) > new Date()) - 1;
     const p0 = d.current.pressure_msl, p3 = nowIdx >= 3 ? d.hourly.pressure_msl[nowIdx - 3] : null;
     const press = p0 != null && p3 != null ? (p0 - p3 >= 1 ? "Rising" : p0 - p3 <= -1 ? "Falling" : "Steady") : null;
     wx = {
-      ...where, current: { temp: d.current.temperature_2m, sky: skyFromCode(d.current.weather_code), p: p0 == null ? null : Math.round(p0), press }, flow,
-      hourly: d.hourly.time.map((t, i) => ({ time: new Date(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]) })),
+      ...where, current: { temp: d.current.temperature_2m, sky: skyFromCode(d.current.weather_code), p: p0 == null ? null : Math.round(p0), press,
+        dp3: p0 != null && p3 != null ? r(p0 - p3, 1) : null, feels: d.current.apparent_temperature, hum: d.current.relative_humidity_2m, cloud: d.current.cloud_cover,
+        wind: d.current.wind_speed_10m, gust: d.current.wind_gusts_10m, dir: d.current.wind_direction_10m, code: d.current.weather_code }, flow,
+      hourly: d.hourly.time.map((t, i) => ({ time: new Date(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]), p: d.hourly.pressure_msl?.[i], wind: d.hourly.wind_speed_10m?.[i], rain: d.hourly.precipitation?.[i], pop: d.hourly.precipitation_probability?.[i] })),
+      sun: (d.daily?.sunrise || []).map((s, i) => ({ rise: new Date(s), set: new Date(d.daily.sunset[i]) })),
+      updated: new Date(),
     };
     const now = new Date();
     $("aTemp").value = tOut(r(wx.current.temp, 0));
@@ -112,7 +116,8 @@ async function loadWeather(useGps) {
     segSet($("aFlow"), flow ? [flow.status] : []);
     msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
     renderAdvice();
-  } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; }
+    if (typeof renderLive === "function") renderLive();
+  } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; if (typeof renderLive === "function") renderLive("error"); }
 }
 const isoDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 

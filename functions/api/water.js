@@ -72,6 +72,10 @@ export async function onRequestGet({ request }) {
     const dayAgo = series.reduce((best, o) => Math.abs(o.t - (last.t - DAY)) < Math.abs(best.t - (last.t - DAY)) ? o : best, series[0]);
     const change = dayAgo.v ? (last.v - dayAgo.v) / Math.abs(dayAgo.v) : 0;
     const latest = obs[obs.length - 1];
+    // 4-hour averages for the app's sparkline (about 84 points over 14 days).
+    const buckets = new Map();
+    for (const o of series) { const k = Math.floor(o.t / (4 * 3600e3)); const b = buckets.get(k) || { t: k * 4 * 3600e3, s: 0, n: 0 }; b.s += o.v; b.n++; buckets.set(k, b); }
+    const spark = [...buckets.values()].sort((a, b) => a.t - b.t).map(b => [b.t, Math.round(b.s / b.n * 1000) / 1000]);
 
     out = {
       station: { id: station.id, name: station.name, distKm: Math.round(station.distKm) },
@@ -82,6 +86,7 @@ export async function onRequestGet({ request }) {
       status: pct >= 0.8 ? "High" : pct <= 0.2 ? "Low" : "Normal",
       trend: change > 0.05 ? "rising" : change < -0.05 ? "falling" : "steady",
       days: Math.round((last.t - series[0].t) / DAY),
+      min: sorted[0], max: sorted[sorted.length - 1], series: spark,
     };
   } catch (e) {
     return json({ error: "Couldn't reach the river gauge service." }, 502);

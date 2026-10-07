@@ -39,7 +39,8 @@ async function fetchWater(lat, lon) {
   if (!res.ok) return null;
   const d = await res.json();
   if (!d || !d.station || !["High", "Normal", "Low"].includes(d.status)) return null;
-  return { station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time };
+  const series = Array.isArray(d.series) ? d.series.filter(x => Array.isArray(x) && Number.isFinite(x[0]) && Number.isFinite(x[1])).slice(-120) : [];
+  return { station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time, min: d.min, max: d.max, series };
 }
 
 /* ---------- where to look up conditions ---------- */
@@ -102,6 +103,7 @@ async function fillConditions(allowPrompt) {
     fetchWeather(where.lat, where.lon, date, hour).catch(() => null),
     recent ? fetchWater(where.lat, where.lon).catch(() => null) : Promise.resolve(null),
   ]);
+  if (flow) delete flow.series;
   formCond = { wx: wx || formCond.wx, flow: flow || formCond.flow };
   applyToForm(wx, flow);
   showFormChips();

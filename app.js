@@ -300,6 +300,7 @@ function showTab(t) {
   for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", b.dataset.tab === t);
   for (const p of ["advice", "season", "patterns", "log"]) $("panel-" + p).hidden = p !== t;
   try { sessionStorage.setItem("ft-tab", t); } catch (e) {}
+  if (t === "advice" && typeof autoLive === "function") autoLive();
 }
 document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
 ["fWater", "fSpecies", "fResult"].forEach(id => $(id).addEventListener("change", renderLog));

@@ -87,8 +87,11 @@
     </div>
 
     <div id="panel-advice" role="tabpanel" hidden>
+      <section class="live" id="live" aria-live="polite"></section>
       <div id="advice"></div>
-      <h2 class="cond-h">Model inputs</h2>
+      <details class="more inputs-box" id="inputsBox">
+      <summary><span>Adjust model inputs</span><span class="more-hint">plan a different time, temperature or conditions</span></summary>
+      <div class="more-in">
       <div class="now-row">
         <label class="field"><span class="label" id="aTempLabel">Temp</span><input id="aTemp" type="number" inputmode="decimal" step="1"></label>
         <label class="field"><span class="label">Time</span><input id="aTime" type="time"></label>
@@ -98,6 +101,7 @@
         <div class="field"><span class="label">River level</span><div class="seg" id="aFlow"></div></div>
       </div>
       <div class="loc-row" style="margin:10px 0 18px"><button type="button" class="btn" id="aWeather">✦ Sync live conditions</button><span id="aWeatherMsg" class="photo-msg"></span></div>
+      </div></details>
     </div>
 
     <div id="panel-season" role="tabpanel">
@@ -257,6 +261,7 @@
 <script src="app.js"></script>
 <script src="forecast.js"></script>
 <script src="conditions.js"></script>
+<script src="live.js"></script>
 <script src="share.js"></script>
 </body>
 </html>
