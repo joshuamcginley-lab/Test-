@@ -18,7 +18,7 @@ const SAMPLE_NOTES = [
 const KEY = "firetiger.v1";
 
 /* ---------- storage ---------- */
-let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null } };
+let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null, maps: "auto" } };
 function load() {
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
   catch (e) { console.warn("Could not read saved log", e); }
@@ -84,6 +84,23 @@ async function shrinkPhoto(file, max = 1600) {
 // Fill every <img data-photo> on the page from storage.
 function hydratePhotos(root = document) {
   root.querySelectorAll("img[data-photo]:not([src])").forEach(async im => { const u = await photoURL(im.dataset.photo); if (u) im.src = u; else im.closest(".thumb")?.remove(); });
+}
+
+/* ---------- maps ---------- */
+// Apple devices open Apple Maps, everything else Google Maps, unless overridden in Settings.
+const isApple = () => /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const useApple = () => state.settings.maps === "apple" || (state.settings.maps !== "google" && isApple());
+function mapsUrl(lat, lon, label, directions) {
+  if (useApple()) return `https://maps.apple.com/?${directions ? "daddr" : "ll"}=${lat},${lon}${!directions && label ? `&q=${encodeURIComponent(label)}` : ""}`;
+  return directions ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+}
+const mapsName = () => useApple() ? "Apple Maps" : "Google Maps";
+// Read coordinates from typed text or a pasted Apple / Google Maps link.
+function parseCoords(text) {
+  const t = decodeURIComponent(String(text || "")).trim();
+  const pats = [/[?&](?:ll|sll|q|query|destination|daddr|coordinate|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/, /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/];
+  for (const re of pats) { const m = t.match(re); if (m) { const lat = +m[1], lon = +m[2]; if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat: r(lat, 5), lon: r(lon, 5) }; } }
+  return null;
 }
 
 /* ---------- derived ---------- */
@@ -230,7 +247,7 @@ function renderLog() {
     const t = [s.start ? fmtTime(s.start) + (s.end ? "–" + fmtTime(s.end) : "") : null, temp, s.method && s.method !== "Spin" ? s.method : null, s.event, ...(s.conditions || [])].filter(Boolean).join(" · ");
     const sizes = (s.catches || []).map(sizeOf).filter(Boolean);
     return `<button class="entry${isPb ? " pb" : ""}" type="button" data-id="${esc(s.id)}"><span class="date"><b>${+s.date.slice(8)}</b><span class="m">${MONTHS[+s.date.slice(5, 7) - 1]}</span><small>${esc(isPeriod(s) || "")}</small></span>
-      <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>
+      <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>${s.lat != null ? ` <span class="maplink" role="link" tabindex="0" data-map="${s.lat},${s.lon}" data-label="${esc([s.water, s.spot].filter(Boolean).join(" · "))}">Map ↗</span>` : ""}
       <div class="catch">${esc(catchSummary(s))}${sizes.length ? ` <span class="meta">(${esc(sizes.join(", "))})</span>` : ""}</div>
       ${photoIdsOf(s).length ? `<span class="thumbs">${(s.catches || []).filter(c => c.photo).map(c => `<span class="thumb" role="button" tabindex="0" data-view="${esc(s.id)}|${esc(c.photo)}" aria-label="View ${esc(c.species)} photo"><img data-photo="${esc(c.photo)}" alt=""></span>`).join("")}</span>` : ""}
       ${s.lureText ? `<div class="lures">${esc(s.lureText)}</div>` : ""}${s.notes ? `<div class="lures"><i>${esc(s.notes)}</i></div>` : ""}</span>
@@ -299,10 +316,17 @@ $("segCond").onclick = e => { const b = e.target.closest("button"); if (b) b.set
 $("segMethod").onclick = e => { const b = e.target.closest("button"); if (b) segSet($("segMethod"), [b.dataset.v]); };
 
 function showLoc() {
-  $("locText").innerHTML = pinned ? `${pinned.lat.toFixed(5)}, ${pinned.lon.toFixed(5)} · <a href="https://maps.google.com/?q=${pinned.lat},${pinned.lon}" target="_blank" rel="noopener">Map</a> · <button type="button" class="linkbtn" id="unpin" style="margin:0">Remove</button>` : "";
+  const label = [$("fWaterIn").value.trim(), $("fSpot").value.trim()].filter(Boolean).join(" · ");
+  $("locText").innerHTML = pinned ? `${pinned.lat.toFixed(5)}, ${pinned.lon.toFixed(5)} · <a href="${mapsUrl(pinned.lat, pinned.lon, label)}" target="_blank" rel="noopener">Open in ${mapsName()}</a> · <button type="button" class="linkbtn" id="unpin" style="margin:0">Remove</button>` : "";
   const u = $("unpin"); if (u) u.onclick = () => { pinned = null; showLoc(); };
   $("pinLoc").textContent = pinned ? "Re-pin location" : "Pin my location";
 }
+$("fLocPaste").addEventListener("change", () => {
+  const v = $("fLocPaste").value.trim(); if (!v) return;
+  const c = parseCoords(v);
+  if (c) { pinned = c; $("fLocPaste").value = ""; showLoc(); }
+  else $("locText").textContent = /goo\.gl|maps\.app/.test(v) ? "Short share links don't include coordinates. In Google Maps, long-press the spot and copy the numbers instead." : "Couldn't find coordinates in that. Paste a map link or numbers like 45.37879, -66.76780.";
+});
 $("pinLoc").onclick = () => {
   if (!navigator.geolocation) { $("locText").textContent = "This browser can't share location."; return; }
   $("locText").textContent = "Finding you…";
@@ -323,7 +347,7 @@ function openSheet(s) {
   $("fTlo").value = tOut(s?.tempLow) ?? ""; $("fThi").value = s && s.tempHigh !== s.tempLow ? (tOut(s.tempHigh) ?? "") : "";
   $("fCombo").value = s?.combo || ""; $("fLureText").value = s?.lureText || ""; $("fNotes").value = s?.notes || "";
   segSet($("segMethod"), [s?.method || "Spin"]); segSet($("segCond"), s?.conditions || []);
-  pinned = s?.lat != null ? { lat: s.lat, lon: s.lon } : null; showLoc();
+  pinned = s?.lat != null ? { lat: s.lat, lon: s.lon } : null; $("fLocPaste").value = ""; showLoc();
   $("catchRows").innerHTML = ""; (s ? s.catches || [] : [{}]).forEach(c => $("catchRows").append(catchRow(c)));
   $("delBtn").hidden = !s; $("delConfirm").hidden = true; $("formErr").hidden = true;
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
@@ -334,10 +358,12 @@ $("welcomeNew").onclick = () => openSheet(null);
 $("cancelBtn").onclick = closeSheets; $("scrim").onclick = closeSheets;
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("viewer").hidden) closeViewer(); else closeSheets(); } });
 $("entries").addEventListener("click", e => {
+  const m = e.target.closest("[data-map]"); if (m) { e.stopPropagation(); openMap(m); return; }
   const v = e.target.closest("[data-view]"); if (v) { e.stopPropagation(); openViewer(v.dataset.view); return; }
   const b = e.target.closest(".entry"); if (b) openSheet(state.sessions.find(s => s.id === b.dataset.id));
 });
-$("entries").addEventListener("keydown", e => { const v = e.target.closest("[data-view]"); if (v && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openViewer(v.dataset.view); } });
+function openMap(el) { const [lat, lon] = el.dataset.map.split(",").map(Number); window.open(mapsUrl(lat, lon, el.dataset.label), "_blank", "noopener"); }
+$("entries").addEventListener("keydown", e => { const m = e.target.closest("[data-map]"); if (m && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openMap(m); return; } const v = e.target.closest("[data-view]"); if (v && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); openViewer(v.dataset.view); } });
 $("bigFish").addEventListener("click", e => { const v = e.target.closest("[data-view]"); if (v) openViewer(v.dataset.view); });
 
 /* ---------- photo viewer ---------- */
@@ -426,7 +452,7 @@ $("clearSample").onclick = () => {
 
 /* ---------- settings ---------- */
 $("openSettings").onclick = () => {
-  $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp;
+  $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
   $("wipeBtn").hidden = false; $("wipeConfirm").hidden = true; $("backupMsg").hidden = true;
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;
 };
@@ -434,6 +460,7 @@ $("closeSettings").onclick = closeSheets;
 $("sName").addEventListener("input", () => { state.settings.name = $("sName").value.trim(); save(); render(); });
 $("sUnits").addEventListener("change", () => { state.settings.units = $("sUnits").value; save(); render(); });
 $("sTemp").addEventListener("change", () => { state.settings.temp = $("sTemp").value; save(); render(); });
+$("sMaps").addEventListener("change", () => { state.settings.maps = $("sMaps").value; save(); render(); });
 
 function download(name, text, type) {
   const blob = new Blob([text], { type });

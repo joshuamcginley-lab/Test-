@@ -105,7 +105,10 @@
       <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Keswick River" autocomplete="off" required></label>
       <label class="field"><span class="label">Spot</span><input id="fSpot" list="dlSpot" placeholder="Fallen tree by the island" autocomplete="off"></label>
     </div>
-    <div class="loc-row"><button type="button" class="btn" id="pinLoc">Pin my location</button><span id="locText"></span></div>
+    <div class="field"><span class="label">Location</span>
+      <div class="loc-row"><button type="button" class="btn" id="pinLoc">Pin my location</button><input id="fLocPaste" placeholder="or paste a map link / coordinates" autocomplete="off" aria-label="Paste a map link or coordinates"></div>
+      <div class="loc-row" id="locText"></div>
+    </div>
     <div class="row">
       <label class="field"><span class="label" id="tloLabel">Temp low</span><input type="number" id="fTlo" inputmode="decimal" step="1"></label>
       <label class="field"><span class="label" id="thiLabel">Temp high</span><input type="number" id="fThi" inputmode="decimal" step="1" placeholder="same"></label>
@@ -136,6 +139,7 @@
       <div class="row">
         <label class="field"><span class="label">Weight &amp; length</span><select id="sUnits"><option value="imperial">lb &amp; inches</option><option value="metric">kg &amp; cm</option></select></label>
         <label class="field"><span class="label">Temperature</span><select id="sTemp"><option value="C">°C</option><option value="F">°F</option></select></label>
+        <label class="field"><span class="label">Open locations in</span><select id="sMaps"><option value="auto">Automatic (Apple Maps on Apple devices)</option><option value="apple">Apple Maps</option><option value="google">Google Maps</option></select></label>
       </div>
     </div>
     <div class="set-group" id="installGroup">
