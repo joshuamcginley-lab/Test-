@@ -29,6 +29,6 @@ Then open http://localhost:8000.
 
 ## Deploy
 
-It's a static site with no build step. `netlify.toml` publishes the repo root.
+Hosted on Cloudflare Pages. It's a static site with no build step: framework preset None, build command empty, output directory `/`. `_headers` sets caching for the offline worker.
 
 When you change `app.js` or `styles.css`, bump `VERSION` in `sw.js` so installed copies pick up the update.
