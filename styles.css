@@ -182,3 +182,23 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px)}
 #fLocPaste{flex:1 1 220px;min-width:0;font:inherit;font-size:15px;padding:9px 10px;border:2px solid var(--hair);border-radius:0;background:var(--bg);color:var(--ink)}
 #locText:empty{display:none}
 .maplink{font:600 12px/1 var(--f-mono);color:var(--water);text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-left:4px;white-space:nowrap}
+
+/* Where to fish */
+.now-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
+.now-row .field input{font:inherit;font-size:16px;padding:9px 10px;border:2px solid var(--rule);border-radius:0;background:var(--paper);color:var(--ink);width:100%}
+.verdict{background:var(--band);color:var(--band-ink);padding:20px 18px 18px;display:grid;gap:10px;margin-bottom:18px;border-bottom:6px solid var(--tiger)}
+.verdict.slow{border-bottom-color:var(--belly)}
+.verdict .label{color:var(--band-muted)}
+.verdict h3{font-style:italic;font-weight:900;font-stretch:110%;font-size:clamp(32px,7vw,54px);text-transform:uppercase;color:var(--tiger);line-height:.95}
+.verdict.locked h3{font-size:clamp(22px,5vw,32px);color:var(--band-ink)}
+.verdict p{margin:0;font-size:17px;max-width:62ch}
+.v-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.v-say b{color:var(--tiger)}
+.v-tips{list-style:none;margin:4px 0 0;padding:0;display:flex;gap:10px 28px;flex-wrap:wrap;font-size:17px;font-weight:600}
+.v-tips li{display:grid;gap:3px}
+.v-warn{font-size:15px!important;color:#FFC9A8;border-left:3px solid var(--belly);padding-left:10px}
+.meter{height:10px;background:#2A3C44}
+.meter span{display:block;height:100%;background:var(--tiger)}
+.window{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:12px 0 14px;border-bottom:1px solid var(--hair);margin-bottom:22px;font-size:16px}
+#panel-advice .card{margin-bottom:26px}
+.cond-h{font-style:italic;font-weight:900;font-size:20px;text-transform:uppercase;margin:4px 0 10px;padding-bottom:6px;border-bottom:3px solid var(--rule)}

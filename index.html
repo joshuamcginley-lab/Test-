@@ -46,10 +46,23 @@
     <div class="sample-bar" id="sampleBar" hidden><span>You're looking at a sample season (47 trips in New Brunswick).</span><button type="button" id="clearSample">Clear sample, start my own</button></div>
 
     <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-advice" aria-selected="false" data-tab="advice"><span>Where to fish</span></button>
       <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><span>Season</span></button>
       <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><span>Patterns</span></button>
       <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><span>Log</span></button>
     </nav>
+
+    <div id="panel-advice" role="tabpanel" hidden>
+      <div id="advice"></div>
+      <h2 class="cond-h">Conditions</h2>
+      <div class="now-row">
+        <label class="field"><span class="label" id="aTempLabel">Temp</span><input id="aTemp" type="number" inputmode="decimal" step="1"></label>
+        <label class="field"><span class="label">Time</span><input id="aTime" type="time"></label>
+        <label class="field"><span class="label">Date</span><input id="aDate" type="date"></label>
+        <div class="field"><span class="label">Sky</span><div class="seg" id="aSky"></div></div>
+      </div>
+      <div class="loc-row" style="margin:10px 0 18px"><button type="button" class="btn" id="aWeather">Use current weather</button><span id="aWeatherMsg" class="photo-msg"></span></div>
+    </div>
 
     <div id="panel-season" role="tabpanel">
       <div class="grid2">
@@ -173,5 +186,6 @@
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
 <script src="app.js"></script>
+<script src="forecast.js"></script>
 </body>
 </html>
