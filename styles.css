@@ -54,7 +54,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .band .wrap{padding-block:20px 22px;display:grid;gap:22px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;font:650 20px/1 var(--f-body);letter-spacing:-.03em}
-.logo .mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:var(--on-grad);font-size:15px;box-shadow:var(--glow)}
+.logo .mark{width:30px;height:30px;border-radius:8px;display:block;background:#080C1E;box-shadow:0 0 0 1px var(--line-2)}
 .logo .tld{color:var(--muted);font-weight:500}
 .pill{display:inline-flex;align-items:center;gap:6px;font:500 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--muted);background:var(--glass)}
 .pill.beta{color:var(--c);border-color:color-mix(in srgb,var(--c) 40%,transparent)}

@@ -91,8 +91,10 @@ async function renderCard(cv, d) {
 
   // header: wordmark + beta pill
   const pad = 64;
-  ctx.fillStyle = gradH(ctx, pad, pad + 44); roundRect(ctx, pad, 52, 44, 44, 12); ctx.fill();
-  ctx.fillStyle = "#07070A"; ctx.font = `700 26px ${SANS}`; ctx.textAlign = "center"; ctx.fillText("✦", pad + 22, 83); ctx.textAlign = "left";
+  const mark = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = "icons/mark-128.png"; });
+  ctx.save(); roundRect(ctx, pad, 50, 48, 48, 12); ctx.clip();
+  if (mark) ctx.drawImage(mark, pad, 50, 48, 48); else { ctx.fillStyle = gradH(ctx, pad, pad + 48); ctx.fillRect(pad, 50, 48, 48); }
+  ctx.restore();
   ctx.fillStyle = "#EDEDF3"; ctx.font = `650 34px ${SANS}`; ctx.fillText("fishr", pad + 60, 86);
   let wx = pad + 60 + ctx.measureText("fishr").width; ctx.fillStyle = "#8C8CA0"; ctx.fillText(".ai", wx, 86);
   wx += ctx.measureText(".ai").width + 16; ctx.strokeStyle = "rgba(34,211,238,.5)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
@@ -107,7 +109,8 @@ async function renderCard(cv, d) {
   else {
     ctx.fillStyle = "#101016"; ctx.fillRect(px, py, pw, ph);
     glow(ctx, px + pw * .3, py + ph * .35, 520, "rgba(139,108,255,.55)"); glow(ctx, px + pw * .75, py + ph * .6, 480, "rgba(34,211,238,.4)"); glow(ctx, px + pw * .5, py + ph, 420, "rgba(52,245,197,.25)");
-    ctx.fillStyle = "rgba(237,237,243,.9)"; ctx.font = `700 200px ${SANS}`; ctx.textAlign = "center"; ctx.fillText("✦", px + pw / 2, py + ph / 2 + 70); ctx.textAlign = "left";
+    const big = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = "icons/mark-512.png"; });
+    if (big) ctx.drawImage(big, px + pw / 2 - 210, py + ph / 2 - 210, 420, 420);
   }
   ctx.restore();
   ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 2; roundRect(ctx, px, py, pw, ph, 36); ctx.stroke();
