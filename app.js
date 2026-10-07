@@ -560,3 +560,35 @@ render();
 try { const t = sessionStorage.getItem("ft-tab"); if (t) showTab(t); } catch (e) {}
 window.addEventListener("storage", e => { if (e.key === KEY) { load(); render(); } });
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+
+/* ---------- swipe down to close the bottom sheets ---------- */
+// Dragging down from the top of a sheet (or anywhere while it's scrolled to the top) pulls it down;
+// past ~110 px, or with a quick flick, it closes. Otherwise it springs back.
+document.querySelectorAll(".sheet").forEach(sheet => {
+  let startY = null, dy = 0, t0 = 0, dragging = false;
+  const reset = () => { sheet.style.transition = "transform .2s ease"; sheet.style.transform = ""; setTimeout(() => { sheet.style.transition = ""; }, 220); };
+  sheet.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1 || sheet.scrollTop > 0) { startY = null; return; }
+    startY = e.touches[0].clientY; dy = 0; t0 = Date.now(); dragging = false;
+  }, { passive: true });
+  sheet.addEventListener("touchmove", e => {
+    if (startY == null) return;
+    dy = e.touches[0].clientY - startY;
+    if (!dragging && (dy < 8 || sheet.scrollTop > 0)) { if (dy < 0) startY = null; return; }
+    dragging = true; e.preventDefault();
+    sheet.style.transition = "none"; sheet.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  }, { passive: false });
+  sheet.addEventListener("touchend", () => {
+    if (startY == null || !dragging) { startY = null; return; }
+    const fast = dy > 40 && dy / Math.max(1, Date.now() - t0) > 0.6;
+    startY = null; dragging = false;
+    if (dy > 110 || fast) {
+      sheet.style.transition = "transform .18s ease"; sheet.style.transform = "translateY(100%)";
+      setTimeout(() => {
+        sheet.style.transition = ""; sheet.style.transform = "";
+        if (sheet.id === "shareSheet" && typeof closeShare === "function") closeShare(); else closeSheets();
+      }, 180);
+    } else reset();
+  });
+  sheet.addEventListener("touchcancel", () => { startY = null; dragging = false; reset(); });
+});
