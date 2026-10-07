@@ -1,4 +1,4 @@
-# Firetiger Fishing Log
+# fishr.ai
 
 A fishing log that runs in the browser and installs to a phone's home screen. Anglers log each trip (water, spot, time, water temperature, conditions, method, every fish with size and lure) and the app shows which waters, times of day, temperatures and lures produce fish.
 
@@ -13,7 +13,7 @@ A fishing log that runs in the browser and installs to a phone's home screen. An
 | File | What it is |
 | --- | --- |
 | `index.html` | Page markup |
-| `styles.css` | Design (firetiger crankbait theme, light and dark) |
+| `styles.css` | Design (AI-startup theme, dark-first with light mode) |
 | `app.js` | All app logic: storage, form, stats, patterns, backup |
 | `sw.js` | Offline caching |
 | `manifest.webmanifest`, `icons/` | Home-screen install |

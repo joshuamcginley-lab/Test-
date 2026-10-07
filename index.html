@@ -3,24 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Firetiger Fishing Log</title>
-<meta name="description" content="Log every fishing trip and see which waters, times, temperatures and lures actually produce fish. Works offline.">
-<meta name="theme-color" content="#0D1A20">
-<meta property="og:title" content="Firetiger Fishing Log">
-<meta property="og:description" content="Log every fishing trip. Find out where to fish for today's conditions. Free, works offline.">
+<title>fishr.ai · Know where they're biting</title>
+<meta name="description" content="fishr.ai is your AI fishing copilot. Log trips, find your patterns, and get told where to fish for today's conditions.">
+<meta name="theme-color" content="#09090B">
+<meta property="og:title" content="fishr.ai · Know where they're biting">
+<meta property="og:description" content="Your AI fishing copilot. Log trips, find your patterns, get the call. Free during beta.">
 <meta property="og:image" content="https://firetiger-fishing-log.pages.dev/og.png">
 <meta property="og:url" content="https://firetiger-fishing-log.pages.dev/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Firetiger">
+<meta name="apple-mobile-web-app-title" content="fishr.ai">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Libre+Franklin:wght@400;500;600;700&family=Martian+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -30,25 +30,29 @@
     <img id="scImg" class="sc-card" alt="Shared catch card">
     <canvas id="scCanvas" hidden></canvas>
     <div class="sc-text">
-      <div class="kicker">Shared from Firetiger Fishing Log</div>
+      <span class="pill live kicker">Shared via fishr.ai</span>
       <h2 id="scTitle"></h2>
       <p id="scMeta" class="sc-meta"></p>
-      <p>Firetiger logs every trip, and once you have a few in it, tells you where to fish for the conditions you're in. Free, no sign-up, works with no signal.</p>
-      <div class="btn-row"><button type="button" class="btn-log" id="scStart">Start my own fishing log</button><button type="button" class="btn sc-ghost" id="scSample">See a sample season</button></div>
+      <p>fishr.ai is an AI fishing copilot. Log your trips, and it learns your water and tells you where to fish for the conditions you're in. Free during beta. No sign-up. Works with no signal.</p>
+      <div class="btn-row"><button type="button" class="btn-log" id="scStart">Get early access</button><button type="button" class="btn" id="scSample">Try the demo</button></div>
     </div>
   </div>
 </section>
 <div class="band"><div class="wrap">
-  <div class="band-top">
-    <div>
+  <div class="topbar">
+    <div class="logo"><span class="mark" aria-hidden="true">✦</span><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
+    <div class="top-actions">
       <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
-      <h1><span class="own" id="ownerLine">Your</span>Fishing Log</h1>
-      <div class="cr" id="tagline">Every trip counts. Skunks too.</div>
+      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
-    <div class="band-actions">
-      <button class="btn-log" id="openNew" type="button">+ Log a trip</button>
-      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+  <div class="band-top">
+    <div class="hero">
+      <span class="pill live">Bite Intelligence™ is live</span>
+      <h1><span class="own" id="ownerLine">Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
+      <div class="cr" id="tagline">Your AI fishing copilot. Log trips, train your model, get the call.</div>
     </div>
+    <button class="btn-log" id="openNew" type="button">✦ Log a trip</button>
   </div>
   <div class="board" id="gauges"></div>
 </div></div>
@@ -56,32 +60,33 @@
 
 <div class="wrap">
   <div class="welcome" id="welcome" hidden>
-    <h2>Start your log</h2>
-    <p>Log each trip in under a minute: where, when, water temp, what you caught and on what. After a few trips the app shows you which spots, times and lures actually produce fish.</p>
-    <p>Your log is saved on this device and works with no signal.</p>
-    <div class="acts"><button class="btn primary" id="welcomeNew" type="button">+ Log your first trip</button><button class="btn" id="welcomeSample" type="button">Explore a sample season</button></div>
+    <span class="pill live">Welcome to the beta</span>
+    <h2>Train your own <span class="grad-text">fishing model.</span></h2>
+    <p>Log a trip in under a minute: where, when, temperature, what you caught and on what. After 10 trips, fishr Copilot starts telling you where to fish and when.</p>
+    <p>Everything stays on your device. Works with no signal. Skunks count as training data.</p>
+    <div class="acts"><button class="btn-log" id="welcomeNew" type="button">✦ Log your first trip</button><button class="btn" id="welcomeSample" type="button">Try the demo workspace</button></div>
   </div>
 
   <div id="main">
-    <div class="sample-bar" id="sampleBar" hidden><span>You're looking at a sample season (47 trips in New Brunswick).</span><button type="button" id="clearSample">Clear sample, start my own</button></div>
+    <div class="sample-bar" id="sampleBar" hidden><span>✦ Demo workspace: 47 real trips from New Brunswick.</span><button type="button" id="clearSample">Start my own workspace</button></div>
 
     <nav class="tabs" role="tablist">
-      <button role="tab" id="tab-advice" aria-selected="false" data-tab="advice"><span>Where to fish</span></button>
-      <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><span>Season</span></button>
-      <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><span>Patterns</span></button>
-      <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><span>Log</span></button>
+      <button role="tab" id="tab-advice" aria-selected="false" data-tab="advice"><span><span class="ai">✦</span>Copilot</span></button>
+      <button role="tab" id="tab-season" aria-selected="true" data-tab="season"><span>Dashboard</span></button>
+      <button role="tab" id="tab-patterns" aria-selected="false" data-tab="patterns"><span>Insights</span></button>
+      <button role="tab" id="tab-log" aria-selected="false" data-tab="log"><span>Trips</span></button>
     </nav>
 
     <div id="panel-advice" role="tabpanel" hidden>
       <div id="advice"></div>
-      <h2 class="cond-h">Conditions</h2>
+      <h2 class="cond-h">Model inputs</h2>
       <div class="now-row">
         <label class="field"><span class="label" id="aTempLabel">Temp</span><input id="aTemp" type="number" inputmode="decimal" step="1"></label>
         <label class="field"><span class="label">Time</span><input id="aTime" type="time"></label>
         <label class="field"><span class="label">Date</span><input id="aDate" type="date"></label>
         <div class="field"><span class="label">Sky</span><div class="seg" id="aSky"></div></div>
       </div>
-      <div class="loc-row" style="margin:10px 0 18px"><button type="button" class="btn" id="aWeather">Use current weather</button><span id="aWeatherMsg" class="photo-msg"></span></div>
+      <div class="loc-row" style="margin:10px 0 18px"><button type="button" class="btn" id="aWeather">✦ Sync live conditions</button><span id="aWeatherMsg" class="photo-msg"></span></div>
     </div>
 
     <div id="panel-season" role="tabpanel">
@@ -121,7 +126,7 @@
       <div class="entries" id="entries"></div>
     </div>
   </div>
-  <div class="foot">Firetiger Fishing Log · Your data stays on this device. Back it up from Settings.</div>
+  <div class="foot">fishr.ai v0.4.2-beta · Built in New Brunswick · Your data stays on this device. Back it up from Settings.<br>© 2026 fishr Labs Inc. Series A: coming soon.</div>
 </div>
 
 <!-- Trip form -->
@@ -182,7 +187,7 @@
     </div>
     <div class="set-group">
       <h3>Backup</h3>
-      <p>Your log lives on this phone only. Save a backup file now and then, and use it to move your log to a new phone. Backups include your photos.</p>
+      <p>Your workspace lives on this device only. Save a backup now and then, and use it to move to a new phone. Backups include your photos.</p>
       <div class="btn-row">
         <button class="btn" id="exportJson" type="button">Save backup</button>
         <button class="btn" id="exportCsv" type="button">Export spreadsheet (CSV)</button>
@@ -216,7 +221,7 @@
 
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Fish photo">
   <figure><img id="viewerImg" alt=""><figcaption id="viewerCap"></figcaption></figure>
-  <div class="btn-row" style="justify-content:center"><button type="button" class="btn primary" id="viewerShare">Share catch</button><button type="button" class="btn" id="viewerClose" style="color:#EDF2EA;border-color:#EDF2EA">Close</button></div>
+  <div class="btn-row" style="justify-content:center"><button type="button" class="btn primary" id="viewerShare">Share catch</button><button type="button" class="btn" id="viewerClose">Close</button></div>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
 <script src="app.js"></script>

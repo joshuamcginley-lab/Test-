@@ -47,23 +47,12 @@ function shareText(link) {
   const d = cardData();
   const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(", ");
   const what = `${d.ct > 1 ? `${d.ct} ` : ""}${d.sp.toLowerCase()}${size ? ` (${size})` : ""}`;
-  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it and start your own log: ${link || catchLink(d)}`;
+  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it on fishr.ai: ${link || catchLink(d)}`;
 }
 
 function cover(ctx, img, x, y, w, h) {
   const k = Math.max(w / img.width, h / img.height), sw = w / k, sh = h / k;
   ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, x, y, w, h);
-}
-function tigerStripe(ctx, x, y, w, h, k = 1) {
-  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-  ctx.fillStyle = "#C8E62E"; ctx.fillRect(x, y, w, h * 0.62);
-  ctx.fillStyle = "#F26A1B"; ctx.fillRect(x, y + h * 0.62, w, h * 0.38);
-  ctx.fillStyle = "#0D1A20";
-  const slant = h / Math.tan(62 * Math.PI / 180);
-  for (let sx = x - slant; sx < x + w + slant; sx += 46 * k) {
-    for (const [o0, bw0] of [[22, 8], [46, 4]]) { const o = o0 * k, bw = bw0 * k; ctx.beginPath(); ctx.moveTo(sx + o, y + h); ctx.lineTo(sx + o + slant, y); ctx.lineTo(sx + o + slant + bw, y); ctx.lineTo(sx + o + bw, y + h); ctx.fill(); }
-  }
-  ctx.restore();
 }
 function fitText(ctx, text, font, max, start) {
   let size = start; do { ctx.font = font.replace("{s}", size); size -= 4; } while (ctx.measureText(text).width > max && size > 24);
@@ -88,42 +77,64 @@ function readCatchLink() {
   } catch (e) { return null; }
 }
 
+function roundRect(ctx, x, y, w, h, rad) { ctx.beginPath(); ctx.moveTo(x + rad, y); ctx.arcTo(x + w, y, x + w, y + h, rad); ctx.arcTo(x + w, y + h, x, y + h, rad); ctx.arcTo(x, y + h, x, y, rad); ctx.arcTo(x, y, x + w, y, rad); ctx.closePath(); }
+function glow(ctx, x, y, rad, color) { const g = ctx.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, color); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+function gradH(ctx, x0, x1) { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, "#8B6CFF"); g.addColorStop(.55, "#22D3EE"); g.addColorStop(1, "#34F5C5"); return g; }
+
 async function renderCard(cv, d) {
   const W = 1080, H = 1350, ctx = cv.getContext("2d");
   cv.width = W; cv.height = H;
-  try { await Promise.all(["italic 900 120px Archivo", "600 30px 'Martian Mono'", "600 36px 'Libre Franklin'"].map(f => document.fonts.load(f))); } catch (e) {}
-  const DISPLAY = "Archivo, 'Arial Black', sans-serif", MONO = "'Martian Mono', ui-monospace, monospace", BODY = "'Libre Franklin', system-ui, sans-serif";
-  ctx.fillStyle = "#0D1A20"; ctx.fillRect(0, 0, W, H);
+  try { await Promise.all(["700 120px Geist", "500 30px 'Geist Mono'", "500 36px Geist"].map(f => document.fonts.load(f))); } catch (e) {}
+  const SANS = "Geist, ui-sans-serif, system-ui, sans-serif", MONO = "'Geist Mono', ui-monospace, monospace";
+  ctx.fillStyle = "#09090B"; ctx.fillRect(0, 0, W, H);
+  glow(ctx, 180, 160, 620, "rgba(139,108,255,.38)"); glow(ctx, 900, 260, 560, "rgba(34,211,238,.24)"); glow(ctx, 600, 1200, 600, "rgba(52,245,197,.12)");
 
-  const photoH = 780;
-  const url = d.photo ? await photoURL(d.photo) : null;
+  // header: wordmark + beta pill
+  const pad = 64;
+  ctx.fillStyle = gradH(ctx, pad, pad + 44); roundRect(ctx, pad, 52, 44, 44, 12); ctx.fill();
+  ctx.fillStyle = "#07070A"; ctx.font = `700 26px ${SANS}`; ctx.textAlign = "center"; ctx.fillText("✦", pad + 22, 83); ctx.textAlign = "left";
+  ctx.fillStyle = "#EDEDF3"; ctx.font = `650 34px ${SANS}`; ctx.fillText("fishr", pad + 60, 86);
+  let wx = pad + 60 + ctx.measureText("fishr").width; ctx.fillStyle = "#8C8CA0"; ctx.fillText(".ai", wx, 86);
+  wx += ctx.measureText(".ai").width + 16; ctx.strokeStyle = "rgba(34,211,238,.5)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
+  ctx.fillStyle = "#22D3EE"; ctx.font = `500 16px ${MONO}`; ctx.fillText("BETA", wx + 15, 82);
+
+  // photo panel
+  const px = pad, py = 128, pw = W - pad * 2, ph = 640;
+  const url = d.photo ? await photoURL(d.photo) : (d.imgUrl || null);
   const img = url ? await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; }) : null;
-  if (img) cover(ctx, img, 0, 0, W, photoH); else tigerStripe(ctx, 0, 0, W, photoH, 4.5);
-  tigerStripe(ctx, 0, photoH, W, 34);
+  ctx.save(); roundRect(ctx, px, py, pw, ph, 36); ctx.clip();
+  if (img) cover(ctx, img, px, py, pw, ph);
+  else {
+    ctx.fillStyle = "#101016"; ctx.fillRect(px, py, pw, ph);
+    glow(ctx, px + pw * .3, py + ph * .35, 520, "rgba(139,108,255,.55)"); glow(ctx, px + pw * .75, py + ph * .6, 480, "rgba(34,211,238,.4)"); glow(ctx, px + pw * .5, py + ph, 420, "rgba(52,245,197,.25)");
+    ctx.fillStyle = "rgba(237,237,243,.9)"; ctx.font = `700 200px ${SANS}`; ctx.textAlign = "center"; ctx.fillText("✦", px + pw / 2, py + ph / 2 + 70); ctx.textAlign = "left";
+  }
+  ctx.restore();
+  ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 2; roundRect(ctx, px, py, pw, ph, 36); ctx.stroke();
 
-  const pad = 64; let y = photoH + 34 + 92;
-  ctx.fillStyle = "#C8E62E"; ctx.font = `600 26px ${MONO}`; ctx.textBaseline = "alphabetic";
-  ctx.fillText(`${fmtDate(d.d).toUpperCase()}${d.w ? ` · ${d.w.toUpperCase()}` : ""}`.slice(0, 60), pad, y - 6);
-  y += 96;
-  ctx.fillStyle = "#EDF2EA";
-  const name = (d.ct > 1 ? `${d.ct}× ` : "") + d.sp.toUpperCase();
-  fitText(ctx, name, `italic 900 {s}px ${DISPLAY}`, W - pad * 2, 104); ctx.fillText(name, pad, y);
+  // text
+  let y = py + ph + 76;
+  ctx.fillStyle = "#8C8CA0"; ctx.font = `500 24px ${MONO}`;
+  ctx.fillText(`${fmtDate(d.d).toUpperCase()}${d.w ? ` · ${d.w.toUpperCase()}` : ""}`.slice(0, 60), pad, y);
+  y += 92;
+  ctx.fillStyle = "#EDEDF3";
+  const name = (d.ct > 1 ? `${d.ct}× ` : "") + d.sp;
+  fitText(ctx, name, `700 {s}px ${SANS}`, W - pad * 2, 92); ctx.fillText(name, pad, y);
 
   const stats = [];
   if (d.lb != null) stats.push([String(wtOut(d.lb)), wU()]);
   if (d.in != null) stats.push([String(lenOut(d.in)), U() === "metric" ? "cm" : "in"]);
   if (d.t != null) stats.push([String(tOut(r(d.t, 0))), `°${T()}`]);
-  y += 132; let x = pad;
+  y += 118; let x = pad;
   for (const [k, [v, u]] of stats.slice(0, 3).entries()) {
-    ctx.fillStyle = k === 0 ? "#C8E62E" : "#EDF2EA";
-    ctx.font = `italic 900 112px ${DISPLAY}`; ctx.fillText(v, x, y); x += ctx.measureText(v).width + 10;
-    ctx.fillStyle = "#8FA3A6"; ctx.font = `italic 800 44px ${DISPLAY}`; ctx.fillText(u, x, y); x += ctx.measureText(u).width + 54;
+    ctx.font = `600 100px ${MONO}`; const vw = ctx.measureText(v).width;
+    ctx.fillStyle = k === 0 ? gradH(ctx, x, x + vw) : "#EDEDF3"; ctx.fillText(v, x, y); x += vw + 8;
+    ctx.fillStyle = "#8C8CA0"; ctx.font = `500 36px ${MONO}`; ctx.fillText(u, x, y); x += ctx.measureText(u).width + 48;
   }
-  ctx.fillStyle = "#EDF2EA"; ctx.font = `600 36px ${BODY}`;
-  if (d.lu) { y += 74; let L = `On a ${d.lu.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
+  if (d.lu) { y += 66; ctx.fillStyle = "#C9C9D6"; ctx.font = `500 34px ${SANS}`; let L = `On a ${d.lu.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
 
-  ctx.fillStyle = "#8FA3A6"; ctx.font = `600 22px ${MONO}`;
-  ctx.fillText(`LOGGED WITH FIRETIGER · ${APP_URL.toUpperCase()}`, pad, H - 52);
+  ctx.fillStyle = "#5E5E72"; ctx.font = `500 21px ${MONO}`;
+  ctx.fillText(`✦ LOGGED WITH FISHR.AI · ${APP_URL.toUpperCase()}`, pad, H - 50);
 }
 async function drawCard() {
   if (!shareCtx) return;

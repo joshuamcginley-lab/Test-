@@ -155,8 +155,8 @@ function render() {
   if (!state.settings.season || (state.settings.season !== "all" && !ys.includes(state.settings.season))) state.settings.season = ys[0] || "all";
   $("seasonSel").innerHTML = ys.map(y => `<option value="${y}">${y}</option>`).join("") + `<option value="all">All time</option>`;
   $("seasonSel").value = state.settings.season;
-  $("ownerLine").textContent = state.settings.name ? `${state.settings.name}'s` : "Your";
-  document.title = state.settings.name ? `${state.settings.name}'s Fishing Log` : "Firetiger Fishing Log";
+  $("ownerLine").textContent = state.settings.name ? `${state.settings.name}'s workspace` : "Your workspace";
+  document.title = state.settings.name ? `${state.settings.name}'s workspace · fishr.ai` : "fishr.ai · Know where they're biting";
 
   const empty = state.sessions.length === 0;
   $("welcome").hidden = !empty; $("main").hidden = empty; $("seasonSel").parentElement.hidden = empty;
@@ -185,9 +185,9 @@ function render() {
     const W = 420, H = 200, P = { l: 34, r: 8, t: 18, b: 30 }, rate = mk.map(m => months[m].f / months[m].n), max = Math.max(1, Math.ceil(Math.max(...rate)));
     const bw = (W - P.l - P.r) / mk.length, y = v => H - P.b - (v / max) * (H - P.t - P.b);
     let g = ""; const step = Math.max(1, Math.round(max / 4));
-    for (let v = 0; v <= max; v += step) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--hair)"/><text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="Martian Mono,monospace">${v}</text>`;
-    mk.forEach((m, i) => { const rt = rate[i], x = P.l + i * bw + bw * .18, w = bw * .64; g += `<rect x="${x}" y="${y(rt)}" width="${w}" height="${H - P.b - y(rt)}" fill="var(--water)"/><text x="${x + w / 2}" y="${y(rt) - 5}" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="Martian Mono,monospace">${rt.toFixed(1)}</text><text x="${x + w / 2}" y="${H - 10}" text-anchor="middle" font-size="12" fill="var(--muted)">${MONTHS[m - 1]} (${months[m].n})</text>`; });
-    $("monthChart").innerHTML = `<svg class="month-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fish per trip by month">${g}</svg><p class="label" style="margin:6px 0 0">Trips per month in brackets</p>`;
+    for (let v = 0; v <= max; v += step) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="Geist Mono,monospace">${v}</text>`;
+    mk.forEach((m, i) => { const rt = rate[i], x = P.l + i * bw + bw * .18, w = bw * .64; g += `<rect x="${x}" y="${y(rt)}" width="${w}" height="${H - P.b - y(rt)}" rx="6" fill="url(#barGrad)"/><text x="${x + w / 2}" y="${y(rt) - 6}" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="Geist Mono,monospace">${rt.toFixed(1)}</text><text x="${x + w / 2}" y="${H - 10}" text-anchor="middle" font-size="12" fill="var(--muted)">${MONTHS[m - 1]} (${months[m].n})</text>`; });
+    $("monthChart").innerHTML = `<svg class="month-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fish per trip by month"><defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--c)"/><stop offset="1" style="stop-color:var(--v)"/></linearGradient></defs>${g}</svg><p class="label" style="margin:6px 0 0">Trips per month in brackets</p>`;
   }
 
   const big = []; for (const s of list) for (const c of s.catches || []) if (c.lb || c.inches) big.push({ c, s });
@@ -428,7 +428,7 @@ $("form").addEventListener("submit", async e => {
   state.settings.season = date.slice(0, 4); save();
   closeSheets(); render();
   const fc = catches.reduce((a, c) => a + c.count, 0);
-  toast(prev ? "Trip updated" : fc ? `Logged ${fc} fish` : "Logged. Skunks count too.");
+  toast(prev ? "Trip updated. Model retrained." : fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
 });
 
 /* ---------- notes ---------- */
@@ -477,7 +477,7 @@ const toDataURL = blob => new Promise((res, rej) => { const fr = new FileReader(
 $("exportJson").onclick = async () => {
   const photos = {};
   for (const id of state.sessions.flatMap(photoIdsOf)) { const b = await photoGet(id).catch(() => null); if (b) photos[id] = await toDataURL(b); }
-  download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "firetiger", version: 2, exportedAt: new Date().toISOString(), ...state, photos }), "application/json");
+  download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "fishr.ai", version: 2, exportedAt: new Date().toISOString(), ...state, photos }), "application/json");
 };
 $("exportCsv").onclick = () => {
   const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -504,7 +504,7 @@ $("importFile").addEventListener("change", async e => {
     save(); render();
     $("backupMsg").hidden = false; $("backupMsg").textContent = `Restored. ${added} new trip${added === 1 ? "" : "s"} added.`;
   } catch (err) {
-    $("backupMsg").hidden = false; $("backupMsg").textContent = "That file isn't a Firetiger backup. Pick the .json file from “Save backup”.";
+    $("backupMsg").hidden = false; $("backupMsg").textContent = "That file isn't a fishr.ai backup. Pick the .json file from “Save backup”.";
   }
   e.target.value = "";
 });

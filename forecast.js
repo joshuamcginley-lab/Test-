@@ -71,12 +71,12 @@ async function loadWeather(useGps) {
   const msg = $("aWeatherMsg");
   let where = null;
   if (useGps && navigator.geolocation) {
-    msg.textContent = "Finding you…";
+    msg.textContent = "Locating…";
     where = await new Promise(res => navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lon: p.coords.longitude }), () => res(null), { timeout: 12000, maximumAge: 600000 }));
   }
   where ??= weatherSpot();
   if (!where) { msg.textContent = "Allow location, or pin a spot on a trip, to pull the weather. You can also type the temperature."; return; }
-  msg.textContent = "Getting the weather…";
+  msg.textContent = "Syncing live conditions…";
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&forecast_days=2&timezone=auto`;
     const d = await (await fetch(u)).json();
@@ -89,7 +89,7 @@ async function loadWeather(useGps) {
     $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     $("aDate").value = isoDate(now);
     segSet($("aSky"), [wx.current.sky]);
-    msg.textContent = `Weather updated ${fmtTime($("aTime").value)}.`;
+    msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}.`;
     renderAdvice();
   } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; }
 }
@@ -117,7 +117,7 @@ function renderAdvice() {
   const box = $("advice"); if (!box) return;
   const withTemp = state.sessions.filter(s => avgT(s) != null).length;
   if (withTemp < MIN_TRIPS) {
-    box.innerHTML = `<div class="verdict locked"><span class="chip info">Learning</span><h3>Log ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your log has ${MIN_TRIPS} trips with a temperature, this tab tells you where to fish for the conditions you're in, and when. Skunked trips count. They teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
+    box.innerHTML = `<div class="verdict locked"><span class="chip info">Training</span><h3>Your model needs ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your workspace has ${MIN_TRIPS} trips with a temperature, Copilot tells you where to fish for the conditions you're in, and when. Skunks count. They teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
@@ -147,9 +147,9 @@ function renderAdvice() {
     </div>`;
     const win = bestWindow();
     if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
-    if (rows.length > 1) html += `<section class="card"><h2>Other options</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(1, 6).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
+    if (rows.length > 1) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(1, 6).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
     const basis = simTop.slice(0, 5);
-    html += `<section class="card"><h2>Based on these trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
+    html += `<section class="card"><h2>Why Copilot said this: your most similar trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
   }
   box.innerHTML = html;
 }
