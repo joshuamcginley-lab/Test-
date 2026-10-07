@@ -15,12 +15,13 @@ const gauss = (d, sd) => Math.exp(-0.5 * (d / sd) ** 2);
 const skyOf = s => (s.conditions || []).includes("Rain") ? "Rain" : (s.conditions || []).includes("Overcast") ? "Overcast" : null;
 
 function similarity(s, q) {
+  const k = q.k || 1; // widens every tolerance when nothing in the log is close
   const t = avgT(s);
-  const wT = t == null ? 0.35 : gauss(t - q.temp, 3.5);
+  const wT = t == null ? 0.35 : gauss(t - q.temp, 3.5 * k);
   const h = tripHour(s);
-  const wH = h == null ? 0.5 : gauss(Math.min(Math.abs(h - q.hour), 24 - Math.abs(h - q.hour)), 2.2);
+  const wH = h == null ? 0.5 : gauss(Math.min(Math.abs(h - q.hour), 24 - Math.abs(h - q.hour)), 2.2 * k);
   let dd = Math.abs(dayOfYear(s.date) - q.doy); dd = Math.min(dd, 365 - dd);
-  const wS = 0.3 + 0.7 * gauss(dd, 40);
+  const wS = 0.3 + 0.7 * gauss(dd, 40 * k);
   const sky = skyOf(s);
   const wC = q.sky && sky ? (sky === q.sky || (q.sky !== "Clear" && sky !== "Clear") ? 1.25 : 0.8) : 1;
   return wT * wH * wS * wC;
@@ -40,7 +41,7 @@ function rankWaters(q) {
     const neff = W2 ? W * W / W2 : 0;
     const similar = xs.filter(x => x.w >= 0.2).sort((a, b) => b.w - a.w);
     return { water, est: (fishW + K * globalRate) / (W + K), raw: W ? fishW / W : 0, skunk: W ? skunkW / W : 0, neff, W, trips: xs.length, similar, xs };
-  }).filter(r => r.trips >= 2);
+  }).filter(r => r.trips >= ((q.k || 1) > 1 ? 1 : 2));
   rows.sort((a, b) => b.est - a.est);
   const sim = scored.filter(x => x.w >= 0.2);
   return { rows, globalRate, nSimilar: sim.length, skunkSimilar: sim.length ? sim.filter(x => !x.f).length / sim.length : 0, anySeason: scored.some(x => { let dd = Math.abs(dayOfYear(x.s.date) - q.doy); return Math.min(dd, 365 - dd) <= 30; }) };
@@ -58,6 +59,19 @@ function bestSpot(xs) {
 }
 const conf = n => n >= 5 ? ["High", "go"] : n >= 2.5 ? ["Medium", "info"] : ["Low", "no"];
 const clock = h => { const hh = Math.floor(h) % 24, mm = Math.round((h - Math.floor(h)) * 60); return fmtTime(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`); };
+
+// Start strict, then widen the tolerances step by step until some water has enough evidence.
+// Always returns a ranking, so Copilot never answers "nothing works".
+const WIDEN = [1, 1.6, 2.5, 4, 8];
+function bestRanking(q, minNeff = 1) {
+  let res = null;
+  for (const k of WIDEN) {
+    res = rankWaters({ ...q, k });
+    const rows = res.rows.filter(x => x.W >= 0.6 && x.neff >= minNeff);
+    if (rows.length) return { res, rows, k };
+  }
+  return { res, rows: res.rows, k: WIDEN[WIDEN.length - 1] };
+}
 
 /* ---------- weather (Open-Meteo, free, no key) ---------- */
 let wx = null; // { lat, lon, current:{temp,sky}, hourly:[{time:Date, temp, sky}] }
@@ -100,7 +114,7 @@ function bestWindow() {
   if (!wx) return null;
   const now = Date.now(), hrs = wx.hourly.filter(h => h.time.getTime() >= now - 36e5 && h.time.getTime() <= now + 30 * 36e5 && h.time.getHours() >= 5 && h.time.getHours() <= 21);
   if (!hrs.length) return null;
-  const scored = hrs.map(h => { const q = { temp: h.temp, hour: h.time.getHours() + 0.5, doy: dayOfYear(isoDate(h.time)), sky: h.sky }; const top = rankWaters(q).rows.filter(x => x.W >= 0.6 && x.neff >= 1.5)[0]; return { h, top }; }).filter(x => x.top);
+  const scored = hrs.map(h => { const q = { temp: h.temp, hour: h.time.getHours() + 0.5, doy: dayOfYear(isoDate(h.time)), sky: h.sky }; const top = bestRanking(q, 1.5).rows[0]; return { h, top }; }).filter(x => x.top);
   if (!scored.length) return null;
   const peak = scored.reduce((a, b) => b.top.est > a.top.est ? b : a);
   const i = scored.indexOf(peak); let lo = i, hi = i;
@@ -123,31 +137,34 @@ function renderAdvice() {
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
   if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Tap “Use current weather” or enter a temperature and time.</p>`; return; }
   const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: $("aSky").querySelector('[aria-pressed="true"]')?.dataset.v || null };
-  const res = rankWaters(q), rows = res.rows.filter(x => x.W >= 0.6 && x.neff >= 1);  // enough similar evidence to judge
-  const top = rows[0];
+  const { res, rows, k } = bestRanking(q);
+  const top = rows[0], second = rows[1], widened = k > 1;
   const when = `${fmtT(q.temp)} at ${fmtTime(tm)}${q.sky ? `, ${q.sky.toLowerCase()}` : ""}`;
   let html = "";
   if (!top) {
-    html = `<div class="verdict"><span class="chip info">No match</span><h3>Nothing in your log looks like ${esc(when)}</h3><p>Fish somewhere new and log it. That's how the model learns these conditions.</p></div>`;
+    html = `<div class="verdict"><span class="chip info">Training</span><h3>Log a few more trips</h3><p>Copilot needs trips at a couple of different waters before it can compare them.</p></div>`;
   } else {
-    const [cl, cc] = conf(top.neff), simTop = top.similar.length ? top.similar : top.xs.sort((a, b) => b.w - a.w);
+    const [cl, cc] = k >= 2.5 ? ["Low", "no"] : k > 1 && top.neff >= 5 ? ["Medium", "info"] : conf(top.neff), simTop = top.similar.length ? top.similar : top.xs.sort((a, b) => b.w - a.w);
     const lure = bestOf(simTop, c => c.lure), spot = bestSpot(simTop), species = bestOf(simTop, c => c.species);
     const nSim = top.similar.length, skunks = top.similar.filter(x => !x.f).length;
     const slow = res.skunkSimilar >= 0.5 && res.nSimilar >= 3;
     const tough = slow && (top.skunk >= 0.5 || top.est < 1);  // even the best option is weak
-    const evidence = nSim ? `On ${nSim} similar trip${nSim === 1 ? "" : "s"} there you caught ${top.similar.reduce((a, x) => a + x.f, 0)} fish and got skunked ${skunks === 0 ? "none of the time" : skunks === nSim ? "every time" : `${skunks} time${skunks === 1 ? "" : "s"}`}.` : `You've fished it ${top.trips} times, but never in conditions this close, so treat this as a lean.`;
+    const evidence = nSim ? `On ${nSim} similar trip${nSim === 1 ? "" : "s"} there you caught ${top.similar.reduce((a, x) => a + x.f, 0)} fish and got skunked ${skunks === 0 ? "none of the time" : skunks === nSim ? "every time" : `${skunks} time${skunks === 1 ? "" : "s"}`}.` : `You've fished it ${top.trips} time${top.trips === 1 ? "" : "s"}, but never in conditions this close, so treat this as a lean.`;
+    const nearT = Math.round(3.5 * k), nearH = Math.round(2.2 * k);
+    const widenNote = widened ? `<p class="v-note">Nothing in your log is a close match for ${esc(when)}, so this is based on your nearest trips (within about ${tOut(nearT) - tOut(0)}°${T()} and ${nearH} hours). It gets sharper as you log trips in these conditions.</p>` : "";
     html += `<div class="verdict${slow ? " slow" : ""}">
-      <div class="v-top"><span class="chip ${cc}">${cl} confidence</span><span class="label">${esc(when)}</span></div>
+      <div class="v-top"><span class="chip ${cc}">${widened ? "Closest match · " : ""}${cl} confidence</span><span class="label">${esc(when)}</span></div>
       ${tough ? `<h3>Wait if you can</h3>
       <p class="v-say">${Math.round(res.skunkSimilar * 100)}% of your trips in conditions like this were skunks. If you go anyway, <b>${esc(top.water)}</b> is your best bet, at about ${top.est.toFixed(1)} fish. ${evidence}</p>` : `<h3>Fish ${esc(top.water)}</h3>
       <p class="v-say">Expect about <b>${top.est.toFixed(1)} fish</b>${species ? `, mostly ${esc(species.toLowerCase())}` : ""}. ${evidence}</p>`}
-      <ul class="v-tips">${spot ? `<li><span class="label">Spot</span>${esc(spot)}</li>` : ""}${lure ? `<li><span class="label">Tie on</span>${esc(lure)}</li>` : ""}</ul>
+      <ul class="v-tips">${spot ? `<li><span class="label">Spot</span>${esc(spot)}</li>` : ""}${lure ? `<li><span class="label">Tie on</span>${esc(lure)}</li>` : ""}${second ? `<li><span class="label">Backup plan</span>${esc(second.water)} · ~${second.est.toFixed(1)} fish</li>` : ""}</ul>
+      ${widenNote}
       ${slow && !tough ? `<p class="v-warn"><b>Heads up:</b> ${Math.round(res.skunkSimilar * 100)}% of your trips in conditions like this were skunks, wherever you went.</p>` : ""}
       ${!res.anySeason ? `<p class="v-warn">You haven't logged trips at this time of year, so this is based on temperature and time of day only.</p>` : ""}
     </div>`;
     const win = bestWindow();
     if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
-    if (rows.length > 1) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(1, 6).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
+    if (rows.length > 2) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(2, 7).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
     const basis = simTop.slice(0, 5);
     html += `<section class="card"><h2>Why Copilot said this: your most similar trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
   }
@@ -174,7 +191,7 @@ function showSampleCopilot() {
   $("aTempLabel").textContent = `Temp °${T()}`;
   $("aSky").innerHTML = ["Clear", "Overcast", "Rain"].map(c => `<button type="button" data-v="${c}" aria-pressed="false">${c}</button>`).join("");
   $("aSky").onclick = e => { const b = e.target.closest("button"); if (!b) return; const on = b.getAttribute("aria-pressed") !== "true"; segSet($("aSky"), on ? [b.dataset.v] : []); renderAdvice(); };
-  ["aTemp", "aTime", "aDate"].forEach(id => $(id).addEventListener("input", renderAdvice));
+  ["aTemp", "aTime", "aDate"].forEach(id => $(id).addEventListener("input", () => { $("aWeatherMsg").textContent = ""; renderAdvice(); }));
   $("aWeather").onclick = () => loadWeather(true);
   const _render = render;
   render = function () { _render(); $("aTempLabel").textContent = `Temp °${T()}`; renderAdvice(); };

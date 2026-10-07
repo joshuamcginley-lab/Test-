@@ -287,3 +287,9 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-varia
   nav.tabs .dock-log{display:grid;place-items:center;width:52px;height:52px;margin:0 6px;border:0;border-radius:16px;background:var(--grad);color:var(--on-grad);font:500 30px/1 var(--f-body);box-shadow:var(--glow)}
 }
 @media (min-width:701px){nav.tabs button[role="tab"] svg{display:none}}
+.v-note{font-size:14px!important;color:var(--muted)!important}
+/* iOS date/time inputs ignore width without this and spill out of their column */
+.field input[type="date"],.field input[type="time"]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:44px;text-align:left}
+input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date-and-time-value{text-align:left}
+.now-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+.now-row > .field:last-child{grid-column:1/-1}
