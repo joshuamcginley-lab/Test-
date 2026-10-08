@@ -560,3 +560,17 @@ p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:
 /* Dark map: invert OpenStreetMap's light tiles, then pull the colours back toward the app's navy */
 .spots-map.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55)}
 body.booting #welcome{visibility:hidden}
+
+/* ---------- fishr Cloud (Settings → Storage) ---------- */
+.set-group h3 .pill{margin-left:6px;vertical-align:2px;padding:4px 7px;font-size:10px}
+.cloud-box{display:grid;gap:10px}
+.cloud-box.warn{padding:12px 14px;border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);border-radius:var(--r);background:color-mix(in srgb,var(--bad) 6%,transparent)}
+.set-group p.fine{font-size:12.5px;line-height:1.5}
+.set-group p.fine a{color:var(--c)}
+.set-group p.sync-line{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:500}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--v);box-shadow:0 0 10px var(--v)}
+.sync-dot.busy{background:var(--m);box-shadow:0 0 10px var(--m);animation:syncPulse 1s ease-in-out infinite}
+.sync-dot.err{background:var(--bad);box-shadow:none}
+@keyframes syncPulse{50%{opacity:.35}}
+.set-group p.cloud-msg{color:var(--ink);font-size:13.5px;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--line-2)}
+.pro-feats b .pill{margin-left:6px;padding:3px 7px;font-size:9.5px;vertical-align:1px}

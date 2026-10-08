@@ -15,6 +15,7 @@ A fishing log that runs in the browser and installs to a phone's home screen. An
 | `index.html` | Page markup |
 | `styles.css` | Design (AI-startup theme, dark-first with light mode) |
 | `app.js` | All app logic: storage, form, stats, patterns, backup |
+| `cloud.js` | Optional fishr Cloud: passkey sign-in and sync |
 | `sw.js` | Offline caching |
 | `manifest.webmanifest`, `icons/` | Home-screen install |
 | `sample.json` | Sample season data |
@@ -52,6 +53,17 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 
 - `map.js`: Trips → Map shows each water (sized by trips, coloured by fish per trip) and pinned spots on OpenStreetMap tiles via Leaflet, loaded on first use. Waters without a location can be placed by tapping the map.
 - `pro.js` + `functions/api/waitlist.js`: the fishr Pro waitlist. Sign-ups need a ticked consent box and are stored in R2 under `waitlist/`. Export them as CSV with `GET /api/waitlist?export=csv` and an `x-admin-key` header matching the `WAITLIST_KEY` environment variable.
+
+## fishr Cloud (optional sync)
+
+Settings → Storage switches between **On this phone** (the default) and **Cloud**. Cloud accounts use passkeys (Face ID, Touch ID, fingerprint): no passwords or email.
+
+- `cloud.js`: passkey sign-in, the Storage settings, and sync. Each trip is compared with what was last synced, so any change gets sent; the newest version of a trip wins, and deletes sync too. Photos upload privately and download on other devices when first shown.
+- `functions/_auth.js`: passkey (WebAuthn) checks, sessions and the database tables (created automatically on first use).
+- `functions/api/auth/[action].js` (sign up, sign in, sign out, account info), `functions/api/sync.js`, `functions/api/photo/[id].js`, `functions/api/account.js` (delete everything).
+- Needs a D1 database (`fishr-logs`) bound to the Pages project as `DB`, plus the existing `CATCHES` R2 bucket (photos go under `u/<user id>/`).
+- Cloud is free during the beta. To make it a Pro feature, add the environment variable `CLOUD_PRO_ONLY=true`; then only accounts with `plan = 'pro'` in the `users` table can sync, and everyone else keeps their log on their phone.
+- Passkeys only work on the domain they were made on, so `www.` and the old pages.dev address redirect to `CANONICAL_HOST`.
 
 ## Admin, privacy and crash reports
 

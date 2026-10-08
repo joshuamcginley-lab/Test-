@@ -84,7 +84,8 @@ const photoClear = () => idbDo("readwrite", s => s.clear());
 const photoUrls = new Map();
 async function photoURL(id) {
   if (photoUrls.has(id)) return photoUrls.get(id);
-  const blob = await photoGet(id).catch(() => null); if (!blob) return null;
+  // Not on this phone? With Cloud on, fetch it from the account (cloud.js).
+  const blob = await photoGet(id).catch(() => null) || (typeof cloudPhoto === "function" ? await cloudPhoto(id) : null); if (!blob) return null;
   const u = URL.createObjectURL(blob); photoUrls.set(id, u); return u;
 }
 const photoIdsOf = s => (s?.catches || []).map(c => c.photo).filter(Boolean);

@@ -38,10 +38,14 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
   <h1>Privacy</h1>
   <p class="meta">Last updated October 8, 2026</p>
 
-  <p>fishr.ai is a fishing log and forecasting app in public beta, built in New Brunswick, Canada. This page explains what the app collects, where it goes, and how to remove it. The short version: <b>your fishing log stays on your phone</b>, and we only receive what you choose to send us.</p>
+  <p>fishr.ai is a fishing log and forecasting app in public beta, built in New Brunswick, Canada. This page explains what the app collects, where it goes, and how to remove it. The short version: <b>your fishing log stays on your phone</b> unless you turn on fishr Cloud, and we only receive what you choose to send us.</p>
 
   <h2>What stays on your device</h2>
-  <p>Your trips, catches, photos, spots, notes and settings are stored in your browser on your device. They are not sent to us. Backups you save from Settings are files on your device too. Deleting the app's data in Settings, or clearing your browser's site data, removes them.</p>
+  <p>Unless you turn on fishr Cloud, your trips, catches, photos, spots, notes and settings are stored in your browser on your device. They are not sent to us. Backups you save from Settings are files on your device too. Deleting the app's data in Settings, or clearing your browser's site data, removes them.</p>
+  <h2 id="cloud">fishr Cloud (optional)</h2>
+  <p>If you switch Storage to Cloud in Settings, we store a copy of your log so you can use it on other devices: your trips (including GPS pins, spots, catches, lures, weather and notes), your notes, your name and unit settings, and your catch photos. You sign in with a passkey. <b>Your face, fingerprint and device passcode never leave your device</b>; we only receive a public key and a device label such as “iPhone · Safari”. No password, email address or phone number is collected.</p>
+  <p>Signing in sets one cookie that keeps you signed in on that device for up to a year. It's only used to recognize your account, never for tracking or ads.</p>
+  <p>Your cloud data is stored on Cloudflare's servers in eastern North America, which may be in the United States, and only you can read it. Photos are stored privately and are not public links. <b>Delete cloud account</b> in Settings erases your account, trips, notes, settings and photos from our servers right away; Cloudflare's automatic database recovery copies expire within 30 days. Trips on your devices stay there.</p>
 
   <h2>What reaches our servers, and why</h2>
   <div class="wrap"><table>
@@ -50,12 +54,13 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
     <tr><td>Your email address, optional first name, the date you joined and your consent</td><td>Only if you join the fishr Pro waitlist</td><td>To email you about fishr Pro. Kept until you unsubscribe or ask us to remove it. We never sell or share it.</td></tr>
     <tr><td>Your approximate location (rounded to about 100 m)</td><td>When the app looks up the nearest river gauge</td><td>To find the gauge. Used for that request and not stored.</td></tr>
     <tr><td>Crash reports: the error message, which file and line, your browser type, screen size and country</td><td>Only if the app hits an error</td><td>To fix bugs. No trips, photos, location or contact details are included. Deleted after 90 days.</td></tr>
+    <tr><td>Your fishing log, photos, settings and a passkey public key</td><td>Only if you turn on fishr Cloud</td><td>To back up and sync your log between your devices. Kept until you delete your cloud account in Settings. <a href="#cloud">Details</a></td></tr>
     <tr><td>Anonymous visit counts</td><td>When you open the app</td><td>Cloudflare Web Analytics, which uses no cookies and doesn't track you across sites.</td></tr>
   </table></div>
 
   <h2>Services the app connects to</h2>
   <ul>
-    <li><b>Cloudflare</b> hosts the app and stores shared catches, the waitlist and crash reports.</li>
+    <li><b>Cloudflare</b> hosts the app and stores fishr Cloud accounts, shared catches, the waitlist and crash reports.</li>
     <li><b>Open-Meteo</b> provides weather, pressure and forecasts. Your phone sends it approximate coordinates to get local weather.</li>
     <li><b>Environment and Climate Change Canada</b> provides river gauge data, fetched by our server.</li>
     <li><b>OpenStreetMap</b> provides map tiles when you open the map.</li>
@@ -71,7 +76,7 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
   <form id="rm"><input type="email" id="rmEmail" placeholder="you@example.com" autocomplete="email" required><button type="submit">Remove me</button><p id="msg" class="muted"></p></form>
 
   <h2>Your rights</h2>
-  <p>Under Canadian privacy law (PIPEDA) you can ask what we hold about you, ask us to correct it, or ask us to delete it, including a shared catch. Use the form above for the waitlist. For anything else, contact us using the details below.</p>
+  <p>Under Canadian privacy law (PIPEDA) you can ask what we hold about you, ask us to correct it, or ask us to delete it, including a shared catch. You can delete a fishr Cloud account yourself in Settings. Use the form above for the waitlist. For anything else, contact us using the details below.</p>
 
   <h2>Children</h2>
   <p>fishr.ai isn't directed at children under 13, and we don't knowingly collect their information.</p>
