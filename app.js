@@ -638,6 +638,36 @@ window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); instal
 $("installBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; };
 if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) $("installGroup").hidden = true;
 
+/* ---------- Insights: one table at a time ---------- */
+// Stats and Insights show one card at a time (picked with the row of buttons above them), so each fits a screen.
+function oneAtATime(seg, cards, key, first) {
+  const show = v => {
+    segSet($(seg), [v]);
+    for (const c of $(cards).querySelectorAll("[data-ins]")) c.hidden = c.dataset.ins !== v;
+    try { sessionStorage.setItem(key, v); } catch (e) {}
+  };
+  $(seg).onclick = e => { const b = e.target.closest("button"); if (b) show(b.dataset.v); };
+  let v = null; try { v = sessionStorage.getItem(key); } catch (e) {}
+  show(v || first);
+}
+oneAtATime("insSeg", "insCards", "ft-ins", "water");
+oneAtATime("statSeg", "statCards", "ft-stat", "species");
+
+// Long tables show their top rows, with a button for the rest.
+const TOP_ROWS = 6;
+function clampTables() {
+  for (const t of document.querySelectorAll("#insCards table, #bigFish")) {
+    const rows = [...t.querySelectorAll("tr")].slice(1), wrap = t.closest(".tbl-wrap");
+    let btn = wrap.nextElementSibling?.classList.contains("show-all") ? wrap.nextElementSibling : null;
+    const open = t.dataset.open === "1", extra = rows.length - TOP_ROWS;
+    rows.forEach((r, i) => { r.hidden = !open && i >= TOP_ROWS; });
+    if (extra <= 0) { btn?.remove(); continue; }
+    if (!btn) { btn = document.createElement("button"); btn.type = "button"; btn.className = "linkbtn show-all"; wrap.after(btn);
+      btn.onclick = () => { t.dataset.open = t.dataset.open === "1" ? "" : "1"; clampTables(); }; }
+    btn.textContent = open ? "Show fewer" : `Show all ${rows.length}`;
+  }
+}
+
 /* ---------- toast ---------- */
 function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").hidden = true, 2400); }
 

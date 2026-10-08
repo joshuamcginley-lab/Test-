@@ -79,3 +79,6 @@ function confetti() {
     } else { ind.style.transform = ""; ind.style.opacity = 0; ind.classList.remove("ready"); }
   });
 })();
+
+/* ---------- long tables show their top rows (clampTables in app.js) after every render ---------- */
+{ const _renderForClamp = render; render = function () { _renderForClamp(); clampTables(); }; clampTables(); }

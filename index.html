@@ -42,6 +42,7 @@
 <header class="appbar" id="appbar"><div class="wrap appbar-in">
   <a class="logo" id="homeLink" href="./" aria-label="fishr.ai home"><img class="mark" src="icons/mark-128.png" alt="" width="30" height="30"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></a>
   <div class="top-actions">
+    <label class="chip-btn fid-pick fid-top" title="fishr ID: what fish is this?"><input type="file" accept="image/*" class="fid-file" aria-label="fishr ID: identify a fish from a photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg><span>fishr ID</span></label>
     <button type="button" class="chip-btn" id="topSample" title="See a sample season"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Sample</span></button>
     <button type="button" class="chip-btn pro-btn" id="topPro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><span>Pro</span></button>
     <button class="btn-log desk-only" id="openNew" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Log a trip</span></button>
@@ -118,12 +119,7 @@
         <div class="ask-gate" id="askGate" hidden><p><b>Ask fishr reads your log from fishr Cloud.</b> Turn on Cloud (free during the beta) and ask anything: where to go, when, what to throw.</p><button type="button" class="btn primary" id="askCloud">Turn on Cloud</button></div>
         <p class="ask-foot" id="askFoot"></p>
       </section>
-      <section class="fid-card" id="fidCard" aria-labelledby="fidCardTitle">
-        <span class="fid-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
-        <div><h2 id="fidCardTitle">fishr ID <span class="pill beta">Beta</span></h2><p>Snap a fish. fishr names the species.</p></div>
-        <label class="btn primary fid-pick"><input type="file" accept="image/*" class="fid-file" aria-label="Choose a fish photo">Identify a fish</label>
-      </section>
-      <button type="button" class="pro-banner" id="copilotPro"><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
+      <button type="button" class="pro-banner" id="copilotPro" hidden><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
       <summary><span>Adjust model inputs</span><span class="more-hint">plan a different time, temperature or conditions</span></summary>
       <div class="more-in">
@@ -141,13 +137,12 @@
 
     <div id="panel-season" role="tabpanel">
       <div class="board" id="gauges"></div>
-      <div class="grid2">
-        <section class="card"><h2>By species</h2><div class="bars" id="speciesBars"></div></section>
-        <section class="card"><h2>Fish per trip by month</h2><div id="monthChart"></div></section>
-      </div>
-      <div class="grid2">
-        <section class="card"><h2>Biggest fish</h2><div class="tbl-wrap"><table id="bigFish"></table></div></section>
-        <section class="card">
+      <div class="seg ins-seg" id="statSeg" role="group" aria-label="Show stats for"><button type="button" data-v="species" aria-pressed="true">Species</button><button type="button" data-v="months" aria-pressed="false">Months</button><button type="button" data-v="big" aria-pressed="false">Biggest fish</button><button type="button" data-v="notes" aria-pressed="false">Field notes</button></div>
+      <div class="grid2 ins-one" id="statCards">
+        <section class="card" data-ins="species"><h2>By species</h2><div class="bars" id="speciesBars"></div></section>
+        <section class="card" data-ins="months"><h2>Fish per trip by month</h2><div id="monthChart"></div></section>
+        <section class="card" data-ins="big"><h2>Biggest fish</h2><div class="tbl-wrap"><table id="bigFish"></table></div></section>
+        <section class="card" data-ins="notes">
           <h2>Field notes <button class="linkbtn" id="editNotes" type="button">Edit</button></h2>
           <ul class="notes-list" id="notesList"></ul>
           <div id="notesEditor" hidden>
@@ -160,13 +155,14 @@
 
     <div id="panel-patterns" role="tabpanel" hidden>
       <div class="callouts" id="callouts"></div>
-      <div class="grid2">
-        <section class="card"><h2>By water</h2><div class="tbl-wrap"><table id="tWater"></table></div></section>
-        <section class="card"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
-        <section class="card"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
-        <section class="card"><h2>By lure</h2><div class="tbl-wrap"><table id="tLure"></table></div></section>
-        <section class="card"><h2>By pressure</h2><div class="tbl-wrap"><table id="tPress"></table></div><p class="showcase-note" id="pressNote" hidden><span class="showcase-tag">Showcase</span> Pressure for these sample trips was looked up from historical weather records. Your trips get it automatically.</p></section>
-        <section class="card"><h2>By river level</h2><div class="tbl-wrap"><table id="tFlow"></table></div></section>
+      <div class="seg ins-seg" id="insSeg" role="group" aria-label="Show insights by"><button type="button" data-v="water" aria-pressed="true">Water</button><button type="button" data-v="time" aria-pressed="false">Time</button><button type="button" data-v="temp" aria-pressed="false">Temp</button><button type="button" data-v="lure" aria-pressed="false">Lure</button><button type="button" data-v="press" aria-pressed="false">Pressure</button><button type="button" data-v="river" aria-pressed="false">River</button></div>
+      <div class="grid2 ins-one" id="insCards">
+        <section class="card" data-ins="water"><h2>By water</h2><div class="tbl-wrap"><table id="tWater"></table></div></section>
+        <section class="card" data-ins="time"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
+        <section class="card" data-ins="temp"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
+        <section class="card" data-ins="lure"><h2>By lure</h2><div class="tbl-wrap"><table id="tLure"></table></div></section>
+        <section class="card" data-ins="press"><h2>By pressure</h2><div class="tbl-wrap"><table id="tPress"></table></div><p class="showcase-note" id="pressNote" hidden><span class="showcase-tag">Showcase</span> Pressure for these sample trips was looked up from historical weather records. Your trips get it automatically.</p></section>
+        <section class="card" data-ins="river"><h2>By river level</h2><div class="tbl-wrap"><table id="tFlow"></table></div></section>
       </div>
     </div>
 

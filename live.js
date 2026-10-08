@@ -80,7 +80,7 @@ function renderLive(status) {
   if (!wx) {
     box.innerHTML = liveLoading
       ? `<div class="live-empty"><span class="live-dot"></span><div><b>Syncing 4 data sources…</b><span>Weather models · barometric pressure · river gauges · sun and moon</span></div></div><div class="live-grid">${"<div class='tile skel'></div>".repeat(6)}</div>`
-      : `<div class="live-empty"><span class="live-dot off"></span><div><b>${status === "error" ? "Couldn't reach live data" : "Live conditions are off"}</b><span>Pull real-time weather, pressure, wind, river levels, sun and moon into Copilot.</span></div><button type="button" class="btn-log" id="liveGo">✦ Go live</button></div>`;
+      : `<div class="live-empty"><span class="live-dot off"></span><div><b>${status === "error" ? "Couldn't reach live data" : "Live conditions are off"}</b><span>Weather, pressure, river levels, sun and moon.</span></div><button type="button" class="btn-log" id="liveGo">✦ Go live</button></div>`;
     const g = $("liveGo"); if (g) g.onclick = () => goLive(true);
     return;
   }
@@ -136,6 +136,7 @@ function renderLive(status) {
         <div class="drivers">${bi.drivers.slice(0, 5).map(x => `<span class="drv ${x.v > 0 ? "up" : "down"}">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</span>`).join("")}</div>
       </div>
     </div>
+    <div class="live-rest">
     <div class="tile">
       <span class="label">Air</span>
       <div class="big"><b data-count="${Math.round(tOut(c.temp))}">${Math.round(tOut(c.temp))}</b><small>°${T()}</small></div>
@@ -173,6 +174,7 @@ function renderLive(status) {
       <div class="big"><b>${sun ? fmtClock(!dark ? sun.set : now < sun.rise ? sun.rise : (nextSun || sun).rise) : "—"}</b><small>${dark ? "sunrise" : "sunset"}</small></div>
       <span class="sub">${esc(lightLine)}</span>
       <div class="moon"><span class="moon-disc" style="--lit:${mn.illum}%"></span><span>${mn.name} · ${mn.illum}% lit</span></div>
+    </div>
     </div>
   </div>
   <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · Environment and Climate Change Canada · astronomical ephemeris.</div>`;

@@ -178,12 +178,17 @@ function renderAdvice() {
     </div>`;
     const win = bestWindow();
     if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
+    // The tables behind the call fold away, so Copilot fits on one screen.
+    html += `<details class="more math" id="mathBox"${mathOpen ? " open" : ""}><summary><span>See the math</span><span class="more-hint">other waters and your most similar trips</span></summary><div class="more-in">`;
     if (rows.length > 2) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(2, 7).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
     const basis = simTop.slice(0, 5);
     html += `<section class="card"><h2>Why Copilot said this: your most similar trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
+    html += `</div></details>`;
   }
   box.innerHTML = html;
+  $("mathBox")?.addEventListener("toggle", e => { mathOpen = e.target.open; });
 }
+let mathOpen = false;
 
 // What your own log says about pressure and river level, once there are enough trips to compare.
 function conditionFacts(q) {

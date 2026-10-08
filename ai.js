@@ -41,7 +41,8 @@ function renderAsk() {
   if (gated) delete askInfo.own;
   if (!gated && !info) askStatus(mode);
   else if (gated && !askInfo.sample) askStatus("sample"); // just to learn whether fishr AI is switched on
-  box.hidden = $("fidCard").hidden = $("fidChoice").hidden = aiOff;
+  box.hidden = $("fidChoice").hidden = aiOff;
+  document.querySelectorAll(".fid-top").forEach(el => { el.hidden = aiOff; });
   if (aiOff) return;
   $("askSub").textContent = own ? "Like the old-timer on the dock, except he's read every trip in your log." : "Like the old-timer on the dock, except he's read all 47 trips in this season.";
   $("askGate").hidden = !gated; $("askForm").hidden = gated;
