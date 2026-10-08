@@ -296,9 +296,18 @@ function fillLists() {
 }
 
 /* ---------- tabs & filters ---------- */
+const TAB_TITLES = { advice: "Copilot", season: "Stats", patterns: "Insights", log: "Trips" };
 function showTab(t) {
+  const was = document.querySelector('nav.tabs [aria-selected="true"]')?.dataset.tab;
   for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", b.dataset.tab === t);
   for (const p of ["advice", "season", "patterns", "log"]) $("panel-" + p).hidden = p !== t;
+  $("screenTitle").textContent = TAB_TITLES[t] || "";
+  $("seasonSel").parentElement.classList.toggle("off", t === "advice");
+  if (was && was !== t) {
+    const panel = $("panel-" + t); panel.classList.remove("enter"); void panel.offsetWidth; panel.classList.add("enter");
+    if (typeof haptic === "function") haptic();
+    if (window.scrollY > 0) window.scrollTo({ top: 0 });
+  }
   try { sessionStorage.setItem("ft-tab", t); } catch (e) {}
   if (t === "advice" && typeof autoLive === "function") autoLive();
   if (t === "log" && typeof renderMap === "function") renderMap();
@@ -496,7 +505,12 @@ $("form").addEventListener("submit", async e => {
   state.settings.season = date.slice(0, 4); save();
   closeSheets(); render();
   const fc = catches.reduce((a, c) => a + c.count, 0);
-  toast(prev ? "Trip updated. Model retrained." : fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
+  const bestBefore = Math.max(0, ...state.sessions.filter(s => s.id !== doc.id).flatMap(s => (s.catches || []).map(c => +c.lb || 0)));
+  const bestNow = Math.max(0, ...catches.map(c => +c.lb || 0));
+  const pb = !prev && bestNow > 0 && bestNow > bestBefore && state.sessions.length > 1;
+  if (prev) toast("Trip updated. Model retrained.");
+  else if (typeof celebrate === "function") celebrate({ fish: fc, pb: pb ? bestNow : null, species: catches.find(c => +c.lb === bestNow)?.species });
+  else toast(fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
 });
 
 /* ---------- notes ---------- */
@@ -601,7 +615,7 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 /* ---------- boot ---------- */
 load();
 render();
-try { const t = sessionStorage.getItem("ft-tab"); if (t) showTab(t); } catch (e) {}
+{ let t = null; try { t = sessionStorage.getItem("ft-tab"); } catch (e) {} showTab(t || "advice"); }
 window.addEventListener("storage", e => { if (e.key === KEY) { load(); render(); } });
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
 

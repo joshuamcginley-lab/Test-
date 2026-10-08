@@ -38,44 +38,42 @@
     </div>
   </div>
 </section>
-<div class="band"><div class="wrap">
-  <div class="topbar">
-    <div class="logo"><img class="mark" src="icons/mark-128.png" alt="" width="28" height="28"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
-    <div class="top-actions">
-      <button type="button" class="btn sm pro-btn" id="topPro">✦ Pro</button>
-      <button type="button" class="btn sm" id="topSample">👀 Sample season</button>
-      <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
-      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
-    </div>
+<header class="appbar" id="appbar"><div class="wrap appbar-in">
+  <div class="logo"><img class="mark" src="icons/mark-128.png" alt="" width="30" height="30"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
+  <div class="top-actions">
+    <button type="button" class="chip-btn" id="topSample" title="See a sample season"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Sample</span></button>
+    <button type="button" class="chip-btn pro-btn" id="topPro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><span>Pro</span></button>
+    <button class="btn-log desk-only" id="openNew" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Log a trip</span></button>
+    <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </div>
-  <div class="band-top">
-    <div class="hero" id="hero">
-      <span class="pill live">Bite Intelligence™ is live</span>
-      <h1><span class="own" id="ownerLine" hidden>Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
-      <div class="cr" id="tagline">Your AI fishing copilot. Log trips, train your model, get the call.</div>
-    </div>
-    <button class="btn-log desk-only" id="openNew" type="button">✦ Log a trip</button>
-  </div>
-  <div class="ws-line" id="wsLine"></div>
-  <div class="board" id="gauges"></div>
-</div></div>
-<div class="tiger" aria-hidden="true"></div>
+</div></header>
 
 <div class="wrap">
   <div class="welcome" id="welcome" hidden>
+    <div class="hero" id="hero">
+      <div class="hero-mark"><img src="icons/mark-512.png" alt="" width="132" height="132"></div>
+      <span class="pill live">Bite Intelligence™ is live</span>
+      <h1><span class="own" id="ownerLine" hidden>Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
+      <p class="cr" id="tagline">Your AI fishing copilot. Log trips, train your model, get the call.</p>
+    </div>
     <button type="button" class="choice primary-choice" id="welcomeNew">
-      <span class="choice-icon">+</span>
+      <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
       <span><b>Log your first trip</b><span>Takes under a minute. Skunks count.</span></span>
     </button>
     <button type="button" class="choice" id="welcomeSample">
-      <span class="choice-icon">👀</span>
+      <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
       <span><b>See a sample season</b><span>47 real trips, so you can see what Copilot does before you log your own.</span></span>
     </button>
     <p class="welcome-note">Your trips stay on this phone. Works with no signal.</p>
   </div>
 
   <div id="main">
-    <div class="sample-bar" id="sampleBar" hidden><span><b>You're viewing a sample season.</b> 47 real trips from New Brunswick. Nothing here is saved.</span><button type="button" id="clearSample">Exit sample</button></div>
+    <div class="screen-head">
+      <div><h1 id="screenTitle">Copilot</h1><div class="ws-line" id="wsLine"></div></div>
+      <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
+    </div>
+
+    <div class="sample-bar" id="sampleBar" hidden><span><b>Sample season</b><span class="sb-long"> · 47 trips</span> · not saved</span><button type="button" id="clearSample">Exit sample</button></div>
 
     <div class="dock">
     <nav class="tabs" role="tablist">
@@ -107,6 +105,7 @@
     </div>
 
     <div id="panel-season" role="tabpanel">
+      <div class="board" id="gauges"></div>
       <div class="grid2">
         <section class="card"><h2>By species</h2><div class="bars" id="speciesBars"></div></section>
         <section class="card"><h2>Fish per trip by month</h2><div id="monthChart"></div></section>
@@ -156,7 +155,6 @@
       <div class="entries" id="entries"></div>
     </div>
   </div>
-  <div class="foot">fishr.ai v0.4.2-beta · Built in New Brunswick · Your data stays on this device. Back it up from Settings.<br>© 2026 fishr Labs Inc. Series A: coming soon.</div>
 </div>
 
 <!-- Trip form -->
@@ -224,7 +222,7 @@
     <div class="set-group">
       <h3>fishr Pro</h3>
       <p>AI chat, photo ID, bite alerts and cloud sync are in development.</p>
-      <div class="btn-row"><button class="btn" id="settingsPro" type="button">✦ Join the Pro waitlist</button></div>
+      <div class="btn-row"><button class="btn" id="settingsPro" type="button">Join the Pro waitlist</button></div>
     </div>
     <div class="set-group" id="installGroup">
       <h3>Put it on your home screen</h3>
@@ -252,6 +250,7 @@
       <h3>Start over</h3>
       <div class="btn-row"><button class="btn danger" id="wipeBtn" type="button">Delete all trips</button><span id="wipeConfirm" hidden><span style="margin-right:8px">This can't be undone.</span><button class="btn danger" id="wipeYes" type="button">Yes, delete everything</button></span></div>
     </div>
+<div class="foot about">fishr.ai v0.4.2-beta · Built in New Brunswick · Your data stays on this device. Back it up from Settings.<br>© 2026 fishr Labs Inc. Series A: coming soon.</div>
     <div class="sheet-actions"><span></span><button class="btn primary" id="closeSettings" type="button">Done</button></div>
   </div>
 </div>
@@ -264,10 +263,10 @@
     <h2 id="proTitle">fishr <span class="grad-text">Pro</span></h2>
     <p class="pro-lede">The next generation of fishr. Built for anglers who want an unfair advantage.</p>
     <ul class="pro-feats">
-      <li><span class="pf-ico">✦</span><span><b>Ask fishr</b>Chat with an AI copilot that knows your log and today's conditions.</span></li>
-      <li><span class="pf-ico">◎</span><span><b>Photo ID</b>Snap a fish and the species fills itself in.</span></li>
-      <li><span class="pf-ico">⚡</span><span><b>Bite alerts</b>Get a ping when the Bite Index spikes at your spots.</span></li>
-      <li><span class="pf-ico">☁</span><span><b>Cloud sync</b>Your trips, photos and spots backed up and on every device.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><span><b>Ask fishr</b>Chat with an AI copilot that knows your log and today's conditions.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg></span><span><b>Photo ID</b>Snap a fish and the species fills itself in.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span><b>Bite alerts</b>Get a ping when the Bite Index spikes at your spots.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z"/></svg></span><span><b>Cloud sync</b>Your trips, photos and spots backed up and on every device.</span></li>
     </ul>
     <div class="wl-count" id="wlCount"></div>
     <form id="wlForm" class="wl-form" novalidate>
@@ -303,12 +302,15 @@
   <div class="btn-row" style="justify-content:center"><button type="button" class="btn primary" id="viewerShare">Share catch</button><button type="button" class="btn" id="viewerClose">Close</button></div>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="celebrate" id="celebrate" hidden aria-live="polite"><canvas id="confetti"></canvas><div class="cel-card"><svg class="cel-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28"/><path d="M20 33l8 8 16-17"/></svg><b id="celTitle">Trip logged</b><span id="celSub"></span></div></div>
+<div class="splash" id="splash" aria-hidden="true"><img src="icons/mark-512.png" alt="" width="120" height="120"><span>fishr<span class="tld">.ai</span></span></div>
 <script src="app.js"></script>
 <script src="forecast.js"></script>
 <script src="conditions.js"></script>
 <script src="live.js"></script>
 <script src="map.js"></script>
 <script src="pro.js"></script>
+<script src="polish.js"></script>
 <script src="share.js"></script>
 </body>
 </html>
