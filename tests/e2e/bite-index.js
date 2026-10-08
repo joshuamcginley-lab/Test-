@@ -85,6 +85,29 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   ok(!r.chips.some(c => /for smallmouth/.test(c.t)) && await p.evaluate(() => state.settings.biteSpecies) === 'all', '"All fish" goes back to the general score');
   await p.reload(); await p.waitForTimeout(700); await p.evaluate(() => { showTab('advice'); goLive(true); }); await p.waitForTimeout(1500);
   ok((await card(p)).pill?.value === 'all', '"All fish" is remembered after a reload');
+  // Cold fronts, from the hourly pressure and temperature around now.
+  const series = kind => p.evaluate(kind => {
+    const base = new Date(); base.setMinutes(0, 0, 0); const H = [];
+    for (let k = -48; k <= 36; k++) {
+      const temp = kind === 'passed' ? (k > -14 ? 8 : 20) : kind === 'coming' ? (k < 8 ? 18 : 6) : 15;
+      const pr = kind === 'passed' ? 1000 + Math.abs(k + 10) * 0.8 : kind === 'coming' ? (k <= 0 ? 1010 : k <= 8 ? 1010 - k * 0.75 : 1004 + (k - 8) * 0.8) : 1013;
+      H.push({ time: new Date(+base + k * 36e5), temp, p: pr, sky: 'Clear', wind: 10, rain: 0, pop: 0 });
+    }
+    wx.hourly = H; wx.current.press = 'Steady'; wx.current.dp3 = 0; renderLive();
+    const chip = [...document.querySelectorAll('.drivers .drv')].find(d => /cold front/i.test(d.textContent));
+    return { chip: chip?.textContent || null, why: chip?.dataset.why || '', visible: !!chip?.checkVisibility(), ask: askConditions().front || null };
+  }, kind);
+  await p.selectOption('#biteSp', 'all');
+  r = await series('passed');
+  ok(r.chip === '−10 Just after a cold front' && r.visible, 'front passed 10h ago: −10 chip, shown on a phone ' + JSON.stringify(r.chip));
+  ok(/^A cold front came through about 10 hours ago: \d+° colder than the day before and pressure up 8 hPa since\./.test(r.why), 'passed front explains itself: ' + r.why);
+  ok(/^cold front passed about 10 hours ago/.test(r.ask || ''), 'Ask fishr is told about the front: ' + r.ask);
+  await p.$eval('.drv[data-why*="cold front"]', e => e.click()).catch(() => {});
+  await p.screenshot({ path: S + '/bite-front.png' });
+  r = await series('coming');
+  ok(r.chip === '+5 Cold front coming' && /due in about 8 hours/.test(r.why), 'front due in 8h: +5 chip ' + JSON.stringify(r));
+  r = await series('steady');
+  ok(!r.chip && !r.ask, 'steady weather: no front chip, nothing sent to Ask fishr');
   await ctx.close();
 
   // 2. Showcase and a brand-new user: nothing new on the card.

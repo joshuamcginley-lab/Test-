@@ -131,6 +131,7 @@ export function conditionsText(c) {
   const lines = [];
   const now = [t(c.date, 10), t(c.time, 5), c.temp != null ? `${t(c.temp, 6)}°C` : "", t(c.sky), c.pressure ? `pressure ${t(c.pressure)}` : "", c.flow ? `river ${t(c.flow)}` : "", c.wind != null ? `wind ${t(c.wind, 6)} km/h` : "", c.place ? `near ${t(c.place, 60)}` : ""].filter(Boolean);
   if (now.length) lines.push("Now: " + now.join(", "));
+  if (t(c.front, 160)) lines.push("Front: " + t(c.front, 160));
   if (Array.isArray(c.forecast) && c.forecast.length) lines.push("Forecast: " + c.forecast.slice(0, 16).map(f => t(f, 60)).join("; "));
   return lines.join("\n") || "No current conditions were sent.";
 }

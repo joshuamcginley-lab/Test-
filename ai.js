@@ -18,6 +18,9 @@ function askConditions() {
   const c = { date: $("aDate").value || null, time: $("aTime").value || null, temp: tv === "" ? null : tIn(Number(tv)), sky: pick("aSky"), pressure: pick("aPress"), flow: pick("aFlow") };
   if (!demo && typeof wx !== "undefined" && wx) {
     if (wx.current?.wind != null) c.wind = Math.round(wx.current.wind);
+    const f = coldFront(wx.hourly || [], new Date());
+    if (f) c.front = f.passed ? `cold front passed about ${f.hrs} hours ago; the last day ran ${Math.round(f.drop)}°C colder than the day before; pressure up ${Math.round(f.rise)} hPa since`
+      : `cold front due in about ${f.hrs} hours; the day after looks ${Math.round(f.drop)}°C colder`;
     const now = Date.now(), day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     c.forecast = (wx.hourly || []).filter(h => h.time.getTime() > now && h.time.getTime() < now + 48 * 36e5 && h.time.getHours() % 3 === 0)
       .map(h => `${day[h.time.getDay()]} ${String(h.time.getHours()).padStart(2, "0")}:00 ${Math.round(h.temp)}°C ${(h.sky || "").toLowerCase()}${h.wind != null ? `, wind ${Math.round(h.wind)} km/h` : ""}${h.pop ? `, ${h.pop}% chance of rain` : ""}`);

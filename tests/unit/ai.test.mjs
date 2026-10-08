@@ -96,4 +96,12 @@ const env3 = { ...env, AI_PRO_ONLY: "true" }; const A3 = client(env3, "5.5.5.5")
 // reuse A's cookies by signing in a fresh account under env3
 await signUp(A3); r = await A3.ask({ mode: "own", question: "hi" }); ok(r.status === 402, "pro-only gate");
 const env4 = { ...env, ANTHROPIC_API_KEY: "" }; r = await client(env4).ask({ mode: "sample", question: "hi" }); ok(r.status === 503 && /switched on/.test(r.data.error), "no key -> 503");
+// Cold fronts reach Ask fishr as one line; anything that isn't text is dropped.
+{
+  const { conditionsText } = await import(F + "_ai.js");
+  const txt = conditionsText({ temp: 9, front: "cold front passed about 10 hours ago; pressure up 8 hPa since" });
+  ok(/^Front: cold front passed about 10 hours ago/m.test(txt), "front line reaches the prompt: " + txt);
+  ok(!/Front:/.test(conditionsText({ temp: 9, front: { evil: 1 } })) && conditionsText({ front: "x".repeat(500) }).length < 200, "front is text only and clipped");
+}
+
 console.log(`${pass} passed, ${failN} failed`);

@@ -126,8 +126,38 @@ function personalEffect(bucketOf, current, sp) {
   return { p: Math.max(-15, Math.min(15, (mine / all - 1) * 20)), w: inB.length / (inB.length + 6), n: inB.length, mine, all };
 }
 
+// Cold fronts, from the hourly pressure and temperature around now. A front shows as a pressure low followed by a
+// sharp rise, with the day after it clearly colder than the day before. Fish often feed ahead of one and go quiet
+// for a day or so after it. Returns { passed: true, hrs, drop, rise } or { passed: false, hrs, drop } or null.
+function coldFront(H, now) {
+  const at = H.findIndex(h => h.time > now) - 1; if (at < 0) return null;
+  const ok = h => h && h.p != null && h.temp != null, mean = xs => xs.reduce((a, h) => a + h.temp, 0) / xs.length;
+  const win = (a, b) => H.slice(Math.max(0, at + a), Math.max(0, at + b + 1)).filter(ok);
+  const low = xs => xs.reduce((m, h) => h.p < m.p ? h : m);
+  const pNow = H[at].p;
+  if (pNow == null) return null;
+  // Passed: the lowest pressure of the last 36 hours was 3+ hours ago, pressure is up 4+ hPa since, and the last 24
+  // hours ran 5°C+ colder than the 24 before.
+  const back = win(-36, -3), before = win(-47, -24), since = win(-23, 0);
+  if (back.length >= 24 && before.length >= 18 && since.length >= 18) {
+    const m = low(back), rise = pNow - m.p, drop = mean(before) - mean(since);
+    if (rise >= 4 && drop >= 5) return { passed: true, hrs: Math.round((now - m.time) / 36e5), drop, rise };
+  }
+  // Coming: the forecast has a pressure low in the next 24 hours, a 3+ hPa rise behind it, and the next day 5°C+ colder.
+  const ahead = win(1, 24), after = win(1, 36), last = win(-23, 0);
+  if (ahead.length >= 18 && last.length >= 18) {
+    const m = low(ahead), backUp = Math.max(...after.filter(h => h.time > m.time).map(h => h.p)) - m.p;
+    const drop = mean(last) - mean(after.filter(h => h.time > m.time).length >= 6 ? after.filter(h => h.time > m.time) : ahead);
+    if (m.p <= pNow - 2 && backUp >= 3 && drop >= 5) return { passed: false, hrs: Math.max(1, Math.round((m.time - now) / 36e5)), drop };
+  }
+  return null;
+}
+const frontWhy = f => f.passed
+  ? `A cold front came through about ${f.hrs} hours ago: ${Math.round(tOut(f.drop) - tOut(0))}° colder than the day before and pressure up ${Math.round(f.rise)} hPa since. Fish often go quiet for a day or so after one. Slow down and fish deeper.`
+  : `A cold front looks due in about ${f.hrs} hours, with the day after it about ${Math.round(tOut(f.drop) - tOut(0))}° colder. Fish often feed hard ahead of one. Go before it hits.`;
+
 function biteIndex(ctx) {
-  const { c, light, flow, model, sp, recentTemp } = ctx, d = [];
+  const { c, light, flow, model, sp, recentTemp, front } = ctx, d = [];
   const unit = sp ? sp.toLowerCase() : "fish";
   // A factor: a general default, blended with your log once it has evidence for the same conditions.
   const factor = (def, label, bucketOf, current, what) => {
@@ -169,6 +199,8 @@ function biteIndex(ctx) {
   else if (w) factor(0, w === "calm" ? "Calm" : "Breezy", tripWind, w, w === "calm" ? "calm trips" : "breezy trips");
   if (c.sky === "Overcast" || c.sky === "Rain") factor(5, "Cloud cover", biteSky, "cloud", "overcast trips");
   else if (c.sky) factor(0, "Clear skies", biteSky, "clear", "clear-sky trips");
+  if (front) d.push(front.passed ? { v: front.hrs <= 24 ? -10 : -5, label: front.hrs <= 24 ? "Just after a cold front" : "Day after a cold front", why: frontWhy(front) }
+    : { v: 5, label: front.hrs <= 6 ? "Cold front due today" : "Cold front coming", why: frontWhy(front) });
   if (model) d.push({ v: Math.max(-15, Math.min(15, Math.round(model.delta))), label: model.label });
   const score = Math.max(5, Math.min(98, Math.round(50 + d.reduce((a, x) => a + x.v, 0))));
   return { score, label: score >= 75 ? "Prime" : score >= 58 ? "Good" : score >= 40 ? "Fair" : "Slow", drivers: d.filter(x => x.v).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)) };
@@ -221,7 +253,8 @@ function renderLive(status) {
   const choices = biteChoices(), sp = biteSpecies(choices);
   const past = wx.hourly.filter(h => h.time <= now && h.time >= now - 48 * 36e5 && h.temp != null);
   const recentTemp = past.length ? past.reduce((a, h) => a + h.temp, 0) / past.length : null;
-  const bi = biteIndex({ c, light, flow: wx.flow, model, sp, recentTemp });
+  const front = coldFront(H, now);
+  const bi = biteIndex({ c, light, flow: wx.flow, model, sp, recentTemp, front });
   // Phones show three chips: keep the strongest one learned from your log among them.
   const mi = bi.drivers.findIndex(x => x.mine);
   const chips = (mi > 2 ? [...bi.drivers.slice(0, 2), bi.drivers[mi], ...bi.drivers.filter((x, i) => i >= 2 && i !== mi)] : bi.drivers).slice(0, 5);
