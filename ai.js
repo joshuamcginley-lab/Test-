@@ -43,7 +43,7 @@ function renderAsk() {
   else if (gated && !askInfo.sample) askStatus("sample"); // just to learn whether fishr AI is switched on
   box.hidden = $("fidCard").hidden = $("fidChoice").hidden = aiOff;
   if (aiOff) return;
-  $("askSub").textContent = own ? "Answers from your log and today's conditions." : "Ask about this showcase season. Answers come from its 47 trips.";
+  $("askSub").textContent = own ? "Like the old-timer on the dock, except he's read every trip in your log." : "Like the old-timer on the dock, except he's read all 47 trips in this season.";
   $("askGate").hidden = !gated; $("askForm").hidden = gated;
   $("askThread").innerHTML = hist.map(h => `<div class="ask-msg ${h.role}${h.err ? " err" : ""}">${esc(h.text)}</div>`).join("")
     + (askBusy ? `<div class="ask-msg assistant busy" aria-label="fishr is thinking"><i></i><i></i><i></i></div>` : "");
