@@ -41,6 +41,8 @@ function tripWeather(url) {
   ok(r.primary === 'Log your first trip', 'welcome: the main button says what it does ' + r.primary);
   ok(/New here\?/.test(r.tag) && r.badge, 'welcome: showcase reads as the place to look first, Start here badge kept');
   ok(!r.eye, 'no unlabeled eye icon in the top bar');
+  r = await p.evaluate(() => ({ tagline: $('tagline').textContent, tile: document.querySelector('.sc-tile.start-here b').textContent, tab: $('tab-advice').textContent.trim(), any: /copilot/i.test(document.body.innerText + document.title + document.querySelector('meta[name=description]').content) }));
+  ok(/^The AI fishing guide trained on you/.test(r.tagline) && r.tile === 'Guide' && r.tab === 'Guide' && !r.any, 'Copilot is now the Guide everywhere a user can see ' + JSON.stringify(r));
   await p.screenshot({ path: S + '/first-welcome.png' });
 
   // 2. First trip form: nothing looks filled in, weather fills itself.
@@ -59,7 +61,7 @@ function tripWeather(url) {
   ok(await p.evaluate(() => $('addCatch').textContent === '+ Add a fish'), 'removing the last fish goes back to "Add a fish"');
   await p.fill('#fWaterIn', 'Keswick River'); await click('#saveBtn'); await p.waitForTimeout(400);
   let cel = await celebrateText(p);
-  ok(/Skunk logged \| 1 of 10 trips\. Copilot starts making calls at 10\. Skunks count too\./.test(cel), 'saved: says where that leaves Copilot ' + cel);
+  ok(/Skunk logged \| 1 of 10 trips\. Your guide starts making calls at 10\. Skunks count too\./.test(cel), 'saved: says where that leaves Copilot ' + cel);
   r = await p.evaluate(() => state.sessions[0]);
   ok(r.tempLow === 18 && r.wx?.t === 18, 'the skunk counts: it has a temperature and weather');
   await p.waitForTimeout(2600);
@@ -67,7 +69,7 @@ function tripWeather(url) {
   ok(r.tab === 'panel-advice' && /9 more trips/.test(r.card), 'after the first trip: Copilot shows how many trips to go');
   await p.evaluate(() => showTab('log')); await p.waitForTimeout(300);
   r = await p.evaluate(() => !$('trainStrip').hidden && $('trainStrip').innerText.replace(/\s+/g, ' ').trim());
-  ok(/^1 of 10 trips Copilot starts making calls at 10\. Skunks count\.$/.test(r), 'Trips shows progress toward Copilot ' + JSON.stringify(r));
+  ok(/^1 of 10 trips Your guide starts making calls at 10\. Skunks count\.$/.test(r), 'Trips shows progress toward Copilot ' + JSON.stringify(r));
   await p.screenshot({ path: S + '/first-trips.png' });
   // A second trip doesn't ask again: it uses the saved location.
   await click('#dockLog'); await p.waitForTimeout(1500);
@@ -75,6 +77,7 @@ function tripWeather(url) {
   await click('#cancelBtn');
   // Copilot: plain words, no engine tag on a phone.
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
+  ok(await p.evaluate(() => $('screenTitle').textContent === 'Guide' && /Your guide needs 9 more trips/.test($('advice').textContent) && getComputedStyle(document.querySelector('.verdict'), '::before').content.includes('Your guide')), 'Guide screen: title and training card say "guide"');
   r = await p.evaluate(() => ({ tag: [...document.querySelectorAll('.model-tag')].some(e => e.checkVisibility()), what: document.querySelector('#inputsBox summary span').textContent, card: $('advice').textContent }));
   ok(!r.tag, 'Copilot: the bite-engine tag is hidden on phones');
   ok(r.what === 'What if?' && !/workspace/.test(r.card) && /1 of 10/i.test(r.card), 'Copilot: plain labels ' + JSON.stringify({ what: r.what }));
@@ -90,10 +93,10 @@ function tripWeather(url) {
   ({ p, ctx, click } = await open({ geo: false }));
   await click('#welcomeNew'); await p.waitForTimeout(1500);
   r = await p.evaluate(() => $('wxText').textContent);
-  ok(/No location, so type the temperature\. A trip needs one to count toward Copilot\./.test(r), 'no location: form explains the temperature ' + r);
+  ok(/No location, so type the temperature\. A trip needs one to count toward your guide\./.test(r), 'no location: form explains the temperature ' + r);
   await p.fill('#fWaterIn', 'Keswick River'); await click('#saveBtn'); await p.waitForTimeout(400);
   cel = await celebrateText(p);
-  ok(/counts toward Copilot once it has a temperature: tap the trip to add one/.test(cel), 'saved without a temperature: says it does not count yet ' + cel);
+  ok(/counts toward your guide once it has a temperature: tap the trip to add one/.test(cel), 'saved without a temperature: says it does not count yet ' + cel);
   await p.waitForTimeout(2600);
   await p.evaluate(() => showTab('log')); r = await p.evaluate(() => $('trainStrip').innerText.replace(/\s+/g, ' '));
   ok(/0 of 10 trips/.test(r) && /1 trip has no temperature, so it doesn't count yet\. Add the weather/.test(r), 'Trips points out the trip that doesn\'t count ' + r);

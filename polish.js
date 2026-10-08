@@ -1,6 +1,6 @@
 "use strict";
 /* Feel: launch splash, haptics, the "trip logged" moment with confetti for a new personal best,
-   app-bar shadow on scroll, and pull-to-refresh on Copilot. Uses globals from the other scripts. */
+   app-bar shadow on scroll, and pull-to-refresh on the Guide tab. Uses globals from the other scripts. */
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 function haptic(ms = 8) { try { navigator.vibrate?.(ms); } catch (e) {} }
@@ -26,7 +26,7 @@ let celTimer = null;
 function celebrate({ fish = 0, pb = null, species = "", next = null } = {}) {
   const box = $("celebrate");
   $("celTitle").textContent = pb ? "New personal best" : fish ? `${fish} fish logged` : "Skunk logged";
-  $("celSub").textContent = pb ? `${species ? species + " · " : ""}${fmtW(pb)}` : next ? next + (fish ? "" : " Skunks count too.") : (fish ? "Model retrained on your new data." : "Still training data. Copilot learns from skunks too.");
+  $("celSub").textContent = pb ? `${species ? species + " · " : ""}${fmtW(pb)}` : next ? next + (fish ? "" : " Skunks count too.") : (fish ? "Model retrained on your new data." : "Still training data. Your guide learns from skunks too.");
   box.classList.toggle("pb", !!pb);
   box.hidden = false; box.classList.remove("show"); void box.offsetWidth; box.classList.add("show");
   haptic(pb ? [12, 60, 20] : 14);
@@ -56,7 +56,7 @@ function confetti() {
   })(t0);
 }
 
-/* ---------- pull to refresh on Copilot ---------- */
+/* ---------- pull to refresh on the Guide tab ---------- */
 (function pullToRefresh() {
   const ind = document.createElement("div"); ind.className = "ptr"; ind.innerHTML = `<span class="ptr-spin"></span>`; document.body.append(ind);
   let y0 = null, dy = 0;

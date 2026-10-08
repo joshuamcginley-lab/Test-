@@ -63,7 +63,7 @@ const conf = n => n >= 5 ? ["High", "go"] : n >= 2.5 ? ["Medium", "info"] : ["Lo
 const clock = h => { const hh = Math.floor(h) % 24, mm = Math.round((h - Math.floor(h)) * 60); return fmtTime(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`); };
 
 // Start strict, then widen the tolerances step by step until some water has enough evidence.
-// Always returns a ranking, so Copilot never answers "nothing works".
+// Always returns a ranking, so Guide never answers "nothing works".
 const WIDEN = [1, 1.6, 2.5, 4, 8];
 function bestRanking(q, minNeff = 1) {
   let res = null;
@@ -113,7 +113,7 @@ async function loadWeather(useGps) {
       via, why, place: via === "town" ? state.settings.home.name || null : null,
     };
     const now = new Date();
-    // On the sample, Copilot keeps its July evening: live weather is yours, the sample's waters aren't.
+    // On the sample, Guide keeps its July evening: live weather is yours, the sample's waters aren't.
     if (!demo) {
       $("aTemp").value = tOut(r(wx.current.temp, 0));
       $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -147,13 +147,13 @@ function bestWindow() {
 }
 
 /* ---------- render ---------- */
-// On Trips, until Copilot unlocks: how far along the log is, and which trips don't count yet.
+// On Trips, until Guide unlocks: how far along the log is, and which trips don't count yet.
 function renderTrainStrip() {
   const box = $("trainStrip"); if (!box) return;
   const n = state.sessions.filter(s => avgT(s) != null).length, missing = state.sessions.length - n;
   box.hidden = !!demo || !state.sessions.length || n >= MIN_TRIPS;
   if (box.hidden) return;
-  box.innerHTML = `<div class="ts-top"><b>${n} of ${MIN_TRIPS} trips</b><span>Copilot starts making calls at ${MIN_TRIPS}. Skunks count.</span></div>
+  box.innerHTML = `<div class="ts-top"><b>${n} of ${MIN_TRIPS} trips</b><span>Your guide starts making calls at ${MIN_TRIPS}. Skunks count.</span></div>
     <div class="meter"><span style="width:${n / MIN_TRIPS * 100}%"></span></div>
     ${missing ? `<p>${missing} trip${missing === 1 ? " has" : "s have"} no temperature, so ${missing === 1 ? "it doesn't" : "they don't"} count yet. <button type="button" class="text-link" id="tsFill">Add the weather</button></p>` : ""}`;
   const f = $("tsFill"); if (f) f.onclick = () => { $("openSettings").click(); $("backfillWx").scrollIntoView({ block: "center" }); };
@@ -162,7 +162,7 @@ function renderAdvice() {
   const box = $("advice"); if (!box) return;
   const withTemp = state.sessions.filter(s => avgT(s) != null).length;
   if (withTemp < MIN_TRIPS) {
-    box.innerHTML = `<div class="verdict locked"><span class="chip info">Training</span><h3>Your model needs ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your log has ${MIN_TRIPS} trips with a temperature, Copilot tells you where to fish for the conditions you're in, and when. fishr fills the temperature in when location is on. Skunks count: they teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
+    box.innerHTML = `<div class="verdict locked"><span class="chip info">Training</span><h3>Your guide needs ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your log has ${MIN_TRIPS} trips with a temperature, your guide tells you where to fish for the conditions you're in, and when. fishr fills the temperature in when location is on. Skunks count: they teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
@@ -174,7 +174,7 @@ function renderAdvice() {
   const when = `${fmtT(q.temp)} at ${fmtTime(tm)}${q.sky ? `, ${q.sky.toLowerCase()}` : ""}${q.press ? `, pressure ${q.press.toLowerCase()}` : ""}${q.flow ? `, ${q.flow.toLowerCase()} water` : ""}`;
   let html = "";
   if (!top) {
-    html = `<div class="verdict"><span class="chip info">Training</span><h3>Log a few more trips</h3><p>Copilot needs trips at a couple of different waters before it can compare them.</p></div>`;
+    html = `<div class="verdict"><span class="chip info">Training</span><h3>Log a few more trips</h3><p>Your guide needs trips at a couple of different waters before it can compare them.</p></div>`;
   } else {
     const [cl, cc] = k >= 2.5 ? ["Low", "no"] : k > 1 && top.neff >= 5 ? ["Medium", "info"] : conf(top.neff), simTop = top.similar.length ? top.similar : top.xs.sort((a, b) => b.w - a.w);
     const lure = bestOf(simTop, c => c.lure), spot = bestSpot(simTop), species = bestOf(simTop, c => c.species);
@@ -196,14 +196,14 @@ function renderAdvice() {
       ${slow && !tough ? `<p class="v-warn"><b>Heads up:</b> ${Math.round(res.skunkSimilar * 100)}% of your trips in conditions like this were skunks, wherever you went.</p>` : ""}
       ${!res.anySeason ? `<p class="v-warn">You haven't logged trips at this time of year, so this is based on temperature and time of day only.</p>` : ""}
     </div>`;
-    if (demo) html += `<p class="v-note showcase-pick">This is the showcase angler's pick from their New Brunswick waters. Log your own trips and Copilot picks from yours.</p>`;
+    if (demo) html += `<p class="v-note showcase-pick">This is the showcase angler's pick from their New Brunswick waters. Log your own trips and your guide picks from yours.</p>`;
     const win = demo ? null : bestWindow(); // the forecast is yours, the sample's waters aren't
     if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
-    // The tables behind the call fold away, so Copilot fits on one screen.
+    // The tables behind the call fold away, so Guide fits on one screen.
     html += `<details class="more math" id="mathBox"${mathOpen ? " open" : ""}><summary><span>See the math</span><span class="more-hint">other waters and your most similar trips</span></summary><div class="more-in">`;
     if (rows.length > 2) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(2, 7).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
     const basis = simTop.slice(0, 5);
-    html += `<section class="card"><h2>Why Copilot said this: your most similar trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
+    html += `<section class="card"><h2>Why your guide said this: your most similar trips</h2><div class="tbl-wrap"><table><tr><th>Date</th><th>Temp</th><th>Time</th><th class="r">Fish</th></tr>${basis.map(x => `<tr><td>${fmtDate(x.s.date)}${x.s.spot ? ` · ${esc(x.s.spot)}` : ""}</td><td>${fmtT(avgT(x.s)) || "—"}</td><td>${x.s.start ? fmtTime(x.s.start) : esc(isPeriod(x.s) || "—")}</td><td class="r">${x.f || "skunk"}</td></tr>`).join("")}</table></div></section>`;
     html += `</div></details>`;
   }
   box.innerHTML = html;
@@ -230,13 +230,13 @@ function conditionFacts(q) {
 /* ---------- wire up ---------- */
 function resetAdviceInputs() {
   const now = new Date();
-  // Back from the sample: put today's live conditions back if we have them, so Copilot isn't blank.
+  // Back from the sample: put today's live conditions back if we have them, so Guide isn't blank.
   const c = wx?.current;
   $("aTemp").value = c?.temp != null ? tOut(r(c.temp, 0)) : ""; segSet($("aSky"), c?.sky ? [c.sky] : []); segSet($("aPress"), c?.press ? [c.press] : []); segSet($("aFlow"), wx?.flow ? [wx.flow.status] : []);
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   $("aDate").value = isoDate(now); $("aWeatherMsg").textContent = "";
 }
-// Opening the sample lands on Copilot with a summer evening filled in, so the call shows straight away.
+// Opening the sample lands on the Guide tab with a summer evening filled in, so the call shows straight away.
 function showSampleCopilot() {
   $("aTemp").value = tOut(22); $("aTime").value = "18:30"; $("aDate").value = "2026-07-15"; segSet($("aSky"), []); segSet($("aPress"), []); segSet($("aFlow"), []);
   $("aWeatherMsg").textContent = "Sample conditions: a July evening at 22°C. Change them to try others.";

@@ -94,7 +94,7 @@ async function fillConditions(allowPrompt) {
   const date = $("fDate").value; if (!date) return;
   let where = knownLocation($("fWaterIn").value.trim());
   if (!where && allowPrompt) { $("wxText").textContent = "Finding you to fill in the weather…"; where = await askDevice(); }
-  if (!where) { $("wxText").textContent = allowPrompt ? "No location, so type the temperature. A trip needs one to count toward Copilot." : ""; return; }
+  if (!where) { $("wxText").textContent = allowPrompt ? "No location, so type the temperature. A trip needs one to count toward your guide." : ""; return; }
   if (!navigator.onLine) { $("wxText").textContent = "No signal. Conditions can be filled in later from Settings."; return; }
   $("wxText").textContent = "Pulling conditions…";
   const hour = tripHourOf(date, $("fStart").value, null);
@@ -116,12 +116,12 @@ function onSheetOpen(s) {
   if (s) return;
   if (knownLocation("")) { fillConditions(false); return; }
   // A new trip and fishr doesn't know where you are: ask once, so the weather fills itself in and the trip counts
-  // toward Copilot. Later trips use the saved spot; "Auto-fill conditions" asks again any time.
+  // toward Guide. Later trips use the saved spot; "Auto-fill conditions" asks again any time.
   let asked = false; try { asked = localStorage.getItem(LOC_ASKED) === "1"; localStorage.setItem(LOC_ASKED, "1"); } catch (e) {}
   if (!asked) fillConditions(true);
 }
 const LOC_ASKED = "fishr.locAsked";
-// A trip's temperature from its weather, when none was typed: that's what Copilot counts and compares.
+// A trip's temperature from its weather, when none was typed: that's what Guide counts and compares.
 function tempFromWx(s) { if (s.tempLow == null && s.wx?.t != null) s.tempLow = s.tempHigh = r(s.wx.t, 0); }
 // After saving a trip with no weather (no signal, or no location yet), fill it in quietly once fishr knows where.
 async function fillTripLater(id) {
@@ -156,5 +156,5 @@ $("backfillWx").onclick = async () => {
     catch (e) { failed++; }
   }
   save(); render();
-  msg.textContent = `Added weather to ${done} trip${done === 1 ? "" : "s"}.${failed ? ` ${failed} couldn't be looked up (no location or no signal).` : ""} Pressure and wind now show in Insights and feed Copilot.`;
+  msg.textContent = `Added weather to ${done} trip${done === 1 ? "" : "s"}.${failed ? ` ${failed} couldn't be looked up (no location or no signal).` : ""} Pressure and wind now show in Insights and feed your guide.`;
 };

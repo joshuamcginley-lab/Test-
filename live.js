@@ -1,10 +1,10 @@
 "use strict";
-/* Live conditions dashboard on the Copilot tab: Bite Index, air, pressure, wind, river, rain, light and moon.
+/* Live conditions dashboard on the Guide tab: Bite Index, air, pressure, wind, river, rain, light and moon.
    Reads the `wx` object filled by loadWeather() in forecast.js. Uses globals from app.js and forecast.js. */
 
 let liveLoading = false;
 
-// Sync on opening Copilot when we can do it without nagging: location already allowed, or a known spot.
+// Sync on opening Guide when we can do it without nagging: location already allowed, or a known spot.
 async function autoLive() {
   if (wx && Date.now() - wx.updated < 15 * 60e3) { renderLive(); return; }
   if (liveLoading) return;

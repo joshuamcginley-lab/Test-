@@ -1,7 +1,7 @@
 {
   "name": "fishr.ai",
   "short_name": "fishr.ai",
-  "description": "Your AI fishing copilot. Log trips, find your patterns, know where they're biting.",
+  "description": "Your AI fishing guide. Log trips, find your patterns, know where they're biting.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

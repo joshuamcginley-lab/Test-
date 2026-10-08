@@ -1,5 +1,5 @@
 "use strict";
-/* fishr AI in the app: Ask fishr on Copilot, and fishr ID (name the fish in a photo) from Copilot, the welcome
+/* fishr AI in the app: Ask fishr on the Guide tab, and fishr ID (name the fish in a photo) from the Guide tab, the welcome
    screen or the log form. Both go through our /api/ai endpoints,
    which call Claude. Free during the beta: fishr Cloud accounts get a few a day, and anyone can ask about the
    showcase season or try a few fishr IDs without an account. Uses globals from app.js, forecast.js and cloud.js. */
@@ -12,7 +12,7 @@ const askHist = { own: [], sample: [] }, askInfo = {}, askLoading = {};
 let askBusy = null, aiOff = false; // askBusy: the mode ("own"/"sample") with a question in flight
 const askMode = () => demo ? "sample" : "own";
 
-// What Copilot is looking at right now: its inputs, plus the live forecast for your own log.
+// What Guide is looking at right now: its inputs, plus the live forecast for your own log.
 function askConditions() {
   const pick = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v || null, tv = $("aTemp").value;
   const c = { date: $("aDate").value || null, time: $("aTime").value || null, temp: tv === "" ? null : tIn(Number(tv)), sky: pick("aSky"), pressure: pick("aPress"), flow: pick("aFlow") };

@@ -124,7 +124,7 @@ export function logText(trips, notes = []) {
   return out;
 }
 
-// What the app knows about right now (from Copilot's inputs and the live forecast), as one short block.
+// What the app knows about right now (from the Guide tab's inputs and the live forecast), as one short block.
 export function conditionsText(c) {
   if (!c || typeof c !== "object") return "No current conditions were sent.";
   const t = (v, n = 40) => (typeof v === "string" || typeof v === "number" ? clip(v, n) : "");

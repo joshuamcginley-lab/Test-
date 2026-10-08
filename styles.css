@@ -167,9 +167,10 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-varia
 .sample-bar button{background:var(--glass-2);color:var(--ink);border:1px solid var(--line-2);padding:7px 12px;border-radius:999px;font-weight:500;font-size:13px}
 .foot{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);font:12px/1.7 var(--f-mono);color:var(--faint)}
 
-/* ---------- copilot ---------- */
+/* ---------- guide ---------- */
 .verdict{position:relative;padding:22px 20px 20px;display:grid;gap:12px;margin-bottom:14px;border-radius:20px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow)}
-.verdict::before{content:"✦ fishr Copilot";font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.verdict::before{content:"✦ Your guide says";font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.verdict.locked::before{content:"✦ Your guide"}
 .verdict.slow{background:linear-gradient(var(--solid),var(--solid)) padding-box,linear-gradient(120deg,var(--bad),#FF7A1A) border-box;box-shadow:none}
 .verdict h3{font-size:clamp(28px,6vw,46px);font-weight:700;letter-spacing:-.04em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.05;padding-bottom:2px}
 .verdict.slow h3{background:linear-gradient(120deg,var(--bad),#FF7A1A);-webkit-background-clip:text;background-clip:text}
@@ -595,7 +596,7 @@ p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:
 .hero-chips svg{width:14px;height:14px;color:var(--c)}
 .welcome .showcase p b{color:var(--ink);font-weight:650}
 
-/* ---------- "How fishr works" guide on Copilot ---------- */
+/* ---------- "How fishr works" guide on the Guide tab ---------- */
 .guide-link-row{display:flex;justify-content:flex-end;margin:-4px 0 8px}
 .guide{position:fixed;inset:0;z-index:40}
 .guide.intro{background:rgba(3,5,12,.72)}
@@ -617,7 +618,7 @@ p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:
 .g-actions .btn[hidden]{display:none}
 body.guiding .dock{visibility:hidden}
 
-/* "Start here" on the showcase's Copilot tile */
+/* "Start here" on the showcase's Guide tile */
 .sc-tile{position:relative}
 .sc-badge{display:none}
 .sc-tile.start-here{border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow);animation:startPulse 2.4s ease-in-out infinite}
@@ -627,7 +628,7 @@ body.guiding .dock{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.sc-tile.start-here{animation:none}}
 .g-actions .btn[hidden]{display:none}
 
-/* Featured Copilot tile until the guide has been seen: full width, gradient, its own call to action */
+/* Featured Guide tile until the guide has been seen: full width, gradient, its own call to action */
 .sc-ico,.sc-txt{display:contents}
 .sc-go{display:none}
 .sc-tile.start-here{grid-column:1/-1;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;min-height:0;padding:16px 14px 14px;border:0;background:var(--grad);color:var(--on-grad);box-shadow:var(--glow);animation:startPulse 2.4s ease-in-out infinite}
@@ -646,7 +647,7 @@ body.guiding .dock{visibility:hidden}
 .sc-tiles:has(.start-here){grid-template-columns:1fr 1fr}
 @media (max-width:360px){.sc-tiles:has(.start-here){grid-template-columns:1fr}}
 
-/* ---------- Ask fishr (Copilot) ---------- */
+/* ---------- Ask fishr (Guide) ---------- */
 .ask{display:grid;gap:12px;margin:16px 0;padding:18px;border-radius:22px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow)}
 .ask-head{display:flex;gap:12px;align-items:center}
 .ask-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--grad);color:var(--on-grad);flex:none}
@@ -755,7 +756,7 @@ label.choice{cursor:pointer}
 .callout{flex:0 0 min(86%,420px);scroll-snap-align:start;grid-template-columns:1fr;gap:8px;align-content:start}
 .callout .chip{justify-self:start}
 .show-all{margin:10px 0 0;display:block}
-/* Copilot: "Live conditions are off" on one line */
+/* Guide: "Live conditions are off" on one line */
 .live-empty{flex-wrap:nowrap;padding:12px 14px;gap:12px}
 .live-empty > div{flex:1 1 0;min-width:0}
 .live-empty b{font-size:15px}
@@ -816,7 +817,7 @@ button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 .drv.mine{text-decoration:underline dotted;text-underline-offset:3px}
 .drv[aria-expanded="true"]{outline:1px solid currentColor}
 .drv-why{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted)}
-/* New users: progress toward Copilot on Trips */
+/* New users: progress toward Guide on Trips */
 .train-strip{background:var(--solid);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:0 0 12px;display:grid;gap:8px}
 .ts-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:14px}
 .ts-top span{color:var(--muted);font-size:13px}

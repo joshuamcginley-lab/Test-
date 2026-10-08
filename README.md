@@ -17,7 +17,7 @@ A fishing log that runs in the browser and installs to a phone's home screen. An
 | `app.js` | All app logic: storage, form, stats, patterns, backup |
 | `cloud.js` | Optional fishr Cloud: passkey sign-in and sync |
 | `ai.js` | Ask fishr and fishr ID |
-| `guide.js` | "How fishr works" guide on Copilot |
+| `guide.js` | "How fishr works" guide on the Guide tab |
 | `sw.js` | Offline caching |
 | `manifest.webmanifest`, `icons/` | Home-screen install |
 | `sample.json` | Sample season data |
@@ -49,7 +49,7 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 ## Conditions (weather, pressure, river levels)
 
 - `conditions.js` pulls weather, barometric pressure (and its 3-hour trend), wind and 48-hour rain from Open-Meteo for each trip, using the forecast API for recent dates and the archive for older ones. Settings → "Add weather to past trips" fills in older trips.
-- `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Copilot and Insights use both.
+- `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Guide and Insights use both.
 
 ## Spots map and Pro waitlist
 
@@ -71,8 +71,8 @@ Settings → Storage switches between **On this phone** (the default) and **Clou
 
 Both call Claude (Claude Haiku 5.5) from Pages Functions, using the official Anthropic SDK bundled into `functions/_vendor/anthropic-sdk.js` (no build step needed; how to update it is at the top of that file).
 
-- **Ask fishr** (`ai.js` card on Copilot, `functions/api/ai/ask.js`): answers questions from the angler's own log in fishr Cloud plus the conditions on Copilot. The showcase season can be asked about without an account.
-- **fishr ID** (`functions/api/ai/identify.js`): names the fish in a photo using structured output. Opens from its own card on Copilot, the welcome screen ("What did you catch?"), or the button on each catch in the log form (automatic on a new photo for Cloud accounts). Anyone can try a few a day; "Log this catch" carries the photo and species into a new trip.
+- **Ask fishr** (`ai.js` card on the Guide tab, `functions/api/ai/ask.js`): answers questions from the angler's own log in fishr Cloud plus the conditions on the Guide tab. The showcase season can be asked about without an account.
+- **fishr ID** (`functions/api/ai/identify.js`): names the fish in a photo using structured output. Opens from its own card on the Guide tab, the welcome screen ("What did you catch?"), or the button on each catch in the log form (automatic on a new photo for Cloud accounts). Anyone can try a few a day; "Log this catch" carries the photo and species into a new trip.
 - `functions/_ai.js`: the client, daily allowances, and the log-to-text formatting.
 - **Setup:** add the secret `ANTHROPIC_API_KEY` (from console.anthropic.com, which bills separately from a Claude subscription). Without it the Ask fishr card stays hidden.
 - **Daily allowances** (environment variables, all optional): `AI_DAILY_CHAT` (5), `AI_DAILY_PHOTO` (10), `AI_DAILY_SAMPLE` (3 showcase questions per visitor), `AI_DAILY_ID_GUEST` (3 fishr IDs per visitor without an account), `AI_DAILY_CHAT_PRO` (50), `AI_DAILY_PHOTO_PRO` (100), and `AI_DAILY_TOTAL` (300 calls a day across everyone, a hard ceiling on spend). `AI_PRO_ONLY=true` limits both features to Pro accounts.

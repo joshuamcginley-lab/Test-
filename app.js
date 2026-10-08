@@ -299,7 +299,7 @@ function fillLists() {
 }
 
 /* ---------- tabs & filters ---------- */
-const TAB_TITLES = { advice: "Copilot", season: "Stats", patterns: "Insights", log: "Trips" };
+const TAB_TITLES = { advice: "Guide", season: "Stats", patterns: "Insights", log: "Trips" };
 function showTab(t) {
   const was = document.querySelector('nav.tabs [aria-selected="true"]')?.dataset.tab;
   for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", b.dataset.tab === t);
@@ -431,7 +431,7 @@ function openSheet(s) {
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
   if (typeof onSheetOpen === "function") onSheetOpen(s);
 }
-// The logo goes home: out of the sample to the welcome screen, or to Copilot on your own log.
+// The logo goes home: out of the sample to the welcome screen, or to Guide on your own log.
 $("homeLink").addEventListener("click", e => {
   e.preventDefault(); closeSheets(); closeViewer();
   if (demo) exitSample(); else if (state.sessions.length) showTab("advice");
@@ -529,17 +529,17 @@ $("form").addEventListener("submit", async e => {
   if (prev) toast("Trip updated. Model retrained.");
   else if (typeof celebrate === "function") celebrate({ fish: fc, pb: pb ? bestNow : null, species: catches.find(c => +c.lb === bestNow)?.species, next: trainingNext(doc) });
   else toast(fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
-  // No weather yet (no signal, or location came late): add it now if fishr can, and say where that leaves Copilot.
-  if (!doc.wx && typeof fillTripLater === "function") fillTripLater(doc.id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === doc.id)) || "Copilot has it."}`); });
+  // No weather yet (no signal, or location came late): add it now if fishr can, and say where that leaves Guide.
+  if (!doc.wx && typeof fillTripLater === "function") fillTripLater(doc.id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === doc.id)) || "Your guide has it."}`); });
 });
 
-// Until Copilot unlocks, each new trip says how far along it is, or why it doesn't count yet.
+// Until Guide unlocks, each new trip says how far along it is, or why it doesn't count yet.
 function trainingNext(trip) {
   if (typeof MIN_TRIPS === "undefined") return null;
   const n = state.sessions.filter(s => avgT(s) != null).length;
   if (n >= MIN_TRIPS) return null;
-  if (trip && avgT(trip) == null) return `Saved. It counts toward Copilot once it has a temperature: tap the trip to add one.`;
-  return `${n} of ${MIN_TRIPS} trips. Copilot starts making calls at ${MIN_TRIPS}.`;
+  if (trip && avgT(trip) == null) return `Saved. It counts toward your guide once it has a temperature: tap the trip to add one.`;
+  return `${n} of ${MIN_TRIPS} trips. Your guide starts making calls at ${MIN_TRIPS}.`;
 }
 
 /* ---------- notes ---------- */
@@ -568,7 +568,7 @@ async function loadSampleNow(where) {
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
     showSampleView(where);
-    if (where === "advice" && typeof maybeGuide === "function") maybeGuide(); // first look at Copilot: how it works
+    if (where === "advice" && typeof maybeGuide === "function") maybeGuide(); // first look at the Guide tab: how it works
     // Picked a tile on the welcome screen? They've read what this is, so keep the explainer closed.
     setSampleInfo(!where);
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }

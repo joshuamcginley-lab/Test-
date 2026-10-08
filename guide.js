@@ -1,7 +1,7 @@
 "use strict";
-/* "How fishr works": a short guide on the Copilot screen. It opens with the loop (log catches, build a data set,
-   catch more fish), then spotlights the parts of Copilot that come from that data. Shows once, the first time someone
-   opens Copilot from the showcase; "How fishr works" on Copilot replays it. Uses globals from app.js. */
+/* "How fishr works": a short guide on the Guide screen. It opens with the loop (log catches, build a data set,
+   catch more fish), then spotlights the parts of Guide that come from that data. Shows once, the first time someone
+   opens the Guide tab from the showcase; "How fishr works" on the Guide tab replays it. Uses globals from app.js. */
 
 const GUIDE_KEY = "fishr.guide";
 const guideSteps = () => [
@@ -9,11 +9,11 @@ const guideSteps = () => [
     <ol class="g-loop">
       <li><span class="g-num">1</span><span><b>Log catches</b>Every trip, fish or skunk: where, when and what you threw. Under a minute.</span></li>
       <li><span class="g-num">2</span><span><b>Build a data set</b>fishr adds the weather, pressure and river level to every trip. Your log becomes data nobody else has.</span></li>
-      <li><span class="g-num">3</span><span><b>Catch more fish</b>Copilot matches today's conditions to your best days and tells you where to go.</span></li>
+      <li><span class="g-num">3</span><span><b>Catch more fish</b>Your guide matches today's conditions to your best days and tells you where to go.</span></li>
     </ol>
     <p>${demo ? "This showcase is one angler's data set: 47 trips. Here's what it does." : "Here's where your data shows up."}</p>` },
-  { target: "live", title: "Today's conditions", body: "Live weather, pressure and river level where you are, once you allow location. This is what Copilot compares against your data set." },
-  { target: "advice", title: "The call comes from your data", body: `Copilot finds the trips in ${demo ? "this log" : "your log"} with conditions most like these, and shows what worked: the water, the time of day, the lure. <b>The more you log, the sharper the call.</b>` },
+  { target: "live", title: "Today's conditions", body: "Live weather, pressure and river level where you are, once you allow location. This is what your guide compares against your data set." },
+  { target: "advice", title: "The call comes from your data", body: `Your guide finds the trips in ${demo ? "this log" : "your log"} with conditions most like these, and shows what worked: the water, the time of day, the lure. <b>The more you log, the sharper the call.</b>` },
   { target: "ask", title: "Or just ask", body: `Ask fishr is the old-timer on the dock who has read the whole log. Ask him where to go Saturday, or what to throw after a cold front.${demo ? " Try one of the suggested questions on this season." : ""} <b>Free during the beta.</b>` },
   { target: "inputsBox", open: true, title: "Ask “what if?”", body: `Change the date, time, temperature or sky to plan a trip. The call updates from the same data.${demo ? " The showcase starts on a July evening at 22°C." : ""}` },
 ];
@@ -67,7 +67,7 @@ function closeGuide(thenLog) {
   scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   if (thenLog) startNewTrip();
 }
-// First time someone opens Copilot from the showcase.
+// First time someone opens the Guide tab from the showcase.
 function maybeGuide() {
   let seen = false; try { seen = localStorage.getItem(GUIDE_KEY) === "1"; } catch (e) {}
   if (!seen) setTimeout(openGuide, 350);
@@ -81,7 +81,7 @@ document.addEventListener("keydown", e => { if (!guideEl.hidden && e.key === "Es
 addEventListener("resize", placeRing);
 addEventListener("scroll", () => { if (!guideEl.hidden) placeRing(); }, { passive: true });
 
-// "Start here" on the showcase's Copilot tile. During the beta it stays for everyone; after the beta,
+// "Start here" on the showcase's Guide tile. During the beta it stays for everyone; after the beta,
 // set IN_BETA to false and it goes away once someone has been through the guide.
 const IN_BETA = true;
 function markGuideSeen() { if (!IN_BETA) document.querySelector(".sc-tile.start-here")?.classList.remove("start-here"); }
