@@ -77,7 +77,7 @@
       </div>
       <p class="sc-fine">Tap in and look around: everything works. Sample data with historical weather added; it's never mixed with your log.</p>
     </section>
-    <label class="choice fid-choice" id="fidChoice" for="fidFile"><span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span><span><b>What did you catch?</b><span>fishr ID names the fish from a photo. Free to try, no account needed.</span></span></label>
+    <label class="choice fid-choice fid-pick" id="fidChoice"><input type="file" accept="image/*" class="fid-file" aria-label="Choose a fish photo"><span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span><span><b>What did you catch?</b><span>fishr ID names the fish from a photo. Free to try, no account needed.</span></span></label>
     <p class="welcome-note">Your trips stay on this phone unless you turn on Cloud. Works with no signal. <a href="privacy.html">Privacy</a></p>
     <p class="welcome-note" id="welcomeCloud">Already use fishr Cloud? <button type="button" class="text-link" id="welcomeSignIn">Sign in with your passkey</button></p>
   </div>
@@ -121,7 +121,7 @@
       <section class="fid-card" id="fidCard" aria-labelledby="fidCardTitle">
         <span class="fid-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
         <div><h2 id="fidCardTitle">fishr ID <span class="pill beta">Beta</span></h2><p>Snap a fish. fishr names the species.</p></div>
-        <label class="btn primary" for="fidFile">Identify a fish</label>
+        <label class="btn primary fid-pick"><input type="file" accept="image/*" class="fid-file" aria-label="Choose a fish photo">Identify a fish</label>
       </section>
       <button type="button" class="pro-banner" id="copilotPro"><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
@@ -315,13 +315,12 @@
 
 <datalist id="dlWater"></datalist><datalist id="dlSpot"></datalist><datalist id="dlCombo"></datalist><datalist id="dlSpecies"></datalist><datalist id="dlLure"></datalist>
 <!-- fishr ID: name the fish in a photo -->
-<input type="file" id="fidFile" accept="image/*" hidden>
 <div class="sheet" id="fidSheet" hidden role="dialog" aria-modal="true" aria-labelledby="fidTitle">
   <div class="sheet-in">
     <div class="fid-top"><span class="fid-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span><h2 id="fidTitle">fishr <span class="grad-text">ID</span></h2><span class="pill beta">Beta</span></div>
     <div class="fid-photo"><img id="fidImg" alt="Your fish photo"></div>
     <div class="fid-result" id="fidResult" aria-live="polite"></div>
-    <div class="fid-actions"><button type="button" class="btn primary" id="fidLog" hidden>Log this catch</button><label class="btn" for="fidFile">Try another photo</label><button type="button" class="btn" id="fidClose">Close</button></div>
+    <div class="fid-actions"><button type="button" class="btn primary" id="fidLog" hidden>Log this catch</button><label class="btn fid-pick"><input type="file" accept="image/*" class="fid-file" aria-label="Choose a fish photo">Try another photo</label><button type="button" class="btn" id="fidClose">Close</button></div>
     <p class="fid-foot" id="fidFoot"></p>
   </div>
 </div>

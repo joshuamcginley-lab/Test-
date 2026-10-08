@@ -723,3 +723,7 @@ label.choice{cursor:pointer}
 .fid-actions .btn[hidden]{display:none}
 .fid-foot{margin:0;font:500 11px/1.5 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .fid-foot:empty{display:none}
+
+/* fishr ID buttons hold their own file input: invisible but still part of the page (iOS ignores display:none ones) */
+.fid-pick{position:relative;overflow:hidden}
+.fid-file{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}

@@ -95,8 +95,13 @@ const fidLeft = d => d.left == null ? "" : cloudOn()
 // The fishr ID sheet: pick or take a photo from anywhere, see the species, then log it as a catch.
 let fid = null; // { blob, species, isFish }
 function showFid(html) { $("fidResult").innerHTML = html; }
-$("fidFile").addEventListener("change", async e => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+// Each "Identify a fish" button holds its own file input (the pattern iOS Safari handles reliably).
+document.addEventListener("change", e => {
+  if (!e.target.matches?.(".fid-file")) return;
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if (f) runFishrId(f).catch(err => { console.error(err); toast("fishr ID hit a snag. Try again."); throw err; });
+});
+async function runFishrId(f) {
   closeSheets(); $("scrim").hidden = false; $("fidSheet").hidden = false; $("fidSheet").scrollTop = 0;
   $("fidLog").hidden = true; $("fidFoot").textContent = ""; $("fidImg").removeAttribute("src");
   showFid(`<p class="fid-busy"><span class="fid-scan"></span>Identifying…</p>`);
@@ -117,7 +122,7 @@ $("fidFile").addEventListener("change", async e => {
     if (err.status === 401) onSyncError(err);
     showFid(`<p class="fid-err">${esc(err.message || "Couldn't identify that photo.")}</p>`);
   }
-});
+}
 $("fidResult").addEventListener("click", e => {
   const b = e.target.closest(".fid-alt"); if (!b || !fid) return;
   const was = fid.species; fid.species = b.textContent; $("fidName").textContent = fid.species; b.textContent = was;
