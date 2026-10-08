@@ -133,7 +133,8 @@ function renderLive(status) {
 
   // model blend, once the log is big enough
   let model = null;
-  if (state.sessions.filter(s => avgT(s) != null).length >= MIN_TRIPS && c.temp != null) {
+  // Only your own log counts: the sample's waters say nothing about the weather where you are.
+  if (!demo && state.sessions.filter(s => avgT(s) != null).length >= MIN_TRIPS && c.temp != null) {
     const q = { temp: c.temp, hour: now.getHours() + now.getMinutes() / 60, doy: dayOfYear(isoDate(now)), sky: c.sky, press: c.press, flow: wx.flow?.status || null };
     const { res, rows } = bestRanking(q);
     if (rows[0] && res.globalRate) model = { delta: (rows[0].est / res.globalRate - 1) * 25, label: `Your log: ${rows[0].water}`, top: rows[0] };
@@ -154,6 +155,7 @@ function renderLive(status) {
     <span class="live-dot"></span><b>Live</b><span class="mono">${wx.place ? esc(wx.place) : coord}</span><span>Updated ${fmtClock(wx.updated)}</span><span>${sources} sources</span>
     <button type="button" class="linkbtn" id="liveRefresh">↻ Resync</button>
   </div>
+  ${demo ? `<p class="live-where">Your weather right now. The showcase call below uses a July evening on this angler's New Brunswick waters.</p>` : ""}
   ${wx.via !== "gps" ? `<p class="live-where">${wx.why === "denied" ? "Location is off, so this is" : "This is"} the weather for ${wx.place ? esc(wx.place) : "your pinned spots"}. <button type="button" class="text-link" id="liveChange">${wx.place ? "Change town" : "Use a town instead"}</button></p>` : ""}
   <div class="live-grid">
     <div class="tile bite">

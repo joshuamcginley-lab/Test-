@@ -32,6 +32,8 @@ const KEY = "firetiger.v1";
 let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null, maps: "auto" } };
 let demo = null; // the person's own trips, set aside while the sample season is on screen
 function load() {
+  // First visit from the US: show °F. Everyone else starts on °C (it's one tap to change in Settings).
+  try { if (!localStorage.getItem(KEY) && /-US$/i.test(navigator.language || "")) state.settings.temp = "F"; } catch (e) {}
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
   catch (e) { console.warn("Could not read saved log", e); }
   // The sample used to be saved into the log; it's view-only now.

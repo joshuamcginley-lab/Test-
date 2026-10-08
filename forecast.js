@@ -113,13 +113,16 @@ async function loadWeather(useGps) {
       via, why, place: via === "town" ? state.settings.home.name || null : null,
     };
     const now = new Date();
-    $("aTemp").value = tOut(r(wx.current.temp, 0));
-    $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    $("aDate").value = isoDate(now);
-    segSet($("aSky"), [wx.current.sky]);
-    segSet($("aPress"), press ? [press] : []);
-    segSet($("aFlow"), flow ? [flow.status] : []);
-    msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
+    // On the sample, Copilot keeps its July evening: live weather is yours, the sample's waters aren't.
+    if (!demo) {
+      $("aTemp").value = tOut(r(wx.current.temp, 0));
+      $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      $("aDate").value = isoDate(now);
+      segSet($("aSky"), [wx.current.sky]);
+      segSet($("aPress"), press ? [press] : []);
+      segSet($("aFlow"), flow ? [flow.status] : []);
+      msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
+    }
     renderAdvice();
     if (typeof renderLive === "function") renderLive();
   } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; return "error"; }
@@ -167,7 +170,8 @@ function renderAdvice() {
     const nSim = top.similar.length, skunks = top.similar.filter(x => !x.f).length;
     const slow = res.skunkSimilar >= 0.5 && res.nSimilar >= 3;
     const tough = slow && (top.skunk >= 0.5 || top.est < 1);  // even the best option is weak
-    const evidence = nSim ? `On ${nSim} similar trip${nSim === 1 ? "" : "s"} there you caught ${top.similar.reduce((a, x) => a + x.f, 0)} fish and got skunked ${skunks === 0 ? "none of the time" : skunks === nSim ? "every time" : `${skunks} time${skunks === 1 ? "" : "s"}`}.` : `You've fished it ${top.trips} time${top.trips === 1 ? "" : "s"}, but never in conditions this close, so treat this as a lean.`;
+    const you = demo ? "this angler" : "you";
+    const evidence = nSim ? `On ${nSim} similar trip${nSim === 1 ? "" : "s"} there ${you} caught ${top.similar.reduce((a, x) => a + x.f, 0)} fish and got skunked ${skunks === 0 ? "none of the time" : skunks === nSim ? "every time" : `${skunks} time${skunks === 1 ? "" : "s"}`}.` : `${demo ? "This angler has" : "You've"} fished it ${top.trips} time${top.trips === 1 ? "" : "s"}, but never in conditions this close, so treat this as a lean.`;
     const nearT = Math.round(3.5 * k), nearH = Math.round(2.2 * k);
     const widenNote = widened ? `<p class="v-note">Nothing in your log is a close match for ${esc(when)}, so this is based on your nearest trips (within about ${tOut(nearT) - tOut(0)}°${T()} and ${nearH} hours). It gets sharper as you log trips in these conditions.</p>` : "";
     html += `<div class="verdict${slow ? " slow" : ""}">
@@ -181,7 +185,8 @@ function renderAdvice() {
       ${slow && !tough ? `<p class="v-warn"><b>Heads up:</b> ${Math.round(res.skunkSimilar * 100)}% of your trips in conditions like this were skunks, wherever you went.</p>` : ""}
       ${!res.anySeason ? `<p class="v-warn">You haven't logged trips at this time of year, so this is based on temperature and time of day only.</p>` : ""}
     </div>`;
-    const win = bestWindow();
+    if (demo) html += `<p class="v-note showcase-pick">This is the showcase angler's pick from their New Brunswick waters. Log your own trips and Copilot picks from yours.</p>`;
+    const win = demo ? null : bestWindow(); // the forecast is yours, the sample's waters aren't
     if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
     // The tables behind the call fold away, so Copilot fits on one screen.
     html += `<details class="more math" id="mathBox"${mathOpen ? " open" : ""}><summary><span>See the math</span><span class="more-hint">other waters and your most similar trips</span></summary><div class="more-in">`;

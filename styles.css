@@ -807,3 +807,4 @@ nav.tabs button[role="tab"]{min-width:0}
 /* Cards built as grids must never grow past the screen because of a wide child (e.g. the swipeable question row) */
 .ask,.showcase,.cloud-box,.fid-result,.g-card{grid-template-columns:minmax(0,1fr)}
 .ask > *,.showcase > *{min-width:0}
+.showcase-pick{margin:-4px 2px 12px;font-size:13px;color:var(--muted)}

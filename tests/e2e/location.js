@@ -27,7 +27,7 @@ const S = process.argv[2], URL0 = process.argv[3]; const res = []; const ok = (c
   // next visit: Resync without GPS falls back to the saved town
   wxUrl = null; await p.evaluate(() => { wx = null; goLive(true); }); await p.waitForTimeout(1800);
   ok(/latitude=44\.65/.test(wxUrl || '') && await p.evaluate(() => !!document.querySelector('.tile.bite')), 'later Go live uses the saved town when GPS is blocked');
-  r = await p.evaluate(() => ({ head: document.querySelector('.live-head .mono')?.textContent, where: document.querySelector('.live-where')?.textContent }));
+  r = await p.evaluate(() => ({ head: document.querySelector('.live-head .mono')?.textContent, where: [...document.querySelectorAll('.live-where')].map(e => e.textContent).join(' ') }));
   ok(r.head === 'Halifax, Nova Scotia' && /Location is off, so this is the weather for Halifax, Nova Scotia/.test(r.where) && /Change town/.test(r.where), 'card says where the weather is from ' + JSON.stringify(r));
   await click('#liveChange'); ok(await p.evaluate(() => !!$('townForm')), 'Change town opens the town box');
   await p.screenshot({ path: S + '/loc-change.png' });

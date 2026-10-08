@@ -45,7 +45,7 @@ r = await V.ask({ mode: "sample", question: "Where should I fish tonight?", cond
 ok(r.status === 200 && /Keswick/.test(r.data.answer) && r.data.left === 2, "sample answer " + JSON.stringify(r.data));
 let req = calls.at(-1).body;
 ok(req.model === "claude-haiku-5-5" && req.output_config.effort === "low" && req.cache_control?.type === "ephemeral" && !req.temperature, "request shape " + JSON.stringify({ m: req.model, oc: req.output_config }));
-ok(req.system.includes("showcase log") && req.system.includes("47 trips") && /Keswick River \(Near little island\)/.test(req.system) && req.system.includes("pounds and inches"), "system has sample log");
+ok(req.system.includes("Never pretend this log covers their area") && req.system.includes("showcase log") && req.system.includes("47 trips") && /Keswick River \(Near little island\)/.test(req.system) && req.system.includes("pounds and inches"), "system has sample log");
 ok(req.messages.length === 1 && req.messages[0].content.includes("Now: 2026-07-15, 18:30, 22°C, Clear, pressure Falling") && req.messages[0].content.includes("Forecast: Thu 18:00") && req.messages[0].content.endsWith("Question: Where should I fish tonight?"), "user turn has conditions " + req.messages[0].content.slice(0, 160));
 await V.ask({ mode: "sample", question: "q2" }); r = await V.ask({ mode: "sample", question: "q3" }); ok(r.data.left === 0, "third ok");
 const n = calls.length; r = await V.ask({ mode: "sample", question: "q4" }); ok(r.status === 429 && calls.length === n && /3 questions/.test(r.data.error), "fourth blocked, no API call " + JSON.stringify(r.data));
