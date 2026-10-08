@@ -628,3 +628,22 @@ body.guiding .dock{visibility:hidden}
 @keyframes startPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--v) 18%,transparent),var(--glow)}}
 @media (prefers-reduced-motion:reduce){.sc-tile.start-here{animation:none}}
 .g-actions .btn[hidden]{display:none}
+
+/* Featured Copilot tile until the guide has been seen: full width, gradient, its own call to action */
+.sc-ico,.sc-txt{display:contents}
+.sc-go{display:none}
+.sc-tile.start-here{grid-column:1/-1;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;min-height:0;padding:16px 14px 14px;border:0;background:var(--grad);color:var(--on-grad);box-shadow:var(--glow);animation:startPulse 2.4s ease-in-out infinite}
+.sc-tile.start-here .sc-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:rgba(0,0,0,.14)}
+.sc-tile.start-here .sc-ico svg{margin:0;width:22px;height:22px;color:var(--on-grad)}
+.sc-tile.start-here .sc-txt{display:grid;gap:2px}
+.sc-tile.start-here b{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.sc-tile.start-here .sc-txt span{color:var(--on-grad);opacity:.8;font-size:13.5px}
+.sc-tile.start-here .sc-go{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;background:var(--on-grad);color:var(--v);font:700 12px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.sc-tile.start-here .sc-go svg{width:14px;height:14px;animation:nudge 1.2s ease-in-out infinite}
+.sc-tile.start-here .sc-badge{top:-11px;left:16px;translate:none;font-size:10.5px;padding:6px 10px;background:var(--ink);color:var(--bg)}
+@keyframes nudge{50%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.sc-tile.start-here .sc-go svg{animation:none}}
+@media (max-width:360px){.sc-tile.start-here{grid-template-columns:40px 1fr}.sc-tile.start-here .sc-go{grid-column:1/-1;justify-content:center}}
+.sc-tile.start-here b{color:var(--on-grad)}
+.sc-tiles:has(.start-here){grid-template-columns:1fr 1fr}
+@media (max-width:360px){.sc-tiles:has(.start-here){grid-template-columns:1fr}}
