@@ -3,7 +3,7 @@
 // Each trip keeps whichever version was saved last (by its updated time). Deleted trips stay as tombstones so
 // other devices learn about the delete. Returns everything changed after `since`, plus notes and settings.
 import { json } from "../_lib.js";
-import { db, handle, fail, requireUser, requireCloud } from "../_auth.js";
+import { db, handle, fail, requireUser, requireCloud, isJson } from "../_auth.js";
 
 const MAX_PUSH = 500, PAGE = 1000, MAX_TRIP = 64 * 1024, MAX_TRIPS = 20000;
 const ID_RE = /^[A-Za-z0-9._-]{1,64}$/;
@@ -17,7 +17,7 @@ function cleanTime(t) {
 
 export async function onRequestPost({ request, env }) {
   return handle(async () => {
-    if (!(request.headers.get("content-type") || "").includes("application/json")) fail("Send JSON.", 415);
+    if (!isJson(request)) fail("Send JSON.", 415);
     const user = await requireUser(request, env); requireCloud(user, env);
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") fail("Send JSON.");
@@ -26,25 +26,30 @@ export async function onRequestPost({ request, env }) {
     if (push.length > MAX_PUSH) fail(`Send at most ${MAX_PUSH} trips at a time.`);
     const DB = await db(env);
 
+    // A trip the server can't store is skipped (and reported) rather than failing the whole sync.
+    const skipped = [];
     const rows = push.map(t => {
-      if (!t || !ID_RE.test(String(t.id))) fail("A trip had a bad id.");
+      const id = String(t?.id ?? "");
+      if (!t || !ID_RE.test(id)) { skipped.push(id.slice(0, 64)); return null; }
+      const ms = Date.parse(t.updated);
+      if (!Number.isFinite(ms)) { skipped.push(id); return null; }
       const updated = cleanTime(t.updated);
-      if (t.deleted) return { id: t.id, data: null, updated, deleted: 1 };
-      if (!t.data || typeof t.data !== "object" || Array.isArray(t.data)) fail("A trip was empty.");
-      const data = JSON.stringify({ ...t.data, id: t.id });
-      if (data.length > MAX_TRIP) fail("A trip was too large to sync.", 413);
-      return { id: t.id, data, updated, deleted: 0 };
-    });
+      if (t.deleted) return { id, data: null, updated, deleted: 1 };
+      if (!t.data || typeof t.data !== "object" || Array.isArray(t.data)) { skipped.push(id); return null; }
+      const data = JSON.stringify({ ...t.data, id });
+      if (data.length > MAX_TRIP) { skipped.push(id); return null; }
+      return { id, data, updated, deleted: 0 };
+    }).filter(Boolean);
 
     if (rows.length) {
       const { n } = await DB.prepare("SELECT COUNT(*) AS n FROM trips WHERE user_id = ?").bind(user.id).first();
       if (n + rows.filter(r => !r.deleted).length > MAX_TRIPS) fail("That's more trips than fishr Cloud holds for one account.", 413);
-      const { seq } = await DB.prepare("UPDATE users SET seq = seq + 1 WHERE id = ? RETURNING seq").bind(user.id).first();
+      // One transaction: take the next seq and write the rows with it, so no device can see a later seq first.
       // Last write wins: an incoming version only replaces the stored one if it's newer.
-      await DB.batch(rows.map(r => DB.prepare(
-        `INSERT INTO trips (user_id, id, data, updated, deleted, seq) VALUES (?, ?, ?, ?, ?, ?)
+      await DB.batch([DB.prepare("UPDATE users SET seq = seq + 1 WHERE id = ?").bind(user.id), ...rows.map(r => DB.prepare(
+        `INSERT INTO trips (user_id, id, data, updated, deleted, seq) VALUES (?, ?, ?, ?, ?, (SELECT seq FROM users WHERE id = ?))
          ON CONFLICT (user_id, id) DO UPDATE SET data = excluded.data, updated = excluded.updated, deleted = excluded.deleted, seq = excluded.seq
-         WHERE excluded.updated > trips.updated`).bind(user.id, r.id, r.data, r.updated, r.deleted, seq)));
+         WHERE excluded.updated > trips.updated`).bind(user.id, r.id, r.data, r.updated, r.deleted, user.id))]);
     }
 
     if (body.meta && typeof body.meta === "object" && body.meta.data && typeof body.meta.data === "object") {
@@ -66,9 +71,16 @@ export async function onRequestPost({ request, env }) {
       if (trimmed.length) results = trimmed;
     }
     const cursor = results.length ? results[results.length - 1].seq : since;
+    // Pushes that lost to a newer stored copy: send that copy back so the device doesn't think it won.
+    const kept = [];
+    for (let k = 0; k < rows.length; k += 90) {
+      const part = rows.slice(k, k + 90);
+      const { results: cur } = await DB.prepare(`SELECT id, data, updated, deleted FROM trips WHERE user_id = ? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part.map(r => r.id)).all();
+      for (const c of cur) { const mine = part.find(r => r.id === c.id); if (mine && c.updated > mine.updated) kept.push(c.deleted ? { id: c.id, deleted: true, updated: c.updated } : { id: c.id, data: JSON.parse(c.data), updated: c.updated }); }
+    }
     const meta = await DB.prepare("SELECT data, updated FROM meta WHERE user_id = ?").bind(user.id).first();
     return json({
-      cursor, more,
+      cursor, more, kept, skipped,
       trips: results.map(r => r.deleted ? { id: r.id, deleted: true, updated: r.updated } : { id: r.id, data: JSON.parse(r.data), updated: r.updated }),
       meta: meta ? { data: JSON.parse(meta.data), updated: meta.updated } : null,
     });

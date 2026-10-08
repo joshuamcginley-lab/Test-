@@ -7,7 +7,10 @@ const page = (title, body) => new Response(`<!doctype html><html lang="en"><head
 
 export async function onRequestGet({ request, env }) {
   const u = new URL(request.url), email = (u.searchParams.get("e") || "").trim().toLowerCase(), t = u.searchParams.get("t") || "";
-  const good = email && t && env.CATCHES && t === await unsubToken(email, env);
+  const want = email && env.CATCHES ? await unsubToken(email, env) : null;
+  let diff = want && t.length === want.length ? 0 : 1;
+  if (!diff) for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ t.charCodeAt(i);
+  const good = !diff;
   if (!good) return page("Link not recognised", "This unsubscribe link is incomplete or has expired. You can also remove your address from the <a href=\"/privacy.html#remove\">privacy page</a>.");
   await removeEmail(env, email);
   return page("You're unsubscribed", "We've removed your address from the fishr Pro list. You won't get any more emails from us.");

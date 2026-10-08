@@ -50,18 +50,35 @@ export async function takeOne(env, who, kind, limit) {
   const all = await bump("*", "all");
   if (all.n === 1) await DB.prepare("DELETE FROM ai_usage WHERE day < ?").bind(new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)).run();
   if (all.n > int(env.AI_DAILY_TOTAL, 300)) { await drop("*", "all"); fail("fishr AI has hit today's limit. It resets at midnight UTC.", 429); }
+  // Visitors without an account share a smaller pool, so they can never use up the day for account holders.
+  const guest = kind === "sample" || kind === "idguest";
+  if (guest && (await bump("*", "guest")).n > int(env.AI_DAILY_GUEST_TOTAL, 100)) {
+    await Promise.all([drop("*", "all"), drop("*", "guest")]);
+    fail("fishr AI's free tries are used up for today. Turn on fishr Cloud (free) to keep going.", 429);
+  }
   const mine = await bump(who, kind);
   if (mine.n > limit) {
-    await Promise.all([drop("*", "all"), drop(who, kind)]);
+    await Promise.all([drop("*", "all"), drop(who, kind), guest && drop("*", "guest")]);
     fail(kind === "idguest" ? `That's today's ${limit} free fishr IDs. Turn on fishr Cloud (free) for more.`
       : kind === "photo" ? `That's all ${limit} fishr IDs for today. More tomorrow.` : `That's all ${limit} questions for today. More tomorrow.`, 429);
   }
-  return { left: limit - mine.n, release: () => Promise.all([drop("*", "all"), drop(who, kind)]) };
+  let released = false;
+  return { left: limit - mine.n, release: () => released ? null : (released = true, Promise.all([drop("*", "all"), drop(who, kind), guest && drop("*", "guest")])) };
+}
+
+// Give a use back only when the request never reached the model (bad request, auth, rate limit, no connection).
+// Timeouts and server errors may already have run, so they still count.
+export function shouldRelease(e) {
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return false;
+  if (e instanceof Anthropic.APIConnectionError) return true;
+  return e instanceof Anthropic.APIError && e.status >= 400 && e.status < 500;
 }
 
 // Anonymous visitors asking about the showcase are counted by a hash of their IP (the IP itself isn't stored).
 export async function visitorId(request) {
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  let ip = request.headers.get("cf-connecting-ip") || "unknown";
+  // One IPv6 connection usually owns a whole /64, so count the /64 rather than each address in it.
+  if (ip.includes(":")) ip = ip.split(":").slice(0, 4).join(":") + "::/64";
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("fishr-visitor:" + ip));
   return "ip:" + [...new Uint8Array(buf)].slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -73,7 +90,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // One line per trip, oldest first. Weights in lb, lengths in inches, temperatures in °C (how the app stores them).
 export function tripLine(s) {
   const d = new Date(s.date + "T12:00:00Z"), parts = [];
-  const when = [s.date, DAYS[d.getUTCDay()], s.start ? `${s.start}${s.end ? "-" + s.end : ""}` : s.period || ""].filter(Boolean).join(" ");
+  const when = [clip(s.date, 10), DAYS[d.getUTCDay()], s.start ? `${clip(s.start, 5)}${s.end ? "-" + clip(s.end, 5) : ""}` : clip(s.period, 12)].filter(Boolean).join(" ");
   parts.push(when);
   parts.push(clip(s.water, 60) + (s.spot ? ` (${clip(s.spot, 60)})` : ""));
   const w = [];
@@ -81,25 +98,28 @@ export function tripLine(s) {
   if (s.wx) {
     const x = s.wx;
     if (x.t != null && s.tempLow == null) w.push(`${x.t}°C`);
-    if (x.sky) w.push(x.sky.toLowerCase());
-    if (x.p) w.push(`${x.p} hPa${x.trend ? " " + x.trend.toLowerCase() : ""}`);
-    if (x.wind != null) w.push(`wind ${x.wind} km/h${x.windDir ? " " + x.windDir : ""}`);
-    if (x.rain48 != null) w.push(`${x.rain48} mm rain in 48h`);
+    if (x.sky) w.push(clip(x.sky, 12).toLowerCase());
+    if (x.p) w.push(`${clip(x.p, 6)} hPa${x.trend ? " " + clip(x.trend, 10).toLowerCase() : ""}`);
+    if (x.wind != null) w.push(`wind ${clip(x.wind, 5)} km/h${x.windDir ? " " + clip(x.windDir, 3) : ""}`);
+    if (x.rain48 != null) w.push(`${clip(x.rain48, 6)} mm rain in 48h`);
   }
-  if (s.flow?.status) w.push(`river ${String(s.flow.status).toLowerCase()}${s.flow.trend ? " and " + s.flow.trend : ""}`);
-  if ((s.conditions || []).length) w.push(s.conditions.join(", ").toLowerCase());
+  if (s.flow?.status) w.push(`river ${clip(s.flow.status, 10).toLowerCase()}${s.flow.trend ? " and " + clip(s.flow.trend, 10) : ""}`);
+  if (Array.isArray(s.conditions) && s.conditions.length) w.push(clip(s.conditions.join(", "), 120).toLowerCase());
   if (w.length) parts.push(w.join(", "));
-  if (s.method) parts.push(s.method);
-  const catches = (s.catches || []).filter(c => c && c.species);
-  parts.push(catches.length ? "caught " + catches.map(c => `${c.count || 1}x ${clip(c.species, 40)}${c.lb != null ? ` ${c.lb} lb` : c.size ? ` ${clip(c.size, 12)}` : ""}${c.inches != null ? ` ${c.inches} in` : ""}${c.lure ? ` on ${clip(c.lure, 40)}` : ""}`).join("; ") : "skunked");
+  if (s.method) parts.push(clip(s.method, 20));
+  const catches = (Array.isArray(s.catches) ? s.catches : []).filter(c => c && c.species).slice(0, 20);
+  parts.push(catches.length ? "caught " + catches.map(c => `${clip(c.count || 1, 4)}x ${clip(c.species, 40)}${c.lb != null ? ` ${clip(c.lb, 6)} lb` : c.size ? ` ${clip(c.size, 12)}` : ""}${c.inches != null ? ` ${clip(c.inches, 6)} in` : ""}${c.lure ? ` on ${clip(c.lure, 40)}` : ""}`).join("; ") : "skunked");
   if (s.lureText) parts.push(`lures: ${clip(s.lureText, 80)}`);
   if (s.notes) parts.push(`notes: ${clip(s.notes, 200)}`);
   return parts.join(" | ");
 }
 export function logText(trips, notes = []) {
   const rows = [...trips].filter(s => s && s.date && s.water).sort((a, b) => a.date.localeCompare(b.date)).slice(-400);
-  const fish = rows.reduce((a, s) => a + (s.catches || []).reduce((b, c) => b + (c.count || 1), 0), 0);
-  let out = `${rows.length} trips, ${fish} fish.\n` + rows.map(tripLine).join("\n");
+  const fish = rows.reduce((a, s) => a + (Array.isArray(s.catches) ? s.catches : []).reduce((b, c) => b + (Number(c?.count) || 1), 0), 0);
+  // Keep the prompt a sensible size: newest trips first until about 120k characters, then back in date order.
+  const lines = []; let size = 0;
+  for (const s of [...rows].reverse()) { const l = tripLine(s); if (size + l.length > 120000) break; lines.unshift(l); size += l.length + 1; }
+  let out = `${rows.length} trips, ${fish} fish${lines.length < rows.length ? ` (the newest ${lines.length} are listed)` : ""}.\n` + lines.join("\n");
   if (notes.length) out += "\n\nAngler's field notes:\n" + notes.slice(0, 40).map(n => "- " + clip(n, 200)).join("\n");
   return out;
 }

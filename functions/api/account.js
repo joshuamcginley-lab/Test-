@@ -1,12 +1,14 @@
 // DELETE /api/account — deletes the signed-in angler's cloud account: every synced trip, note, setting, photo,
 // passkey record and session. Trips already on their devices stay there.
 import { json } from "../_lib.js";
-import { db, handle, fail, requireUser, withCookies, endSession } from "../_auth.js";
+import { db, handle, fail, requireUser, withCookies, endSession, isJson } from "../_auth.js";
 
 export async function onRequestDelete({ request, env }) {
   return handle(async () => {
-    if (!(request.headers.get("content-type") || "").includes("application/json")) fail("Send JSON.", 415);
+    if (!isJson(request)) fail("Send JSON.", 415);
     const user = await requireUser(request, env), DB = await db(env);
+    // Sign every device out first, so an upload or sync already in flight can't recreate data afterwards.
+    await DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id).run();
     if (env.CATCHES) {
       let cursor;
       do {

@@ -328,7 +328,7 @@ function catchRow(c = {}) {
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
   <label class="field lu"><span class="label">Lure</span><input class="c-lu" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
-  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" hidden><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
+  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" class="vh-file"><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
   speciesPicker(d.querySelector(".combo"));
   const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
@@ -471,6 +471,8 @@ $("delYes").onclick = () => {
 
 $("form").addEventListener("submit", async e => {
   e.preventDefault(); $("formErr").hidden = true;
+  if ($("saveBtn").disabled) return; // a save is already running
+  const editId = editingId; // read now: closing the sheet while photos save would otherwise turn an edit into a new trip
   const date = $("fDate").value, water = $("fWaterIn").value.trim();
   if (!date || !water) { $("formErr").hidden = false; $("formErr").textContent = "Add a date and the water you fished."; return; }
   const num = v => v === "" || v == null ? null : Number(v);
@@ -494,11 +496,11 @@ $("form").addEventListener("submit", async e => {
   });
   const tlo = num($("fTlo").value), thi = num($("fThi").value);
   const start = $("fStart").value || null, end = $("fEnd").value || null;
-  const prev = state.sessions.find(s => s.id === editingId);
+  const prev = state.sessions.find(s => s.id === editId);
   const keepT = (v, old) => old != null && v === tOut(old) ? old : tIn(v);
   const doc = {
     ...(prev || {}),
-    id: editingId || `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    id: editId || `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     date, start, end, water, spot: $("fSpot").value.trim(), catches,
     tempLow: keepT(tlo, prev?.tempLow), tempHigh: thi == null ? keepT(tlo, prev?.tempLow) : keepT(thi, prev?.tempHigh),
     lureText: $("fLureText").value.trim(), combo: $("fCombo").value.trim(),
@@ -509,8 +511,9 @@ $("form").addEventListener("submit", async e => {
     wx: (typeof formCond !== "undefined" && formCond.wx) || prev?.wx || null,
     flow: (typeof formCond !== "undefined" && formCond.flow) || prev?.flow || null,
   };
-  if (prev) state.sessions = state.sessions.map(s => s.id === prev.id ? doc : s); else state.sessions.push(doc);
-  if (!save()) return;
+  const before = state.sessions;
+  state.sessions = prev ? state.sessions.map(s => s.id === prev.id ? doc : s) : [...state.sessions, doc];
+  if (!save()) { state.sessions = before; return; } // nothing changed, so tapping Save again can't add a duplicate
   const kept = new Set(photoIdsOf(doc)); photoDel(photoIdsOf(prev).filter(id => !kept.has(id))).catch(() => {});
   state.settings.season = date.slice(0, 4); save();
   closeSheets(); render();
@@ -531,14 +534,20 @@ $("saveNotes").onclick = () => { state.notes = $("notesText").value.split("\n").
 
 /* ---------- sample season ---------- */
 // The sample season is shown in place of your trips but never saved over them.
-async function loadSample(where) {
-  if (demo) { if (where) showSampleView(where); return; }
+let sampleLoading = null; // one load at a time: a double tap must never set the real log aside twice
+function loadSample(where) {
+  if (demo) { if (where) showSampleView(where); return Promise.resolve(); }
+  return sampleLoading ??= loadSampleNow(where).finally(() => { sampleLoading = null; });
+}
+async function loadSampleNow(where) {
   try {
     // The showcase version has historical weather added on the server; fall back to the plain file.
     let data = null;
     try { const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000); const r = await fetch("/api/sample", { signal: ctl.signal }); clearTimeout(t); if (r.ok) data = await r.json(); } catch (e) {}
     if (!Array.isArray(data) || !data.length) data = await (await fetch("sample.json")).json();
     data.forEach(s => { s.sample = true; });
+    // Started logging a trip while the sample was loading? Stay on your own log so the trip saves there.
+    if (demo || !$("sheet").hidden) return;
     demo = { sessions: state.sessions, notes: state.notes, season: state.settings.season };
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
@@ -578,20 +587,31 @@ $("openSettings").onclick = () => {
 $("closeSettings").onclick = closeSheets;
 $("sName").addEventListener("input", () => { state.settings.name = $("sName").value.trim(); save(); render(); });
 $("sUnits").addEventListener("change", () => { state.settings.units = $("sUnits").value; save(); render(); });
-$("sTemp").addEventListener("change", () => { state.settings.temp = $("sTemp").value; save(); render(); });
+$("sTemp").addEventListener("change", () => {
+  const box = $("aTemp"), c = box && box.value !== "" ? tIn(Number(box.value)) : null; // in °C, read with the old unit
+  state.settings.temp = $("sTemp").value; save();
+  if (c != null) box.value = tOut(r(c, 1));
+  render();
+});
 $("sMaps").addEventListener("change", () => { state.settings.maps = $("sMaps").value; save(); render(); });
 
 function download(name, text, type) {
   const blob = new Blob([text], { type });
   const file = typeof File === "function" ? new File([blob], name, { type }) : null;
   if (file && navigator.canShare && navigator.canShare({ files: [file] }) && /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
-    navigator.share({ files: [file], title: name }).catch(() => {});
+    // If the share sheet is refused (e.g. iOS after a long photo export), save it as a download instead.
+    navigator.share({ files: [file], title: name }).catch(err => { if (err?.name !== "AbortError") saveFile(blob, name); });
     return;
   }
+  saveFile(blob, name);
+}
+function saveFile(blob, name) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("Saved to your downloads");
 }
-const stamp = () => new Date().toISOString().slice(0, 10);
+const stamp = () => isoLocal(new Date()); // the date where you are, not UTC
+const isoLocal = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const toDataURL = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
 $("exportJson").onclick = async () => {
   const photos = {};
@@ -618,9 +638,15 @@ $("importFile").addEventListener("change", async e => {
     if (!Array.isArray(data.sessions)) throw new Error("not a backup");
     const byId = new Map(state.sessions.map(s => [s.id, s]));
     let added = 0;
-    for (const s of data.sessions) { if (!s || !s.id || !s.date || !s.water) continue; if (!byId.has(s.id)) added++; byId.set(s.id, s); }
+    for (const raw of data.sessions) {
+      const s = cleanTrip(raw); if (!s) continue;
+      const mine = byId.get(s.id);
+      if (!mine) added++;
+      else if ((mine.updatedAt || "") > (s.updatedAt || "")) continue; // this phone's copy is newer: keep it
+      byId.set(s.id, s);
+    }
     state.sessions = [...byId.values()];
-    if (data.photos && typeof data.photos === "object") for (const [id, url] of Object.entries(data.photos)) { if (typeof url === "string" && url.startsWith("data:image/")) await photoPut(id, await (await fetch(url)).blob()); }
+    if (data.photos && typeof data.photos === "object") for (const [id, url] of Object.entries(data.photos)) { if (PHOTO_ID.test(id) && typeof url === "string" && url.startsWith("data:image/")) await photoPut(id, await (await fetch(url)).blob()); }
     if (Array.isArray(data.notes) && !state.notes.length) state.notes = data.notes.filter(x => typeof x === "string");
     save(); render();
     $("backupMsg").hidden = false; $("backupMsg").textContent = `Restored. ${added} new trip${added === 1 ? "" : "s"} added.`;
@@ -631,6 +657,31 @@ $("importFile").addEventListener("change", async e => {
 });
 $("wipeBtn").onclick = () => { $("wipeBtn").hidden = true; $("wipeConfirm").hidden = false; };
 $("wipeYes").onclick = () => { if (demo) exitSample(); state.sessions = []; state.notes = []; save(); photoClear().catch(() => {}); photoUrls.clear(); closeSheets(); render(); toast("All trips deleted"); };
+
+// A trip from a backup file, with every field checked and given its proper type (a file can contain anything).
+const PHOTO_ID = /^p-[a-z0-9]{1,16}-[a-z0-9]{1,12}$/;
+function cleanTrip(t) {
+  if (!t || typeof t !== "object") return null;
+  const str = (v, n) => typeof v === "string" ? v.slice(0, n) : "";
+  const num = v => v === null || v === "" || v === undefined ? null : Number.isFinite(+v) ? +v : null;
+  const id = str(t.id, 64), date = str(t.date, 10), water = str(t.water, 120).trim();
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(id) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !water) return null;
+  const hm = v => /^\d{2}:\d{2}$/.test(v) ? v : null;
+  const catches = (Array.isArray(t.catches) ? t.catches : []).filter(c => c && typeof c === "object" && str(c.species, 60).trim()).slice(0, 50).map(c => ({
+    species: str(c.species, 60).trim(), count: Math.max(1, Math.min(999, Math.round(num(c.count) || 1))), lb: num(c.lb), inches: num(c.inches),
+    lure: str(c.lure, 80) || null, size: str(c.size, 20) || null, photo: PHOTO_ID.test(c.photo) ? c.photo : null }));
+  const pick = (o, spec) => { if (!o || typeof o !== "object") return null; const out = {}; for (const [k, ty] of Object.entries(spec)) { const v = ty === "n" ? num(o[k]) : str(o[k], 60) || null; if (v != null) out[k] = v; } return out; };
+  const out = {
+    id, date, water, start: hm(t.start), end: hm(t.end), spot: str(t.spot, 120), catches,
+    tempLow: num(t.tempLow), tempHigh: num(t.tempHigh), lureText: str(t.lureText, 200), combo: str(t.combo, 120), method: str(t.method, 20) || "Spin",
+    period: str(t.period, 12) || null, notes: str(t.notes, 4000), conditions: (Array.isArray(t.conditions) ? t.conditions : []).filter(x => typeof x === "string").map(x => x.slice(0, 30)).slice(0, 20),
+    lat: num(t.lat), lon: num(t.lon),
+    wx: pick(t.wx, { t: "n", code: "n", sky: "s", p: "n", dp3: "n", trend: "s", wind: "n", windDir: "s", rain48: "n", at: "s", source: "s" }),
+    flow: pick(t.flow, { status: "s", trend: "s", station: "s", distKm: "n", value: "n", pct: "n" }),
+  };
+  if (typeof t.updatedAt === "string" && !Number.isNaN(Date.parse(t.updatedAt))) out.updatedAt = new Date(t.updatedAt).toISOString();
+  return out;
+}
 
 /* ---------- install ---------- */
 let installEvt = null;
@@ -675,7 +726,16 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 load();
 render();
 { let t = null; try { t = sessionStorage.getItem("ft-tab"); } catch (e) {} showTab(t || "advice"); }
-window.addEventListener("storage", e => { if (e.key === KEY) { load(); render(); } });
+window.addEventListener("storage", e => {
+  if (e.key !== KEY) return;
+  if (demo) {
+    // The sample is on screen here: refresh the real log that's set aside, and leave the sample alone.
+    const shown = { sessions: state.sessions, notes: state.notes, season: state.settings.season };
+    load(); demo = { sessions: state.sessions, notes: state.notes, season: demo.season };
+    Object.assign(state, { sessions: shown.sessions, notes: shown.notes }); state.settings.season = shown.season;
+  } else load();
+  render();
+});
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
 /* ---------- swipe down to close the bottom sheets ---------- */

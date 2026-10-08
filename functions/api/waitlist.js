@@ -34,7 +34,9 @@ export async function onRequestGet({ request, env }) {
       const obj = await env.CATCHES.get(key); if (!obj) continue;
       try { const d = await obj.json(); rows.push([d.email, d.name || "", d.joined, d.consentText, d.country || "", `${origin}/api/unsubscribe?e=${encodeURIComponent(d.email)}&t=${await unsubToken(d.email, env)}`]); } catch {}
     }
-    const csv = rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(",")).join("\n");
+    // Cells that start with = + - @ (or a tab/CR) would run as formulas in Excel; prefix them so they stay text.
+    const cell = v => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const csv = rows.map(r => r.map(cell).join(",")).join("\n");
     return new Response(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": "attachment; filename=fishr-waitlist.csv", "cache-control": "no-store" } });
   }
   return json({ count: (await listAll(env.CATCHES)).length });

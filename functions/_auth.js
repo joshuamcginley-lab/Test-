@@ -32,6 +32,8 @@ const sha256 = async data => new Uint8Array(await crypto.subtle.digest("SHA-256"
 const hex = bytes => [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
 const iso = (ms = 0) => new Date(Date.now() + ms).toISOString();
 export const fail = (msg, status = 400) => { throw Object.assign(new Error(msg), { status }); };
+// The media type itself must be application/json (not just contain it), so cross-site forms can't post here.
+export const isJson = request => (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() === "application/json";
 
 // Run a handler and turn thrown errors into JSON responses.
 export async function handle(fn) {
@@ -140,6 +142,7 @@ export function cbor(buf) {
 
 // COSE public key -> JWK. ES256 (P-256) and RS256 cover every phone, laptop and password manager.
 function coseToJwk(m) {
+  if (!(m instanceof Map)) fail("Passkey key wasn't readable.");
   const kty = m.get(1), alg = m.get(3);
   if (kty === 2 && alg === -7 && m.get(-1) === 1) return { alg, jwk: { kty: "EC", crv: "P-256", x: b64u(m.get(-2)), y: b64u(m.get(-3)) } };
   if (kty === 3 && alg === -257) return { alg, jwk: { kty: "RSA", n: b64u(m.get(-1)), e: b64u(m.get(-2)), alg: "RS256" } };
@@ -153,6 +156,7 @@ function derToRaw(der) {
   for (let k = 0; k < 2; k++) {
     if (der[i++] !== 0x02) fail("Passkey signature wasn't readable.");
     let n = der[i++], p = der.slice(i, i + n); i += n;
+    if (n > 33) fail("Passkey signature wasn't readable.");
     while (p.length > 32 && p[0] === 0) p = p.slice(1);
     const out = new Uint8Array(32); out.set(p, 32 - p.length); parts.push(out);
   }

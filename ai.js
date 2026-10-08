@@ -9,7 +9,7 @@ const ASK_CHIPS = {
   sample: ["Where should this angler fish tonight?", "What lure works best in July?", "Does pressure change the bite here?"],
 };
 const askHist = { own: [], sample: [] }, askInfo = {}, askLoading = {};
-let askBusy = false, aiOff = false;
+let askBusy = null, aiOff = false; // askBusy: the mode ("own"/"sample") with a question in flight
 const askMode = () => demo ? "sample" : "own";
 
 // What Copilot is looking at right now: its inputs, plus the live forecast for your own log.
@@ -31,7 +31,11 @@ async function askStatus(mode) {
     const d = await api(`/api/ai/ask?mode=${mode}`);
     if (d.ready === false) aiOff = true;
     askInfo[mode] = d;
-  } catch (e) { if (e.status === 503) aiOff = true; }
+  } catch (e) {
+    if (e.status === 503) aiOff = true;
+    // Remember the failure so the card doesn't ask again on every render (offline, Pro-only, etc.).
+    askInfo[mode] = { failed: Date.now(), status: e.status };
+  }
   finally { askLoading[mode] = false; renderAsk(); }
 }
 
@@ -39,29 +43,30 @@ function renderAsk() {
   const box = $("ask"); if (!box) return;
   const mode = askMode(), own = mode === "own", gated = own && !cloudOn(), info = askInfo[mode], hist = askHist[mode];
   if (gated) delete askInfo.own;
-  if (!gated && !info) askStatus(mode);
-  else if (gated && !askInfo.sample) askStatus("sample"); // just to learn whether fishr AI is switched on
+  const stale = i => !i || (i.failed && Date.now() - i.failed > 60e3); // retry a failed check after a minute
+  if (!gated && stale(info)) askStatus(mode);
+  else if (gated && stale(askInfo.sample)) askStatus("sample"); // just to learn whether fishr AI is switched on
   box.hidden = $("fidChoice").hidden = aiOff;
   document.querySelectorAll(".fid-top").forEach(el => { el.hidden = aiOff; });
   if (aiOff) return;
   $("askSub").textContent = own ? "Like the old-timer on the dock, except he's read every trip in your log." : "Like the old-timer on the dock, except he's read all 47 trips in this season.";
   $("askGate").hidden = !gated; $("askForm").hidden = gated;
   $("askThread").innerHTML = hist.map(h => `<div class="ask-msg ${h.role}${h.err ? " err" : ""}">${esc(h.text)}</div>`).join("")
-    + (askBusy ? `<div class="ask-msg assistant busy" aria-label="fishr is thinking"><i></i><i></i><i></i></div>` : "");
-  $("askChips").hidden = gated || hist.length > 0 || askBusy;
+    + (askBusy === mode ? `<div class="ask-msg assistant busy" aria-label="fishr is thinking"><i></i><i></i><i></i></div>` : "");
+  $("askChips").hidden = gated || hist.length > 0 || askBusy === mode;
   $("askChips").innerHTML = ASK_CHIPS[mode].map(q => `<button type="button" class="ask-chip">${esc(q)}</button>`).join("");
   const out = info && info.left === 0;
   $("askFoot").textContent = gated ? "" : !info?.limit ? "Powered by Claude" : out
     ? (own ? "That's today's free questions. More tomorrow." : "That's today's free questions on the showcase. Start your own log to ask about your fishing.")
     : `${info.left} of ${info.limit} free question${info.limit === 1 ? "" : "s"} left today · Powered by Claude`;
-  $("askGo").disabled = askBusy || out; $("askInput").disabled = askBusy || out;
+  $("askGo").disabled = !!askBusy || out; $("askInput").disabled = !!askBusy || out;
 }
 
 async function askFishr(q) {
   q = q.trim(); if (!q || askBusy) return;
   const mode = askMode(), hist = askHist[mode];
   const history = hist.filter(h => !h.err).map(({ role, text }) => ({ role, text }));
-  hist.push({ role: "user", text: q }); askBusy = true; $("askInput").value = ""; renderAsk();
+  hist.push({ role: "user", text: q }); askBusy = mode; $("askInput").value = ""; renderAsk();
   try {
     if (mode === "own") await syncNow(); // so the answer sees your latest trips
     const d = await api("/api/ai/ask", { mode, question: q, history, conditions: askConditions(), units: { weight: state.settings.units, temp: state.settings.temp } });
@@ -72,7 +77,7 @@ async function askFishr(q) {
     if (e.status === 429 && askInfo[mode]) askInfo[mode].left = 0;
     hist.push({ role: "assistant", text: e.message || "fishr AI didn't answer. Try again.", err: true });
   } finally {
-    askBusy = false; renderAsk();
+    askBusy = null; renderAsk();
     $("askThread").lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 }
@@ -100,19 +105,23 @@ function showFid(html) { $("fidResult").innerHTML = html; }
 document.addEventListener("change", e => {
   if (!e.target.matches?.(".fid-file")) return;
   const f = e.target.files && e.target.files[0]; e.target.value = "";
-  if (f) runFishrId(f).catch(err => { console.error(err); toast("fishr ID hit a snag. Try again."); throw err; });
+  if (f) runFishrId(f).catch(err => { console.error(err); toast("fishr ID hit a snag. Try again."); });
 });
+let fidRun = 0; // only the newest photo's result is shown, even if an older one answers later
 async function runFishrId(f) {
+  const run = ++fidRun;
   closeSheets(); $("scrim").hidden = false; $("fidSheet").hidden = false; $("fidSheet").scrollTop = 0;
   $("fidLog").hidden = true; $("fidFoot").textContent = ""; $("fidImg").removeAttribute("src"); $("fidImg").parentElement.style.removeProperty("--fid-bg");
   showFid(`<p class="fid-busy"><span class="fid-scan"></span>Identifying…</p>`);
   let blob;
-  try { blob = await shrinkPhoto(f); } catch (err) { showFid(`<p class="fid-err">Couldn't read that image. Try a JPEG or PNG.</p>`); return; }
+  try { blob = await shrinkPhoto(f); } catch (err) { if (run === fidRun) showFid(`<p class="fid-err">Couldn't read that image. Try a JPEG or PNG.</p>`); return; }
+  if (run !== fidRun) return;
   const url = URL.createObjectURL(blob);
   $("fidImg").src = url; $("fidImg").parentElement.style.setProperty("--fid-bg", `url("${url}")`);
   fid = { blob };
   try {
     const d = await identify(blob);
+    if (run !== fidRun) return;
     fid = { blob, species: d.species, isFish: d.isFish };
     if (!d.isFish) showFid(`<p class="fid-err">That doesn't look like a fish. Try a clearer shot of the whole fish.</p>`);
     else showFid(`<span class="fid-conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span><h3 class="fid-name" id="fidName">${esc(d.species)}</h3>`
@@ -121,7 +130,9 @@ async function runFishrId(f) {
     $("fidLog").hidden = !d.isFish;
     $("fidFoot").textContent = fidLeft(d);
   } catch (err) {
+    if (run !== fidRun) return;
     if (err.status === 401) onSyncError(err);
+    fid = null; $("fidLog").hidden = true;
     showFid(`<p class="fid-err">${esc(err.message || "Couldn't identify that photo.")}</p>`);
   }
 }

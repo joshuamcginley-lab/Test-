@@ -1,17 +1,22 @@
 // POST /api/share — multipart form with `image` (the JPEG catch card) and `meta` (JSON catch details).
 // Saves to R2 and returns a short link: { id, url }.
 import { newId, cleanMeta, json } from "../_lib.js";
+import { underLimit, readCapped } from "../_limits.js";
 
 const MAX_BYTES = 1.5 * 1024 * 1024;
 
 export async function onRequestPost({ request, env }) {
   if (!env.CATCHES) return json({ error: "Sharing storage isn't set up yet." }, 503);
-  const len = Number(request.headers.get("content-length") || 0);
-  if (len > MAX_BYTES + 8192) return json({ error: "Image too large." }, 413);
-  if (!(request.headers.get("content-type") || "").startsWith("multipart/form-data")) return json({ error: "Expected a form upload." }, 400);
+  if (Number(request.headers.get("content-length") || 0) > MAX_BYTES + 8192) return json({ error: "Image too large." }, 413);
+  const type = request.headers.get("content-type") || "";
+  if (!type.startsWith("multipart/form-data")) return json({ error: "Expected a form upload." }, 400);
+  if (!(await underLimit(env, request, "share", Number(env.SHARE_DAILY) || 30))) return json({ error: "That's a lot of sharing for one day. Try again tomorrow." }, 429);
+  // Read at most the size limit, whether or not a size header was sent.
+  const raw = await readCapped(request, MAX_BYTES + 8192);
+  if (!raw) return json({ error: "Image too large." }, 413);
 
   let form;
-  try { form = await request.formData(); } catch { return json({ error: "Couldn't read the upload." }, 400); }
+  try { form = await new Response(raw, { headers: { "content-type": type } }).formData(); } catch { return json({ error: "Couldn't read the upload." }, 400); }
   const image = form.get("image"), metaRaw = form.get("meta");
   if (!image || typeof image === "string" || typeof metaRaw !== "string" || metaRaw.length > 2048) return json({ error: "Missing image or details." }, 400);
   if (image.size > MAX_BYTES) return json({ error: "Image too large." }, 413);

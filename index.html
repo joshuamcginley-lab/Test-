@@ -67,9 +67,9 @@
       <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
       <span><b>Start training your model</b><span>Log your first trip. Under a minute, and skunks count.</span></span>
     </button>
-    <section class="showcase" id="welcomeShowcase" aria-labelledby="scTitle">
+    <section class="showcase" id="welcomeShowcase" aria-labelledby="showTitle">
       <span class="showcase-tag">Showcase</span>
-      <h2 id="scTitle">One angler. 47 trips. A model that knows the water.</h2>
+      <h2 id="showTitle">One angler. 47 trips. A model that knows the water.</h2>
       <p>A real 2026 season in New Brunswick, fed into fishr. It learned the rivers, the lures that worked and the weather that switches the bite on. <b>Yours learns the same way.</b></p>
       <div class="sc-tiles">
         <button type="button" class="sc-tile start-here" data-sample="advice"><span class="sc-badge" aria-hidden="true">Start here</span><span class="sc-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><span class="sc-txt"><b>Copilot</b><span>Where and when to fish today</span></span><span class="sc-go" aria-hidden="true">Try it <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
@@ -295,8 +295,7 @@
       <div class="btn-row">
         <button class="btn" id="exportJson" type="button">Save backup</button>
         <button class="btn" id="exportCsv" type="button">Export spreadsheet (CSV)</button>
-        <label class="btn" for="importFile" style="cursor:pointer">Restore backup</label>
-        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <label class="btn fid-pick" style="cursor:pointer"><input type="file" id="importFile" class="vh-file" accept="application/json,.json">Restore backup</label>
       </div>
       <p id="backupMsg" hidden></p>
     </div>

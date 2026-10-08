@@ -7,7 +7,7 @@
 // POST /api/auth/logout
 import { json } from "../../_lib.js";
 import { db, handle, fail, randomId, currentUser, requireUser, startSession, endSession, withCookies, newChallenge,
-  registrationOptions, verifyRegistration, verifyLogin, accountInfo } from "../../_auth.js";
+  registrationOptions, verifyRegistration, verifyLogin, accountInfo, isJson } from "../../_auth.js";
 
 const cleanLabel = s => String(s || "").replace(/[^\w ·().,'-]/g, "").trim().slice(0, 40) || "Passkey";
 
@@ -66,7 +66,7 @@ export async function onRequest({ request, env, params }) {
     let body = {};
     if (!isGet) {
       // JSON only: browsers won't send that cross-site without asking first, which blocks forged requests.
-      if (!(request.headers.get("content-type") || "").includes("application/json")) fail("Send JSON.", 415);
+      if (!isJson(request)) fail("Send JSON.", 415);
       body = await request.json().catch(() => ({})) || {};
     }
     return fn({ request, env, body });

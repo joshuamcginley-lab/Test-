@@ -152,7 +152,7 @@ function renderAdvice() {
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
-  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Tap “Use current weather” or enter a temperature and time.</p>`; return; }
+  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Tap “Go live” above for today's conditions, or open “Adjust model inputs” and enter a temperature and time.</p>`; return; }
   const pick = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v || null;
   const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: pick("aSky"), press: pick("aPress"), flow: pick("aFlow") };
   const { res, rows, k } = bestRanking(q);
@@ -214,7 +214,9 @@ function conditionFacts(q) {
 /* ---------- wire up ---------- */
 function resetAdviceInputs() {
   const now = new Date();
-  $("aTemp").value = ""; segSet($("aSky"), []); segSet($("aPress"), []); segSet($("aFlow"), []);
+  // Back from the sample: put today's live conditions back if we have them, so Copilot isn't blank.
+  const c = wx?.current;
+  $("aTemp").value = c?.temp != null ? tOut(r(c.temp, 0)) : ""; segSet($("aSky"), c?.sky ? [c.sky] : []); segSet($("aPress"), c?.press ? [c.press] : []); segSet($("aFlow"), wx?.flow ? [wx.flow.status] : []);
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   $("aDate").value = isoDate(now); $("aWeatherMsg").textContent = "";
 }

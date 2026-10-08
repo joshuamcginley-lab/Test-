@@ -22,8 +22,15 @@ function hashStr(str) { // cyrb53: a fast fingerprint to spot changed trips
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
+// fetch with a time limit, so a hung connection (weak signal on the water) can't leave "Syncing…" stuck.
+async function fetchT(url, opts = {}, ms = 25000) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctl.signal }); }
+  catch (e) { throw e.name === "AbortError" ? Object.assign(new Error("fishr Cloud took too long to answer. Try again."), { timeout: true }) : e; }
+  finally { clearTimeout(t); }
+}
 async function api(path, body, method) {
-  const r = await fetch(path, { method: method || (body ? "POST" : "GET"), credentials: "same-origin",
+  const r = await fetchT(path, { method: method || (body ? "POST" : "GET"), credentials: "same-origin",
     headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(d.error || "fishr Cloud didn't answer. Try again."), { status: r.status });
@@ -60,26 +67,25 @@ async function usePasskey() {
     authenticatorData: b64u(cred.response.authenticatorData), signature: b64u(cred.response.signature),
     userHandle: cred.response.userHandle ? b64u(cred.response.userHandle) : null });
 }
+const PREV_KEY = "fishr.sync.prev"; // what this phone last synced, kept after "sign out, keep trips on this phone"
 async function signedIn(user) {
   if (demo) exitSample();
-  sync = { user, cursor: 0, hashes: {}, photos: {} }; writeSync();
+  let prev = null; try { prev = JSON.parse(localStorage.getItem(PREV_KEY)); } catch (e) {}
+  const same = prev && prev.user === user.id;
+  syncGen++;
+  sync = { user, cursor: 0, hashes: same ? prev.hashes || {} : {}, photos: same ? prev.photos || {} : {} }; writeSync();
+  try { localStorage.removeItem(PREV_KEY); } catch (e) {}
   account = user; renderCloud();
 
-// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
-$("welcomeCloud").hidden = !passkeysOK();
-$("welcomeSignIn").onclick = async () => {
-  const b = $("welcomeSignIn"); b.disabled = true;
-  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
-  catch (e) { toast(passkeyError(e)); }
-  finally { b.disabled = false; }
-};
   await syncNow();
   const n = realLog().sessions.length;
   cloudMsg(`Cloud is on. ${n} trip${n === 1 ? "" : "s"} synced.`);
 }
 
 /* ---------- sync ---------- */
-let syncing = null, again = false, applying = false, syncErr = null, syncTimer = null;
+let syncing = null, again = false, applying = false, syncErr = null, syncTimer = null, syncGen = 0;
+const EPOCH = "1970-01-01T00:00:00.000Z"; // the time given to trips that never had one, so any real edit beats them
+const TRIP_ID = /^[A-Za-z0-9._-]{1,64}$/;
 const missingPhotos = new Set();
 function syncNow() {
   if (!cloudOn()) return Promise.resolve();
@@ -87,14 +93,6 @@ function syncNow() {
   syncing = runSync().catch(onSyncError).finally(() => { syncing = null; renderCloud(); if (again) { again = false; syncNow(); } });
   renderCloud();
 
-// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
-$("welcomeCloud").hidden = !passkeysOK();
-$("welcomeSignIn").onclick = async () => {
-  const b = $("welcomeSignIn"); b.disabled = true;
-  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
-  catch (e) { toast(passkeyError(e)); }
-  finally { b.disabled = false; }
-};
   return syncing;
 }
 function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, ms); }
@@ -107,19 +105,25 @@ function saveQuiet() { applying = true; try { save(); } finally { applying = fal
 async function runSync() {
   if (!navigator.onLine) throw new Error("offline");
   syncErr = null;
+  const gen = syncGen, live = () => gen === syncGen; // signing out or in mid-sync makes this run stale
+  await uploadPhotos();
+  if (!live()) return;
+  // Read the log only now: the sample season may have been opened while photos uploaded.
   const log = realLog(), now = new Date().toISOString(), first = sync.metaAt == null;
-  await uploadPhotos(log);
 
   // Trips that changed or were deleted since the last sync.
   const push = [], here = new Set();
   let bumped = false;
   for (const s of log.sessions) {
+    if (s.sample || !TRIP_ID.test(String(s.id))) continue; // never send sample trips; skip ids the server can't store
     here.add(s.id);
     const prev = sync.hashes[s.id];
     if (prev && prev[0] === hashStr(JSON.stringify(s))) continue;
-    // Changed without a new timestamp (e.g. placed on the map): stamp it so it wins over the older copy.
-    if (!s.updatedAt || (prev && s.updatedAt <= prev[1])) { s.updatedAt = now; bumped = true; }
-    push.push({ id: s.id, data: s, updated: s.updatedAt, h: hashStr(JSON.stringify(s)) });
+    if (JSON.stringify(s).length > 60000) continue; // too big to sync; stays on this phone
+    let updated = s.updatedAt;
+    if (prev && (!updated || updated <= prev[1])) { s.updatedAt = updated = now; bumped = true; } // edited without a new time (e.g. placed on the map)
+    else if (!updated) updated = EPOCH; // never synced and no time: an old copy, so it can't beat a real edit elsewhere
+    push.push({ id: s.id, data: s, updated, h: hashStr(JSON.stringify(s)) });
   }
   for (const id of Object.keys(sync.hashes)) if (!here.has(id)) push.push({ id, deleted: true, updated: now });
   if (bumped) saveQuiet();
@@ -133,14 +137,16 @@ async function runSync() {
   do {
     const part = push.slice(i, i + 400);
     res = await api("/api/sync", { since, trips: part.map(({ h, ...t }) => t), meta: i === 0 ? metaPush : null });
+    if (!live()) return;
     for (const p of part) if (p.deleted) delete sync.hashes[p.id]; else sync.hashes[p.id] = [p.h, p.updated];
     if (i === 0 && metaPush) { sync.metaHash = metaHash; sync.metaAt = now; }
     applyTrips(res.trips);
+    applyTrips(res.kept || []); // pushes the server turned down because it holds a newer copy
     since = res.cursor; i += 400;
   } while (i < push.length || res.more);
   applyMeta(res.meta, first, meta);
   sync.cursor = since; sync.lastSync = Date.now(); writeSync();
-  await prunePhotos(realLog());
+  await prunePhotos();
   missingPhotos.clear();
 }
 
@@ -177,28 +183,32 @@ function applyMeta(remote, first, local) {
     return;
   }
   if (!remote || remote.updated <= (sync.metaAt || "")) return;
-  log.notes = remote.data.notes || [];
+  // If this phone also changed its notes since the last sync, keep both sides' notes rather than dropping these.
+  const mine = hashStr(JSON.stringify({ notes: log.notes, settings: Object.fromEntries(SYNC_SETTINGS.map(k => [k, state.settings[k]])) })) !== sync.metaHash;
+  const notes = [...(remote.data.notes || [])];
+  if (mine) { for (const n of log.notes) if (!notes.includes(n)) notes.push(n); again = true; }
+  log.notes = notes;
   for (const k of SYNC_SETTINGS) if (remote.data.settings?.[k] != null) state.settings[k] = remote.data.settings[k];
   sync.metaAt = remote.updated; sync.metaHash = hashStr(JSON.stringify(remote.data));
   saveQuiet(); render();
 }
 
 /* ---------- photos ---------- */
-async function uploadPhotos(log) {
+async function uploadPhotos() {
   sync.photos ||= {};
-  for (const id of new Set(log.sessions.flatMap(photoIdsOf))) {
+  for (const id of new Set(realLog().sessions.filter(s => !s.sample).flatMap(photoIdsOf))) {
     if (sync.photos[id]) continue;
     const blob = await photoGet(id).catch(() => null); if (!blob) continue; // on another device; it uploads from there
-    const r = await fetch(`/api/photo/${encodeURIComponent(id)}`, { method: "PUT", credentials: "same-origin", headers: { "content-type": blob.type || "image/jpeg" }, body: blob });
+    const r = await fetchT(`/api/photo/${encodeURIComponent(id)}`, { method: "PUT", credentials: "same-origin", headers: { "content-type": blob.type || "image/jpeg" }, body: blob }, 60000);
     if (r.status === 401 || r.status === 402) throw Object.assign(new Error("photo"), { status: r.status });
     if (r.ok) { sync.photos[id] = 1; writeSync(); }
   }
 }
-async function prunePhotos(log) {
-  const used = new Set(log.sessions.flatMap(photoIdsOf));
+async function prunePhotos() {
+  const used = new Set(realLog().sessions.flatMap(photoIdsOf));
   for (const id of Object.keys(sync.photos || {})) {
     if (used.has(id)) continue;
-    const r = await fetch(`/api/photo/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" }).catch(() => null);
+    const r = await fetchT(`/api/photo/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "same-origin" }).catch(() => null);
     if (r?.ok) { delete sync.photos[id]; writeSync(); }
   }
 }
@@ -206,7 +216,7 @@ async function prunePhotos(log) {
 async function cloudPhoto(id) {
   if (!cloudOn() || missingPhotos.has(id) || !navigator.onLine) return null;
   try {
-    const r = await fetch(`/api/photo/${encodeURIComponent(id)}`, { credentials: "same-origin" });
+    const r = await fetchT(`/api/photo/${encodeURIComponent(id)}`, { credentials: "same-origin" });
     if (!r.ok) { missingPhotos.add(id); return null; }
     const blob = await r.blob();
     await photoPut(id, blob).catch(() => {});
@@ -216,10 +226,17 @@ async function cloudPhoto(id) {
 }
 
 /* ---------- sign out / delete ---------- */
-function forgetAccount() { sync = {}; writeSync(); account = null; syncErr = null; renderCloud(); }
+function forgetAccount(keepHistory = true) {
+  // Remember what this phone had synced, so deletes made while signed out reach the account on the next sign-in.
+  try {
+    if (keepHistory && sync.user) localStorage.setItem(PREV_KEY, JSON.stringify({ user: sync.user.id, hashes: sync.hashes || {}, photos: sync.photos || {} }));
+    else if (!keepHistory) localStorage.removeItem(PREV_KEY);
+  } catch (e) {}
+  syncGen++; sync = {}; writeSync(); account = null; syncErr = null; renderCloud();
+}
 async function signOut(removeLocal) {
   try { await api("/api/auth/logout", {}); } catch (e) {}
-  forgetAccount();
+  forgetAccount(!removeLocal);
   if (removeLocal) {
     if (demo) exitSample();
     state.sessions = []; state.notes = []; save(); photoClear().catch(() => {}); photoUrls.clear(); render();
@@ -228,7 +245,7 @@ async function signOut(removeLocal) {
 }
 async function deleteAccount() {
   await api("/api/account", {}, "DELETE");
-  forgetAccount();
+  forgetAccount(false);
   cloudMsg("Cloud account deleted. Your trips are still on this phone.");
 }
 
@@ -271,14 +288,6 @@ $("segStore").onclick = e => {
   cloudPick = b.dataset.v === (cloudOn() ? "cloud" : "local") ? null : b.dataset.v;
   cloudMsg(""); renderCloud();
 
-// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
-$("welcomeCloud").hidden = !passkeysOK();
-$("welcomeSignIn").onclick = async () => {
-  const b = $("welcomeSignIn"); b.disabled = true;
-  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
-  catch (e) { toast(passkeyError(e)); }
-  finally { b.disabled = false; }
-};
 };
 $("cloudCreate").onclick = () => busy($("cloudCreate"), async () => { const d = await createPasskey(); cloudPick = null; await signedIn(d.user); });
 $("cloudSignIn").onclick = () => busy($("cloudSignIn"), async () => { const d = await usePasskey(); cloudPick = null; await signedIn(d.user); });
@@ -296,14 +305,6 @@ $("cloudDeleteYes").onclick = () => busy($("cloudDeleteYes"), async () => { awai
 $("openSettings").addEventListener("click", () => {
   cloudPick = null; cloudMsg(""); $("cloudDeleteNo").onclick(); renderCloud();
 
-// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
-$("welcomeCloud").hidden = !passkeysOK();
-$("welcomeSignIn").onclick = async () => {
-  const b = $("welcomeSignIn"); b.disabled = true;
-  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
-  catch (e) { toast(passkeyError(e)); }
-  finally { b.disabled = false; }
-};
   if (cloudOn()) { api("/api/auth/me").then(d => { account = d.user; renderCloud(); }).catch(e => { if (e.status === 401) onSyncError(e); }); syncNow(); }
 });
 

@@ -1,5 +1,5 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "fishr-v51";
+const VERSION = "fishr-v52";
 const APP = ["./", "index.html", "styles.css", "app.js", "forecast.js", "conditions.js", "live.js", "map.js", "pro.js", "cloud.js", "polish.js", "guide.js", "ai.js", "report.js", "privacy.html", "share.js", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -14,10 +14,20 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if (url.origin === location.origin && /^\/(api|c|img)\//.test(url.pathname)) return;
   if (url.origin === location.origin) {
-    // Network first so updates arrive when online; cache when offline.
-    e.respondWith(fetch(req).then(res => {
-      const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res;
-    }).catch(() => caches.match(req).then(r => r || caches.match("index.html"))));
+    // Network first so updates arrive when online. On a weak signal (common on the water), fall back to the
+    // cached copy after 3 seconds instead of waiting for the network to give up. Only good responses are cached.
+    const fromNet = fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+      return res;
+    });
+    const page = req.mode === "navigate";
+    const fromCache = () => caches.match(req).then(r => r || (page ? caches.match("index.html") : undefined));
+    e.respondWith(new Promise(resolve => {
+      let done = false; const use = r => { if (!done && r) { done = true; resolve(r); } };
+      const t = setTimeout(() => fromCache().then(use), 3000);
+      fromNet.then(r => { clearTimeout(t); use(r); }).catch(() => { clearTimeout(t); fromCache().then(r => use(r || Response.error())); });
+      // If the cache had nothing at 3 s, the network answer (whenever it comes) is still used.
+    }));
   } else if (url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com")) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
       const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res;

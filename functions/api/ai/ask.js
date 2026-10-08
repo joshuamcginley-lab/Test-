@@ -3,8 +3,8 @@
 // POST /api/ai/ask { mode, question, history: [{ role, text }], conditions, units } -> { answer, left }
 // mode "sample" asks about the showcase season and needs no account (a few questions a day per visitor).
 import { json } from "../../_lib.js";
-import { db, handle, fail, requireUser, currentUser } from "../../_auth.js";
-import { MODEL, claude, aiError, textOf, allowance, requireAI, usedToday, takeOne, visitorId, logText, conditionsText } from "../../_ai.js";
+import { db, handle, fail, requireUser, currentUser, isJson } from "../../_auth.js";
+import { MODEL, claude, aiError, shouldRelease, textOf, allowance, requireAI, usedToday, takeOne, visitorId, logText, conditionsText } from "../../_ai.js";
 
 const SYSTEM = `You are Copilot, the fishing assistant in fishr, a fishing log app. You answer an angler's questions from the fishing log below plus the current conditions sent with the question.
 
@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   return handle(async () => {
-    if (!(request.headers.get("content-type") || "").includes("application/json")) fail("Send JSON.", 415);
+    if (!isJson(request)) fail("Send JSON.", 415);
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") fail("Send JSON.");
     const question = String(body.question || "").trim();
@@ -62,7 +62,7 @@ export async function onRequestPost({ request, env }) {
     if (mode === "sample") trips = await sampleTrips(env, request);
     else {
       const DB = await db(env);
-      trips = (await DB.prepare("SELECT data FROM trips WHERE user_id = ? AND deleted = 0").bind(a.user.id).all()).results.map(r => JSON.parse(r.data));
+      trips = (await DB.prepare("SELECT data FROM trips WHERE user_id = ? AND deleted = 0 ORDER BY json_extract(data, '$.date') DESC LIMIT 400").bind(a.user.id).all()).results.map(r => JSON.parse(r.data));
       const meta = await DB.prepare("SELECT data FROM meta WHERE user_id = ?").bind(a.user.id).first();
       if (meta) notes = JSON.parse(meta.data).notes || [];
     }
@@ -81,10 +81,10 @@ export async function onRequestPost({ request, env }) {
     let msg;
     try {
       msg = await ai.messages.create({ model: MODEL, max_tokens: 2048, output_config: { effort: "low" }, cache_control: { type: "ephemeral" }, system, messages });
-    } catch (e) { await release(); throw aiError(e); }
+    } catch (e) { if (shouldRelease(e)) await release(); throw aiError(e); }
     if (msg.stop_reason === "refusal") return json({ answer: "Can't help you with that one, friend. Ask me where they're biting.", left });
     const answer = textOf(msg);
-    if (!answer) { await release(); fail("fishr AI didn't answer. Try again.", 502); }
+    if (!answer) fail("fishr AI didn't answer. Try again.", 502);
     return json({ answer, left });
   });
 }
