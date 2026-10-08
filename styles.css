@@ -827,3 +827,9 @@ button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 #catchRows:empty{display:none!important}
 /* The parody engine tag is desktop-only; phones keep the card plain */
 @media (max-width:700px){.model-tag{display:none}}
+/* Keep your trips safe: until fishr is installed or Cloud is on */
+.keep-safe{background:var(--solid);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:16px;padding:12px 14px;margin:0 0 12px;display:grid;gap:6px}
+.keep-safe b{font-size:14.5px}
+.keep-safe p{margin:0;font-size:13px;line-height:1.45;color:var(--muted)}
+.keep-safe .btn-row{margin-top:4px;align-items:center}
+.keep-safe .btn{min-height:36px;padding:0 14px;font-size:14px}

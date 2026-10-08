@@ -111,6 +111,37 @@ function tripWeather(url) {
   ok(/Weather added\. 1 of 10 trips/.test(r.toast), 'and says so ' + r.toast);
   await ctx.close();
 
+  // 5. Keep your trips safe: shown to iPhone users with a log in Safari, until they install or turn on Cloud.
+  ({ p, ctx, click } = await open());
+  const keep = () => p.evaluate(() => ({ shown: !$('keepSafe').hidden, text: $('keepSafe').textContent.replace(/\s+/g, ' ') }));
+  ok(!(await keep()).shown, 'keep-safe: not shown before there is a log');
+  await p.evaluate(() => { state.sessions.push({ id: 't-k1', date: '2026-07-01', water: 'Keswick River', catches: [], tempLow: 20, tempHigh: 20, updatedAt: new Date().toISOString() }); save(); render(); });
+  let k = await keep();
+  ok(k.shown && /Safari can clear a site's data/.test(k.text) && /Add to Home Screen/.test(k.text) && /turn on Cloud/.test(k.text), 'keep-safe: iPhone in Safari is told how to keep the log ' + k.text.slice(0, 80));
+  await p.screenshot({ path: S + '/first-keepsafe.png' });
+  await p.evaluate(() => loadSample()); await p.waitForTimeout(800);
+  ok(!(await keep()).shown, 'keep-safe: hidden in the showcase');
+  await p.evaluate(() => exitSample()); await p.waitForTimeout(300);
+  await p.evaluate(() => { sync.user = { id: 'u1' }; renderCloud(); });
+  ok(!(await keep()).shown, 'keep-safe: hidden once Cloud is on');
+  await p.evaluate(() => { sync.user = null; renderCloud(); });
+  ok((await keep()).shown, 'keep-safe: back when Cloud is off');
+  await click('#ksCloud'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => !$('settings').hidden), '"Turn on Cloud" opens Settings at Storage');
+  await p.evaluate(() => closeSheets());
+  await click('#ksLater');
+  ok(!(await keep()).shown, '"Not now" hides it');
+  await p.reload(); await p.waitForTimeout(800);
+  ok(!(await keep()).shown, '"Not now" is remembered');
+  await ctx.close();
+  // Opened from the Home Screen: nothing to say.
+  ({ p, ctx, click } = await open());
+  await p.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
+  await p.evaluate(() => { state.sessions.push({ id: 't-k2', date: '2026-07-01', water: 'Keswick River', catches: [], updatedAt: new Date().toISOString() }); save(); });
+  await p.reload(); await p.waitForTimeout(800);
+  ok(!(await keep()).shown, 'keep-safe: hidden when opened from the Home Screen');
+  await ctx.close();
+
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
   console.log(res.join('\n')); await b.close();
 })().catch(e => { console.log(res.join('\n')); console.error('ERR', e.message.split('\n')[0]); process.exit(1); });

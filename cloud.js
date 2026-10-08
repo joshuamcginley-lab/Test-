@@ -329,3 +329,31 @@ $("welcomeSignIn").onclick = async () => {
   catch (e) { toast(passkeyError(e)); }
   finally { b.disabled = false; }
 };
+
+/* ---------- keep your trips safe ---------- */
+// A log kept only in a browser tab can be lost: Safari clears a site's data when it hasn't been opened for a while.
+// Until fishr is on the Home Screen or Cloud is on, a small note says so. "Not now" hides it for three weeks.
+const KEEP_KEY = "fishr.keepSafe", KEEP_SNOOZE = 21 * 864e5;
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const onApple = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function renderKeepSafe() {
+  const box = $("keepSafe"); if (!box) return;
+  let snoozed = false; try { snoozed = Date.now() - (+localStorage.getItem(KEEP_KEY) || 0) < KEEP_SNOOZE; } catch (e) {}
+  box.hidden = !!demo || !state.sessions.length || installed() || cloudOn() || snoozed;
+  if (box.hidden) return;
+  const canInstall = typeof installEvt !== "undefined" && !!installEvt;
+  box.innerHTML = `<b>Keep your trips safe</b>
+    <p>${onApple()
+      ? "Safari can clear a site's data if you don't open it for a while. Add fishr to your Home Screen (Share, then “Add to Home Screen”) or turn on Cloud."
+      : `Your log lives only in this browser. ${canInstall ? "Install fishr, or turn" : "Turn"} on Cloud to back it up.`}</p>
+    <div class="btn-row"><button type="button" class="btn primary sm" id="ksCloud">Turn on Cloud</button>${canInstall ? `<button type="button" class="btn sm" id="ksInstall">Install app</button>` : ""}<button type="button" class="linkbtn" id="ksLater">Not now</button></div>`;
+  $("ksCloud").onclick = () => { $("openSettings").click(); $("cloudGroup").scrollIntoView({ block: "start" }); };
+  const ins = $("ksInstall"); if (ins) ins.onclick = () => $("installBtn").click();
+  $("ksLater").onclick = () => { try { localStorage.setItem(KEEP_KEY, String(Date.now())); } catch (e) {} box.hidden = true; };
+}
+{
+  const _render = render; render = function () { _render(); renderKeepSafe(); };
+  const _renderCloud = renderCloud; renderCloud = function () { _renderCloud(); renderKeepSafe(); };
+  addEventListener("appinstalled", renderKeepSafe);
+  renderKeepSafe();
+}
