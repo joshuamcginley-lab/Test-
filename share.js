@@ -2,7 +2,7 @@
 /* Share a catch: draws a 1080×1350 card (photo + stats) and opens the phone's share sheet.
    Exact spots and coordinates are never shared; the water name is optional. */
 
-const APP_URL = "firetiger-fishing-log.pages.dev";
+const APP_URL = "fishr.monster";
 let shareCtx = null; // { s: trip, idx: catch index }
 
 function catchesOf(s) { return (s.catches || []).map((c, i) => ({ c, i })); }
