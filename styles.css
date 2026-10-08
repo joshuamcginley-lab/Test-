@@ -618,3 +618,13 @@ p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:
 .g-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 .g-actions .btn[hidden]{display:none}
 body.guiding .dock{visibility:hidden}
+
+/* "Start here" on the showcase's Copilot tile */
+.sc-tile{position:relative}
+.sc-badge{display:none}
+.sc-tile.start-here{border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow);animation:startPulse 2.4s ease-in-out infinite}
+.sc-tile.start-here .sc-badge{display:block;position:absolute;top:-10px;left:50%;translate:-50% 0;white-space:nowrap;font:700 9.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:999px;background:var(--grad);color:var(--on-grad);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.sc-tiles{padding-top:6px}
+@keyframes startPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--v) 18%,transparent),var(--glow)}}
+@media (prefers-reduced-motion:reduce){.sc-tile.start-here{animation:none}}
+.g-actions .btn[hidden]{display:none}

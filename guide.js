@@ -24,7 +24,7 @@ guideEl.innerHTML = `<div class="g-ring" id="gRing"></div>
   <div class="g-card" role="dialog" aria-modal="true" aria-labelledby="gTitle">
     <div class="g-top"><span class="g-step" id="gStepLbl"></span><button type="button" class="linkbtn" id="gSkip">Skip</button></div>
     <h3 id="gTitle"></h3><div class="g-body" id="gBody"></div>
-    <div class="g-actions"><button type="button" class="btn" id="gBack">Back</button><button type="button" class="btn primary" id="gNext">Next</button></div>
+    <div class="g-actions"><button type="button" class="btn" id="gBack">Back</button><button type="button" class="btn" id="gClose" hidden>Close</button><button type="button" class="btn primary" id="gNext">Next</button></div>
   </div>`;
 document.body.append(guideEl);
 
@@ -41,9 +41,9 @@ function showStep(i) {
   guideEl.classList.toggle("intro", !!s.intro);
   $("gStepLbl").textContent = `${i + 1} of ${gSteps.length}`;
   $("gTitle").textContent = s.title; $("gBody").innerHTML = s.body;
-  $("gBack").hidden = i === 0;
+  $("gBack").hidden = i === 0 || last;
+  $("gClose").hidden = !last; $("gSkip").hidden = last;
   $("gNext").textContent = last ? (demo ? "Start my data set" : "Log a trip") : "Next";
-  $("gSkip").textContent = last ? "Keep exploring" : "Skip";
   if (s.open && $(s.target).tagName === "DETAILS" && !$(s.target).open) { $(s.target).open = true; gOpened = s.target; }
   $("gRing").hidden = true;
   if (s.target) {
@@ -62,6 +62,7 @@ function closeGuide(thenLog) {
   guideEl.hidden = true; document.body.classList.remove("guiding");
   if (gOpened) { $(gOpened).open = false; gOpened = null; }
   try { localStorage.setItem(GUIDE_KEY, "1"); } catch (e) {}
+  markGuideSeen();
   scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   if (thenLog) startNewTrip();
 }
@@ -73,8 +74,12 @@ function maybeGuide() {
 
 $("gNext").onclick = () => gStep < gSteps.length - 1 ? showStep(gStep + 1) : closeGuide(true);
 $("gBack").onclick = () => showStep(Math.max(0, gStep - 1));
-$("gSkip").onclick = () => closeGuide(false);
+$("gSkip").onclick = $("gClose").onclick = () => closeGuide(false);
 $("guideOpen").onclick = openGuide;
 document.addEventListener("keydown", e => { if (!guideEl.hidden && e.key === "Escape") { e.stopImmediatePropagation(); closeGuide(false); } }, true);
 addEventListener("resize", placeRing);
 addEventListener("scroll", () => { if (!guideEl.hidden) placeRing(); }, { passive: true });
+
+// "Start here" on the showcase's Copilot tile until someone has been through the guide.
+function markGuideSeen() { document.querySelector(".sc-tile.start-here")?.classList.remove("start-here"); }
+try { if (localStorage.getItem(GUIDE_KEY) === "1") markGuideSeen(); } catch (e) {}
