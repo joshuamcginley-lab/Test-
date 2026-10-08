@@ -421,8 +421,6 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
   .top-actions{grid-column:1/-1;justify-content:flex-start;gap:6px}
   .season-pick label{display:none}
   .season-pick select{max-width:110px}
-  #topSample{font-size:0;padding:7px 10px}
-  #topSample::before{content:"👀 Sample";font-size:13px}
 }
 @media (max-width:520px){.band .wrap{position:relative}#openSettings{position:absolute;top:18px;right:16px}}
 
@@ -647,3 +645,48 @@ body.guiding .dock{visibility:hidden}
 .sc-tile.start-here b{color:var(--on-grad)}
 .sc-tiles:has(.start-here){grid-template-columns:1fr 1fr}
 @media (max-width:360px){.sc-tiles:has(.start-here){grid-template-columns:1fr}}
+
+/* ---------- Ask fishr (Copilot) ---------- */
+.ask{display:grid;gap:12px;margin:16px 0;padding:18px;border-radius:22px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:var(--glow)}
+.ask-head{display:flex;gap:12px;align-items:center}
+.ask-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--grad);color:var(--on-grad);flex:none}
+.ask-ico svg{width:20px;height:20px}
+.ask h2{margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.ask h2 .pill{padding:4px 7px;font-size:10px}
+.ask-head p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.ask-thread{display:grid;gap:8px}
+.ask-thread:empty{display:none}
+.ask-msg{max-width:88%;padding:10px 13px;border-radius:16px;font-size:14.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.ask-msg.user{justify-self:end;background:var(--ink);color:var(--bg);border-bottom-right-radius:6px}
+.ask-msg.assistant{justify-self:start;background:var(--glass-2);border:1px solid var(--line);border-bottom-left-radius:6px}
+.ask-msg.err{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
+.ask-msg.busy{display:flex;gap:5px;padding:14px 16px}
+.ask-msg.busy i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:askDot 1s ease-in-out infinite}
+.ask-msg.busy i:nth-child(2){animation-delay:.15s}.ask-msg.busy i:nth-child(3){animation-delay:.3s}
+@keyframes askDot{50%{opacity:.25;transform:translateY(-3px)}}
+.ask-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ask-chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass);color:var(--ink);font-size:13.5px;text-align:left}
+.ask-chip:hover{border-color:var(--c)}
+.ask-form{display:flex;gap:8px}
+.ask-form input{flex:1;min-width:0;font:inherit;font-size:16px;padding:11px 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);color:var(--ink)}
+.ask-form input:focus{outline:2px solid var(--c);outline-offset:1px}
+.ask-form[hidden],.ask-gate[hidden]{display:none}
+.ask-gate{display:grid;gap:10px}
+.ask-gate p{margin:0;font-size:14px;color:var(--muted)}
+.ask-gate b{color:var(--ink)}
+.ask-gate .btn{justify-self:start}
+.ask-foot{margin:0;font:500 11px/1.4 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ask-foot:empty{display:none}
+@media (prefers-reduced-motion:reduce){.ask-msg.busy i{animation:none}}
+
+/* ---------- Photo ID on the log form ---------- */
+.id-photo{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;border:0;background:var(--grad);color:var(--on-grad);font-weight:600;font-size:13.5px}
+.id-photo svg{width:14px;height:14px}
+.id-photo[hidden]{display:none}
+.id-photo.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.photo-msg .id-hit{color:var(--ink)}
+.photo-msg .id-why{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.c-photo .photo-msg{flex-basis:100%}
+.c-photo .photo-msg:empty{display:none}
+@media (max-width:360px){.appbar .logo .pill{display:none}.top-actions{gap:6px}}

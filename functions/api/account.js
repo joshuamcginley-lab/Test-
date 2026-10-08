@@ -16,7 +16,7 @@ export async function onRequestDelete({ request, env }) {
       } while (cursor);
     }
     const cookies = await endSession(request, env);
-    await DB.batch(["trips", "meta", "passkeys", "sessions", "challenges"].map(t => DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id))
+    await DB.batch(["trips", "meta", "passkeys", "sessions", "challenges", "ai_usage"].map(t => DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id))
       .concat(DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)));
     return withCookies(json({ ok: true }), cookies);
   });

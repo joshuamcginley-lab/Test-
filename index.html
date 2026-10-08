@@ -109,7 +109,15 @@
       <div class="guide-link-row"><button type="button" class="linkbtn" id="guideOpen">How fishr works</button></div>
       <section class="live" id="live" aria-live="polite"></section>
       <div id="advice"></div>
-      <button type="button" class="pro-banner" id="copilotPro"><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Ask fishr AI chat, Photo ID and Bite alerts.</span><span class="pro-go">Join the waitlist →</span></button>
+      <section class="ask" id="ask" aria-labelledby="askTitle" hidden>
+        <div class="ask-head"><span class="ask-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><div><h2 id="askTitle">Ask fishr <span class="pill beta">Beta</span></h2><p id="askSub">Answers from your log and today's conditions.</p></div></div>
+        <div class="ask-thread" id="askThread" aria-live="polite"></div>
+        <div class="ask-chips" id="askChips"></div>
+        <form class="ask-form" id="askForm"><input id="askInput" maxlength="500" placeholder="Where should I fish this weekend?" autocomplete="off" enterkeyhint="send" aria-label="Ask fishr a question"><button type="submit" class="btn primary" id="askGo">Ask</button></form>
+        <div class="ask-gate" id="askGate" hidden><p><b>Ask fishr reads your log from fishr Cloud.</b> Turn on Cloud (free during the beta) and ask anything: where to go, when, what to throw.</p><button type="button" class="btn primary" id="askCloud">Turn on Cloud</button></div>
+        <p class="ask-foot" id="askFoot"></p>
+      </section>
+      <button type="button" class="pro-banner" id="copilotPro"><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and Photo IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
       <summary><span>Adjust model inputs</span><span class="more-hint">plan a different time, temperature or conditions</span></summary>
       <div class="more-in">
@@ -265,7 +273,7 @@
     </div>
     <div class="set-group">
       <h3>fishr Pro</h3>
-      <p>AI chat, photo ID and bite alerts are in development. Cloud sync is in beta now, free.</p>
+      <p>Ask fishr, Photo ID and Cloud sync are in beta now, free with a Cloud account. Bite alerts are in development.</p>
       <div class="btn-row"><button class="btn" id="settingsPro" type="button">Join the Pro waitlist</button></div>
     </div>
     <div class="set-group" id="installGroup">
@@ -307,8 +315,8 @@
     <h2 id="proTitle">fishr <span class="grad-text">Pro</span></h2>
     <p class="pro-lede">The next generation of fishr. Built for anglers who want an unfair advantage.</p>
     <ul class="pro-feats">
-      <li><span class="pf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><span><b>Ask fishr</b>Chat with an AI copilot that knows your log and today's conditions.</span></li>
-      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg></span><span><b>Photo ID</b>Snap a fish and the species fills itself in.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><span><b>Ask fishr <span class="pill beta">In beta, free</span></b>Chat with an AI copilot that knows your log and today's conditions.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg></span><span><b>Photo ID <span class="pill beta">In beta, free</span></b>Snap a fish and the species fills itself in.</span></li>
       <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span><b>Bite alerts</b>Get a ping when the Bite Index spikes at your spots.</span></li>
       <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z"/></svg></span><span><b>Cloud sync <span class="pill beta">In beta, free</span></b>Your trips, photos and spots backed up and on every device. Turn it on in Settings.</span></li>
     </ul>
@@ -357,6 +365,7 @@
 <script src="cloud.js"></script>
 <script src="polish.js"></script>
 <script src="guide.js"></script>
+<script src="ai.js"></script>
 <script src="share.js"></script>
 </body>
 </html>

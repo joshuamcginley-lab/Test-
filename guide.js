@@ -14,6 +14,7 @@ const guideSteps = () => [
     <p>${demo ? "This showcase is one angler's data set: 47 trips. Here's what it does." : "Here's where your data shows up."}</p>` },
   { target: "live", title: "Today's conditions", body: "Live weather, pressure and river level where you are, once you allow location. This is what Copilot compares against your data set." },
   { target: "advice", title: "The call comes from your data", body: `Copilot finds the trips in ${demo ? "this log" : "your log"} with conditions most like these, and shows what worked: the water, the time of day, the lure. <b>The more you log, the sharper the call.</b>` },
+  { target: "ask", title: "Or just ask", body: `Ask fishr reads the whole log and answers in plain English: where to go Saturday, what to throw after a cold front.${demo ? " Try one of the suggested questions on this season." : ""} <b>Free during the beta.</b>` },
   { target: "inputsBox", open: true, title: "Ask “what if?”", body: `Change the date, time, temperature or sky to plan a trip. The call updates from the same data.${demo ? " The showcase starts on a July evening at 22°C." : ""}` },
 ];
 
@@ -54,7 +55,7 @@ function showStep(i) {
   $("gNext").focus({ preventScroll: true });
 }
 function openGuide() {
-  showTab("advice"); closeSheets(); gSteps = guideSteps(); gOpened = null;
+  showTab("advice"); closeSheets(); gSteps = guideSteps().filter(s => !s.target || !$(s.target).hidden); gOpened = null;
   guideEl.hidden = false; document.body.classList.add("guiding");
   showStep(0);
 }

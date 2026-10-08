@@ -19,6 +19,7 @@ export function db(env) {
     "CREATE TABLE IF NOT EXISTS trips (user_id TEXT NOT NULL, id TEXT NOT NULL, data TEXT, updated TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, seq INTEGER NOT NULL, PRIMARY KEY (user_id, id))",
     "CREATE INDEX IF NOT EXISTS trips_seq ON trips (user_id, seq)",
     "CREATE TABLE IF NOT EXISTS meta (user_id TEXT PRIMARY KEY, data TEXT NOT NULL, updated TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS ai_usage (user_id TEXT NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, day, kind))",
   ].map(sql => env.DB.prepare(sql))).catch(e => { ready.delete(env.DB); throw e; }));
   return ready.get(env.DB).then(() => env.DB);
 }
