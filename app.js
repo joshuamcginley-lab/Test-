@@ -180,7 +180,7 @@ function render() {
   const empty = state.sessions.length === 0;
   $("welcome").hidden = !empty; $("main").hidden = empty; $("seasonSel").parentElement.hidden = empty;
   $("hero").hidden = !empty; $("gauges").hidden = empty; $("topSample").hidden = !!demo || empty;
-  $("sampleBar").hidden = !demo;
+  $("sampleBar").hidden = !demo; if (!demo) $("sampleInfo").hidden = true;
   document.body.classList.toggle("has-dock", !empty);
 
   const list = view();
@@ -240,8 +240,9 @@ function renderPatterns(list) {
   const press = group(list, s => s.wx?.trend || null).sort((a, b) => order(a, ["Falling", "Steady", "Rising"]) - order(b, ["Falling", "Steady", "Rising"]));
   const flow = group(list, waterLevelOf).sort((a, b) => order(a, ["Low", "Normal", "High"]) - order(b, ["Low", "Normal", "High"]));
   const emptyRow = msg => `<tr><td style="white-space:normal;color:var(--muted)">${msg}</td></tr>`;
+  $("pressNote").hidden = !(demo && press.length);
   $("tPress").innerHTML = press.length ? tableHTML(press, "Pressure") : emptyRow("Trips logged with auto-filled conditions show here. For older trips, use Settings → Add weather to past trips.");
-  $("tFlow").innerHTML = flow.length ? tableHTML(flow, "River") : emptyRow("Trips logged with auto-filled conditions show here, or tag trips High water / Low water.");
+  $("tFlow").innerHTML = flow.length ? tableHTML(flow, "River") : emptyRow(demo ? "River gauges only keep about a month of live readings, so the sample season has none. Trips you log get the nearest gauge's level automatically." : "Trips logged with auto-filled conditions show here, or tag trips High water / Low water.");
 
   const lu = {};
   for (const s of list) for (const c of s.catches || []) { if (!c.lure) continue; lu[c.lure] ??= { fish: 0, trips: new Set(), big: 0 }; lu[c.lure].fish += +c.count || 0; lu[c.lure].trips.add(s); lu[c.lure].big = Math.max(lu[c.lure].big, +c.lb || 0); }
@@ -524,11 +525,17 @@ $("saveNotes").onclick = () => { state.notes = $("notesText").value.split("\n").
 async function loadSample() {
   if (demo) return;
   try {
-    const res = await fetch("sample.json"); const data = await res.json();
+    // The showcase version has historical weather added on the server; fall back to the plain file.
+    let data = null;
+    try { const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000); const r = await fetch("/api/sample", { signal: ctl.signal }); clearTimeout(t); if (r.ok) data = await r.json(); } catch (e) {}
+    if (!Array.isArray(data) || !data.length) data = await (await fetch("sample.json")).json();
+    data.forEach(s => { s.sample = true; });
     demo = { sessions: state.sessions, notes: state.notes, season: state.settings.season };
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
     if (typeof showSampleCopilot === "function") showSampleCopilot(); else showTab("season");
+    let seen = false; try { seen = sessionStorage.getItem("ft-showcase") === "1"; sessionStorage.setItem("ft-showcase", "1"); } catch (e) {}
+    setSampleInfo(!seen);
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }
 }
 function exitSample() {
@@ -540,6 +547,10 @@ function exitSample() {
 $("welcomeSample").onclick = loadSample;
 $("topSample").onclick = loadSample;
 $("clearSample").onclick = exitSample;
+function setSampleInfo(open) { $("sampleInfo").hidden = !open; $("sampleInfoBtn").setAttribute("aria-expanded", open); }
+$("sampleInfoBtn").onclick = () => setSampleInfo($("sampleInfo").hidden);
+$("sampleInfoClose").onclick = () => setSampleInfo(false);
+$("sampleStart").onclick = () => { setSampleInfo(false); startNewTrip(); };
 
 /* ---------- settings ---------- */
 $("openSettings").onclick = () => {

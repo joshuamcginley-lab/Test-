@@ -74,7 +74,14 @@
       <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
     </div>
 
-    <div class="sample-bar" id="sampleBar" hidden><span><b>Sample season</b><span class="sb-long"> · 47 trips</span> · not saved</span><button type="button" id="clearSample">Exit sample</button></div>
+    <div class="sample-bar" id="sampleBar" hidden><button type="button" class="sb-info" id="sampleInfoBtn" aria-expanded="false" aria-controls="sampleInfo"><span class="showcase-tag">Showcase</span><b>Sample season</b><span class="sb-long"> · 47 trips</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button><button type="button" id="clearSample">Exit sample</button></div>
+    <div class="sample-info" id="sampleInfo" hidden>
+      <b>This is a showcase.</b>
+      <p>These 47 trips are a real angler's 2026 season in New Brunswick, so you can see fishr working on a full season.</p>
+      <p>We added <b>historical weather, pressure, wind and rain</b> to every trip to show off Insights and Copilot. Map locations are approximate.</p>
+      <p>Your own trips get these conditions <b>automatically</b>. Nothing here is saved or mixed with your log.</p>
+      <div class="btn-row"><button type="button" class="btn-log" id="sampleStart">Start my own log</button><button type="button" class="btn" id="sampleInfoClose">Got it</button></div>
+    </div>
 
     <div class="dock">
     <nav class="tabs" role="tablist">
@@ -131,7 +138,7 @@
         <section class="card"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
         <section class="card"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
         <section class="card"><h2>By lure</h2><div class="tbl-wrap"><table id="tLure"></table></div></section>
-        <section class="card"><h2>By pressure</h2><div class="tbl-wrap"><table id="tPress"></table></div></section>
+        <section class="card"><h2>By pressure</h2><div class="tbl-wrap"><table id="tPress"></table></div><p class="showcase-note" id="pressNote" hidden><span class="showcase-tag">Showcase</span> Pressure for these sample trips was looked up from historical weather records. Your trips get it automatically.</p></section>
         <section class="card"><h2>By river level</h2><div class="tbl-wrap"><table id="tFlow"></table></div></section>
       </div>
     </div>

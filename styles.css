@@ -543,3 +543,17 @@ body{padding-top:0}
 .appbar{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 .appbar.scrolled{background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6)}
 .welcome-note a,.foot a,.label a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+
+/* Showcase (sample season) */
+.sb-info{display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;color:var(--ink);font-size:13px;text-align:left}
+.sb-info svg{flex:none;color:var(--muted)}
+.showcase-tag{display:inline-block;font:600 9.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border-radius:6px;background:var(--grad);color:var(--on-grad);flex:none}
+.sample-info{display:grid;gap:8px;margin:-6px 0 16px;padding:16px;border-radius:18px;border:1px solid var(--line-2);background:var(--solid);font-size:14.5px}
+.sample-info p{margin:0;color:var(--muted)}
+.sample-info p b{color:var(--ink)}
+.sample-info > b{font-size:16px}
+.sample-info .btn-row{margin-top:4px}
+@media (prefers-reduced-motion:no-preference){.sample-info:not([hidden]){animation:rowIn .3s cubic-bezier(.2,.8,.2,1)}}
+.showcase-note{white-space:normal!important;color:var(--muted);font-size:12.5px;padding-top:12px!important;border-bottom:0!important}
+.sample-bar .sb-info{background:none;border:0;padding:0 4px 0 0;color:var(--ink);font-weight:500;font-size:13px}
+p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6}
