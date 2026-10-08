@@ -369,3 +369,5 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 @keyframes shimmer{to{background-position:-200% 0}}
 .inputs-box{margin-top:6px}
 @media (max-width:520px){.tile.bite{grid-template-columns:1fr;justify-items:start}.bite-ring{width:104px;height:104px}}
+.model-tag{display:inline-block;margin-left:6px;padding:3px 6px;border-radius:6px;border:1px solid var(--line-2);color:var(--faint);font-size:9.5px;letter-spacing:.04em;text-transform:none}
+.live-foot b{color:var(--muted);font-weight:600}

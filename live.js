@@ -131,7 +131,7 @@ function renderLive(status) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™</span>
+        <span class="label">fishr Bite Index™ <span class="model-tag">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
         <div class="drivers">${bi.drivers.slice(0, 5).map(x => `<span class="drv ${x.v > 0 ? "up" : "down"}">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</span>`).join("")}</div>
       </div>
@@ -175,7 +175,7 @@ function renderLive(status) {
       <div class="moon"><span class="moon-disc" style="--lit:${mn.illum}%"></span><span>${mn.name} · ${mn.illum}% lit</span></div>
     </div>
   </div>
-  <div class="live-foot">Inputs: Open-Meteo weather models · Environment and Climate Change Canada real-time hydrometric data · astronomical sun &amp; moon. fishr Bite Index™ v0.3 is experimental: it blends live conditions with patterns from your log.</div>`;
+  <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · Environment and Climate Change Canada · astronomical ephemeris.</div>`;
   $("liveRefresh").onclick = () => goLive(true);
   countUp(box);
 }
