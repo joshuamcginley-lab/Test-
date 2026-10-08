@@ -147,11 +147,22 @@ function bestWindow() {
 }
 
 /* ---------- render ---------- */
+// On Trips, until Copilot unlocks: how far along the log is, and which trips don't count yet.
+function renderTrainStrip() {
+  const box = $("trainStrip"); if (!box) return;
+  const n = state.sessions.filter(s => avgT(s) != null).length, missing = state.sessions.length - n;
+  box.hidden = !!demo || !state.sessions.length || n >= MIN_TRIPS;
+  if (box.hidden) return;
+  box.innerHTML = `<div class="ts-top"><b>${n} of ${MIN_TRIPS} trips</b><span>Copilot starts making calls at ${MIN_TRIPS}. Skunks count.</span></div>
+    <div class="meter"><span style="width:${n / MIN_TRIPS * 100}%"></span></div>
+    ${missing ? `<p>${missing} trip${missing === 1 ? " has" : "s have"} no temperature, so ${missing === 1 ? "it doesn't" : "they don't"} count yet. <button type="button" class="text-link" id="tsFill">Add the weather</button></p>` : ""}`;
+  const f = $("tsFill"); if (f) f.onclick = () => { $("openSettings").click(); $("backfillWx").scrollIntoView({ block: "center" }); };
+}
 function renderAdvice() {
   const box = $("advice"); if (!box) return;
   const withTemp = state.sessions.filter(s => avgT(s) != null).length;
   if (withTemp < MIN_TRIPS) {
-    box.innerHTML = `<div class="verdict locked"><span class="chip info">Training</span><h3>Your model needs ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your workspace has ${MIN_TRIPS} trips with a temperature, Copilot tells you where to fish for the conditions you're in, and when. Skunks count. They teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
+    box.innerHTML = `<div class="verdict locked"><span class="chip info">Training</span><h3>Your model needs ${MIN_TRIPS - withTemp} more trip${MIN_TRIPS - withTemp === 1 ? "" : "s"} with a temperature</h3><p>Once your log has ${MIN_TRIPS} trips with a temperature, Copilot tells you where to fish for the conditions you're in, and when. fishr fills the temperature in when location is on. Skunks count: they teach it what doesn't work.</p><div class="meter"><span style="width:${withTemp / MIN_TRIPS * 100}%"></span></div><p class="label">${withTemp} of ${MIN_TRIPS}</p></div>`;
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
@@ -244,6 +255,6 @@ function showSampleCopilot() {
   ["aTemp", "aTime", "aDate"].forEach(id => $(id).addEventListener("input", () => { $("aWeatherMsg").textContent = ""; renderAdvice(); }));
   $("aWeather").onclick = () => loadWeather(true);
   const _render = render;
-  render = function () { _render(); $("aTempLabel").textContent = `Temp °${T()}`; renderAdvice(); };
-  renderAdvice();
+  render = function () { _render(); $("aTempLabel").textContent = `Temp °${T()}`; renderAdvice(); renderTrainStrip(); };
+  renderAdvice(); renderTrainStrip();
 })();

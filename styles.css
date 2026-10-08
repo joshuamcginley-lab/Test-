@@ -443,7 +443,7 @@ body{padding-top:0}
 .appbar .icon-btn{width:36px;height:36px;border-radius:999px}
 .appbar .btn-log{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;font-size:14px}
 .appbar .btn-log svg{width:16px;height:16px}
-@media (max-width:420px){#topSample span{display:none}#topSample{padding:0 10px}}
+
 /* undo older phone-specific header rules */
 @media (max-width:520px){.topbar,.top-actions{display:flex}#openSettings{position:static}.top-actions{grid-column:auto}}
 
@@ -811,8 +811,19 @@ nav.tabs button[role="tab"]{min-width:0}
 /* Bite Index: species pick and factor explanations, kept small */
 .bite-sp{font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--glass-2);border:1px solid var(--line-2);border-radius:999px;padding:4px 20px 4px 8px;margin-left:6px;vertical-align:1px;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat}
 @media (max-width:700px){.bite-sp{font-size:16px;transform:scale(.66);transform-origin:left center;margin-right:-34%}}
-@media (max-width:700px){.model-tag.has-sp{display:none}}
+
 button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 .drv.mine{text-decoration:underline dotted;text-underline-offset:3px}
 .drv[aria-expanded="true"]{outline:1px solid currentColor}
 .drv-why{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+/* New users: progress toward Copilot on Trips */
+.train-strip{background:var(--solid);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin:0 0 12px;display:grid;gap:8px}
+.ts-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:14px}
+.ts-top span{color:var(--muted);font-size:13px}
+.train-strip p{margin:0;font-size:13px;color:var(--muted)}
+.train-strip .text-link{color:var(--c);font-size:inherit}
+/* Trip form: with no fish yet, "Add a fish" is a proper button */
+#catchRows:empty + .add-catch{border-style:solid;color:var(--ink);font-weight:600}
+#catchRows:empty{display:none!important}
+/* The parody engine tag is desktop-only; phones keep the card plain */
+@media (max-width:700px){.model-tag{display:none}}

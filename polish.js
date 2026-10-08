@@ -23,16 +23,16 @@ document.addEventListener("click", e => { if (e.target.closest(".btn-log, .dock-
 
 /* ---------- the "trip logged" moment ---------- */
 let celTimer = null;
-function celebrate({ fish = 0, pb = null, species = "" } = {}) {
+function celebrate({ fish = 0, pb = null, species = "", next = null } = {}) {
   const box = $("celebrate");
   $("celTitle").textContent = pb ? "New personal best" : fish ? `${fish} fish logged` : "Skunk logged";
-  $("celSub").textContent = pb ? `${species ? species + " · " : ""}${fmtW(pb)}` : fish ? "Model retrained on your new data." : "Still training data. Copilot learns from skunks too.";
+  $("celSub").textContent = pb ? `${species ? species + " · " : ""}${fmtW(pb)}` : next ? next + (fish ? "" : " Skunks count too.") : (fish ? "Model retrained on your new data." : "Still training data. Copilot learns from skunks too.");
   box.classList.toggle("pb", !!pb);
   box.hidden = false; box.classList.remove("show"); void box.offsetWidth; box.classList.add("show");
   haptic(pb ? [12, 60, 20] : 14);
   if (pb && !reduceMotion) confetti();
   clearTimeout(celTimer);
-  celTimer = setTimeout(() => { box.classList.remove("show"); setTimeout(() => { box.hidden = true; }, 300); }, pb ? 2600 : 1500);
+  celTimer = setTimeout(() => { box.classList.remove("show"); setTimeout(() => { box.hidden = true; }, 300); }, pb ? 2600 : next ? 2600 : 1500);
 }
 $("celebrate").addEventListener("click", () => { clearTimeout(celTimer); $("celebrate").classList.remove("show"); setTimeout(() => { $("celebrate").hidden = true; }, 300); });
 

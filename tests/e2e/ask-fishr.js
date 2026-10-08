@@ -44,7 +44,7 @@ const S = process.argv[2]; const res = []; const ok = (c, m) => res.push((c ? 'P
   req = await lastAI(); ok(req.system.includes('Tay River') && req.system.includes('caught 3x Brook trout on Inline spinner') && !req.system.includes('showcase'), 'own question uses own synced log');
   ok(/4 of 5/.test(await p.evaluate(() => $('askFoot').textContent)), 'own allowance counts down');
   // ---- Photo ID: auto on new photo
-  await click('#dockLog'); await p.waitForTimeout(400);
+  await click('#dockLog'); await p.waitForTimeout(400); await click('#addCatch');
   await p.setInputFiles('#catchRows .catch-row .c-photo input[type=file]', S + '/bass.jpg'); await p.waitForTimeout(2000);
   const ph = await p.evaluate(() => { const r = document.querySelector('#catchRows .catch-row'); return { sp: r.querySelector('.c-sp').value, msg: r.querySelector('.photo-msg').textContent, btn: !r.querySelector('.id-photo').hidden }; });
   ok(ph.sp === 'Smallmouth bass' && /high confidence/.test(ph.msg) && /Largemouth bass/.test(ph.msg) && ph.btn, 'photo auto-identified ' + JSON.stringify(ph));

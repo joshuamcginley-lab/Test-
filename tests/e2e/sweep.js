@@ -52,7 +52,7 @@ const wxBody = fs.readFileSync(S + '/wx.json', 'utf8');
     await p.evaluate(() => { state.settings.units = 'metric'; state.settings.temp = 'F'; save(); });
     await p.evaluate(() => startNewTrip()); await p.waitForTimeout(300); await overflow('log form');
     await p.fill('#fWaterIn', 'Tay River'); await p.fill('#fTlo', '68');
-    await p.fill('#catchRows .c-sp', 'Brook trout'); await p.fill('#catchRows .c-lb', '1'); await p.fill('#catchRows .c-in', '30');
+    await click('#addCatch'); await p.fill('#catchRows .c-sp', 'Brook trout'); await p.fill('#catchRows .c-lb', '1'); await p.fill('#catchRows .c-in', '30');
     await click('#saveBtn'); await p.waitForTimeout(700);
     let t = await p.evaluate(() => state.sessions[0]);
     ok(t && Math.abs(t.tempLow - 20) < 0.11 && Math.abs(t.catches[0].lb - 2.205) < 0.01 && Math.abs(t.catches[0].inches - 11.81) < 0.05, `${tag}: metric/°F stored as lb/in/°C ${JSON.stringify(t && { tl: t.tempLow, lb: t.catches[0].lb, in: t.catches[0].inches })}`);

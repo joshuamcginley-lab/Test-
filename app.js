@@ -177,12 +177,11 @@ function render() {
   $("seasonSel").innerHTML = ys.map(y => `<option value="${y}">${y}</option>`).join("") + `<option value="all">All time</option>`;
   $("seasonSel").value = state.settings.season;
   $("wsLine").textContent = state.sessions.length === 0 ? "" : demo ? "Sample season" : state.settings.name ? `${state.settings.name}'s workspace` : "";
-  $("topSample").hidden = !!demo;
   document.title = state.settings.name ? `${state.settings.name}'s workspace · fishr.ai` : "fishr.ai · Know where they're biting";
 
   const empty = state.sessions.length === 0;
   $("welcome").hidden = !empty; $("main").hidden = empty; $("seasonSel").parentElement.hidden = empty;
-  $("hero").hidden = !empty; $("gauges").hidden = empty; $("topSample").hidden = !!demo || empty;
+  $("hero").hidden = !empty; $("gauges").hidden = empty;
   $("sampleBar").hidden = !demo; if (!demo) $("sampleInfo").hidden = true;
   document.body.classList.toggle("has-dock", !empty);
 
@@ -383,8 +382,11 @@ function speciesPicker(box) {
 $("addCatch").onclick = () => {
   const rows = $("catchRows").querySelectorAll(".catch-row"), last = rows[rows.length - 1];
   const r = catchRow({ species: last?.querySelector(".c-sp").value, lure: last?.querySelector(".c-lu").value });
-  $("catchRows").append(r); r.querySelector(".c-sp").focus();
+  $("catchRows").append(r); r.querySelector(".c-sp").focus(); catchLabel();
 };
+// "+ Add a fish" until there's one, then "+ Add another fish".
+const catchLabel = () => { $("addCatch").textContent = $("catchRows").querySelector(".catch-row") ? "+ Add another fish" : "+ Add a fish"; };
+$("catchRows").addEventListener("click", e => { if (e.target.closest(".x")) setTimeout(catchLabel); });
 function segSet(el, vals) { for (const b of el.querySelectorAll("button")) b.setAttribute("aria-pressed", vals.includes(b.dataset.v)); }
 $("segCond").innerHTML = CONDS.map(c => `<button type="button" data-v="${c}" aria-pressed="false">${c}</button>`).join("");
 $("segCond").onclick = e => { const b = e.target.closest("button"); if (b) b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); };
@@ -424,7 +426,7 @@ function openSheet(s) {
   $("fCombo").value = s?.combo || ""; $("fLureText").value = s?.lureText || ""; $("fNotes").value = s?.notes || "";
   segSet($("segMethod"), [s?.method || "Spin"]); segSet($("segCond"), s?.conditions || []);
   pinned = s?.lat != null ? { lat: s.lat, lon: s.lon } : null; $("fLocPaste").value = ""; showLoc();
-  $("catchRows").innerHTML = ""; (s ? s.catches || [] : [{}]).forEach(c => $("catchRows").append(catchRow(c)));
+  $("catchRows").innerHTML = ""; (s?.catches || []).forEach(c => $("catchRows").append(catchRow(c))); catchLabel();
   $("delBtn").hidden = !s; $("delConfirm").hidden = true; $("formErr").hidden = true;
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
   if (typeof onSheetOpen === "function") onSheetOpen(s);
@@ -513,6 +515,7 @@ $("form").addEventListener("submit", async e => {
     wx: (typeof formCond !== "undefined" && formCond.wx) || prev?.wx || null,
     flow: (typeof formCond !== "undefined" && formCond.flow) || prev?.flow || null,
   };
+  if (typeof tempFromWx === "function") tempFromWx(doc);
   const before = state.sessions;
   state.sessions = prev ? state.sessions.map(s => s.id === prev.id ? doc : s) : [...state.sessions, doc];
   if (!save()) { state.sessions = before; return; } // nothing changed, so tapping Save again can't add a duplicate
@@ -524,9 +527,20 @@ $("form").addEventListener("submit", async e => {
   const bestNow = Math.max(0, ...catches.map(c => +c.lb || 0));
   const pb = !prev && bestNow > 0 && bestNow > bestBefore && state.sessions.length > 1;
   if (prev) toast("Trip updated. Model retrained.");
-  else if (typeof celebrate === "function") celebrate({ fish: fc, pb: pb ? bestNow : null, species: catches.find(c => +c.lb === bestNow)?.species });
+  else if (typeof celebrate === "function") celebrate({ fish: fc, pb: pb ? bestNow : null, species: catches.find(c => +c.lb === bestNow)?.species, next: trainingNext(doc) });
   else toast(fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
+  // No weather yet (no signal, or location came late): add it now if fishr can, and say where that leaves Copilot.
+  if (!doc.wx && typeof fillTripLater === "function") fillTripLater(doc.id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === doc.id)) || "Copilot has it."}`); });
 });
+
+// Until Copilot unlocks, each new trip says how far along it is, or why it doesn't count yet.
+function trainingNext(trip) {
+  if (typeof MIN_TRIPS === "undefined") return null;
+  const n = state.sessions.filter(s => avgT(s) != null).length;
+  if (n >= MIN_TRIPS) return null;
+  if (trip && avgT(trip) == null) return `Saved. It counts toward Copilot once it has a temperature: tap the trip to add one.`;
+  return `${n} of ${MIN_TRIPS} trips. Copilot starts making calls at ${MIN_TRIPS}.`;
+}
 
 /* ---------- notes ---------- */
 $("editNotes").onclick = () => {
@@ -572,7 +586,7 @@ function exitSample() {
   render(); window.scrollTo(0, 0);
 }
 $("welcomeShowcase").addEventListener("click", e => { const t = e.target.closest("[data-sample]"); if (t) loadSample(t.dataset.sample); });
-$("topSample").onclick = () => loadSample();
+$("settingsSample").onclick = () => { closeSheets(); loadSample(); };
 $("clearSample").onclick = exitSample;
 function setSampleInfo(open) { $("sampleInfo").hidden = !open; $("sampleInfoBtn").setAttribute("aria-expanded", open); }
 $("sampleInfoBtn").onclick = () => setSampleInfo($("sampleInfo").hidden);

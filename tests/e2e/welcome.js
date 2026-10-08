@@ -30,8 +30,8 @@ const click = (p, sel) => p.$eval(sel, el => el.click());
       }
       await click(p, '#clearSample'); await p.waitForTimeout(300);
       ok(await p.evaluate(() => !$('welcome').hidden), 'exit sample returns to welcome');
-      await click(p, '#topSample').catch(() => {}); await p.waitForTimeout(1200);
-      ok(await p.evaluate(() => !!demo && !$('sampleInfo').hidden), 'header sample button opens with explainer');
+      await click(p, '#openSettings'); await click(p, '#settingsSample'); await p.waitForTimeout(1200);
+      ok(await p.evaluate(() => !!demo && !$('sampleInfo').hidden && $('settings').hidden), 'Settings > Show the sample season opens it with the explainer');
     }
     ok(!p.errs.length, scheme + ' no errors ' + p.errs.join('|'));
   }

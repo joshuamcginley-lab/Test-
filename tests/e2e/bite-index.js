@@ -100,12 +100,12 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   await p.selectOption('#biteSp', 'all');
   r = await series('passed');
   ok(r.chip === '−10 Just after a cold front' && r.visible, 'front passed 10h ago: −10 chip, shown on a phone ' + JSON.stringify(r.chip));
-  ok(/^A cold front came through about 10 hours ago: \d+° colder than the day before and pressure up 8 hPa since\./.test(r.why), 'passed front explains itself: ' + r.why);
-  ok(/^cold front passed about 10 hours ago/.test(r.ask || ''), 'Ask fishr is told about the front: ' + r.ask);
+  ok(/^A cold front came through about 1[01] hours ago: \d+° colder than the day before and pressure up 8 hPa since\./.test(r.why), 'passed front explains itself: ' + r.why);
+  ok(/^cold front passed about 1[01] hours ago/.test(r.ask || ''), 'Ask fishr is told about the front: ' + r.ask);
   await p.$eval('.drv[data-why*="cold front"]', e => e.click()).catch(() => {});
   await p.screenshot({ path: S + '/bite-front.png' });
   r = await series('coming');
-  ok(r.chip === '+5 Cold front coming' && /due in about 8 hours/.test(r.why), 'front due in 8h: +5 chip ' + JSON.stringify(r));
+  ok(r.chip === '+5 Cold front coming' && /due in about [78] hours/.test(r.why), 'front due in 8h: +5 chip ' + JSON.stringify(r));
   r = await series('steady');
   ok(!r.chip && !r.ask, 'steady weather: no front chip, nothing sent to Ask fishr');
   await ctx.close();

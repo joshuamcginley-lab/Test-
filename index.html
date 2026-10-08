@@ -43,7 +43,6 @@
   <a class="logo" id="homeLink" href="./" aria-label="fishr.ai home"><img class="mark" src="icons/mark-128.png" alt="" width="30" height="30"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></a>
   <div class="top-actions">
     <label class="chip-btn fid-pick fid-top" title="fishr ID: what fish is this?"><input type="file" accept="image/*" class="fid-file" aria-label="fishr ID: identify a fish from a photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg><span>fishr ID</span></label>
-    <button type="button" class="chip-btn" id="topSample" title="See a sample season"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Sample</span></button>
     <button type="button" class="chip-btn pro-btn" id="topPro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><span>Pro</span></button>
     <button class="btn-log desk-only" id="openNew" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Log a trip</span></button>
     <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
@@ -65,10 +64,10 @@
     </div>
     <button type="button" class="choice primary-choice" id="welcomeNew">
       <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
-      <span><b>Start training your model</b><span>Log your first trip. Under a minute, and skunks count.</span></span>
+      <span><b>Log your first trip</b><span>That starts training your model. Under a minute, and skunks count.</span></span>
     </button>
     <section class="showcase" id="welcomeShowcase" aria-labelledby="showTitle">
-      <span class="showcase-tag">Showcase</span>
+      <span class="showcase-tag">New here? See it in action</span>
       <h2 id="showTitle">One angler. 47 trips. A model that knows the water.</h2>
       <p>A real 2026 season in New Brunswick, fed into fishr. It learned the rivers, the lures that worked and the weather that switches the bite on. <b>Yours learns the same way.</b></p>
       <div class="sc-tiles">
@@ -121,7 +120,7 @@
       </section>
       <button type="button" class="pro-banner" id="copilotPro" hidden><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
-      <summary><span>Adjust model inputs</span><span class="more-hint">plan a different time, temperature or conditions</span></summary>
+      <summary><span>What if?</span><span class="more-hint">plan a different day, time or weather</span></summary>
       <div class="more-in">
       <div class="now-row">
         <label class="field"><span class="label" id="aTempLabel">Temp</span><input id="aTemp" type="number" inputmode="decimal" step="1"></label>
@@ -167,6 +166,7 @@
     </div>
 
     <div id="panel-log" role="tabpanel" hidden>
+      <div class="train-strip" id="trainStrip" hidden></div>
       <div class="seg view-seg" id="viewSeg"><button type="button" data-v="list" aria-pressed="true">List</button><button type="button" data-v="map" aria-pressed="false">Map</button></div>
       <div id="mapWrap" hidden>
         <div class="map-place" id="mapPlace" hidden>
@@ -195,19 +195,19 @@
     <h2 id="sheetTitle">Log a trip</h2>
     <div class="row">
       <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
-      <label class="field"><span class="label" id="tloLabel">Temp</span><input type="number" id="fTlo" inputmode="decimal" step="1" placeholder="22"></label>
+      <label class="field"><span class="label" id="tloLabel">Temp</span><input type="number" id="fTlo" inputmode="decimal" step="1"></label>
     </div>
     <div class="cond-strip">
       <div class="loc-row"><button type="button" class="btn sm" id="fillWx">✦ Auto-fill conditions</button><span id="wxText" class="photo-msg"></span></div>
       <div class="wx-chips" id="wxChips"></div>
     </div>
     <div class="row">
-      <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Keswick River" autocomplete="off" required></label>
-      <label class="field"><span class="label">Spot (optional)</span><input id="fSpot" list="dlSpot" placeholder="Fallen tree by the island" autocomplete="off"></label>
+      <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Lake or river name" autocomplete="off" required></label>
+      <label class="field"><span class="label">Spot (optional)</span><input id="fSpot" list="dlSpot" placeholder="e.g. by the bridge" autocomplete="off"></label>
     </div>
     <div class="field"><span class="label">What did you catch? Leave empty if you got skunked.</span>
       <div id="catchRows" style="display:grid;gap:8px"></div>
-      <button type="button" class="add-catch" id="addCatch">+ Add another fish</button>
+      <button type="button" class="add-catch" id="addCatch">+ Add a fish</button>
     </div>
     <details class="more" id="moreDetails">
       <summary><span>More details</span><span class="more-hint">time, location, sky, method, notes</span></summary>
@@ -224,10 +224,10 @@
         <div class="field"><span class="label">Conditions</span><div class="seg" id="segCond"></div></div>
         <div class="field"><span class="label">Method</span><div class="seg" id="segMethod"><button type="button" data-v="Spin" aria-pressed="true">Spin</button><button type="button" data-v="Bait" aria-pressed="false">Bait</button><button type="button" data-v="Fly" aria-pressed="false">Fly</button><button type="button" data-v="Ice" aria-pressed="false">Ice</button><button type="button" data-v="Troll" aria-pressed="false">Troll</button></div></div>
         <div class="row">
-          <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="Medium spinning" autocomplete="off"></label>
-          <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='2.5" white curly tail grub'></label>
+          <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="e.g. medium spinning" autocomplete="off"></label>
+          <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='e.g. white curly tail grub'></label>
         </div>
-        <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="Water high after rain, missed 2 hits on the frog"></textarea></label>
+        <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="e.g. water high after rain"></textarea></label>
       </div>
     </details>
     <div class="err" id="formErr" hidden></div>
@@ -243,7 +243,7 @@
   <div class="sheet-in">
     <h2 id="setTitle">Settings</h2>
     <div class="set-group">
-      <label class="field"><span class="label">Your name</span><input id="sName" placeholder="Josh" autocomplete="given-name"></label>
+      <label class="field"><span class="label">Your name</span><input id="sName" placeholder="First name" autocomplete="given-name"></label>
       <div class="row">
         <label class="field"><span class="label">Weight &amp; length</span><select id="sUnits"><option value="imperial">lb &amp; inches</option><option value="metric">kg &amp; cm</option></select></label>
         <label class="field"><span class="label">Temperature</span><select id="sTemp"><option value="C">°C</option><option value="F">°F</option></select></label>
@@ -272,6 +272,11 @@
         <div class="btn-row" id="cloudAcctRow"><button class="btn" id="cloudSignOut" type="button">Sign out</button><button class="btn danger" id="cloudDelete" type="button">Delete cloud account</button><span id="cloudDeleteConfirm" hidden><span style="margin-right:8px">Deletes every synced trip and photo from our servers. Trips on this phone stay.</span><button class="btn danger" id="cloudDeleteYes" type="button">Delete my cloud data</button> <button class="linkbtn" id="cloudDeleteNo" type="button">Cancel</button></span></div>
       </div>
       <p id="cloudMsg" class="cloud-msg" role="status" hidden></p>
+    </div>
+    <div class="set-group">
+      <h3>Sample season</h3>
+      <p>See what fishr does with a full season: one angler's 47 trips. Your log stays as it is.</p>
+      <div class="btn-row"><button class="btn" id="settingsSample" type="button">Show the sample season</button></div>
     </div>
     <div class="set-group">
       <h3>fishr Pro</h3>

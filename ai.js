@@ -148,7 +148,7 @@ $("fidLog").onclick = () => {
   if (!fid?.isFish) return;
   const { blob, species } = fid;
   closeSheets(); startNewTrip();
-  const row = $("catchRows").querySelector(".catch-row"); if (!row) return;
+  const row = catchRow({ species }); $("catchRows").append(row); catchLabel();
   row.querySelector(".c-sp").value = species; row.setPhoto(blob);
   row.querySelector(".photo-msg").innerHTML = `<span class="id-hit">Identified by fishr ID: <b>${esc(species)}</b></span>`;
 };
