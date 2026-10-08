@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Privacy · fishr.ai</title>
+<meta name="theme-color" content="#070A14">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+<style>
+:root{--bg:#070A14;--solid:#0F1322;--line:rgba(255,255,255,.1);--ink:#EEF2E8;--muted:#8D96A3;--v:#C4FF2E;--m:#FF7A1A;--bad:#FF5470;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#F8FAF4;--solid:#fff;--line:rgba(14,22,10,.12);--ink:#0C1208;--muted:#5A6455;--v:#3F8A00;--m:#E2570B;--bad:#E11D48;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Geist,system-ui,sans-serif;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 64px}
+main{max-width:680px;margin:0 auto}
+a{color:var(--v)}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:28px;font-weight:650;font-size:19px;letter-spacing:-.03em;text-decoration:none;color:var(--ink)}
+.top img{width:30px;height:30px;border-radius:9px}
+h1{font-size:clamp(32px,8vw,44px);letter-spacing:-.04em;line-height:1.05;margin:0 0 6px}
+h2{font-size:20px;letter-spacing:-.02em;margin:34px 0 8px}
+.meta{font:500 12px/1.4 "Geist Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p,li{color:var(--ink)}
+li{margin-bottom:6px}
+.muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+th,td{text-align:left;padding:9px 8px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px/1.3 "Geist Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.wrap{overflow-x:auto}
+form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+input{flex:1 1 220px;font:inherit;font-size:16px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--solid);color:var(--ink)}
+button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radius:999px;border:1px solid var(--line);background:var(--ink);color:var(--bg);cursor:pointer}
+#msg{width:100%;margin:4px 0 0;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <a class="top" href="/"><img src="icons/mark-128.png" alt="">fishr.ai</a>
+  <h1>Privacy</h1>
+  <p class="meta">Last updated October 8, 2026</p>
+
+  <p>fishr.ai is a fishing log and forecasting app in public beta, built in New Brunswick, Canada. This page explains what the app collects, where it goes, and how to remove it. The short version: <b>your fishing log stays on your phone</b>, and we only receive what you choose to send us.</p>
+
+  <h2>What stays on your device</h2>
+  <p>Your trips, catches, photos, spots, notes and settings are stored in your browser on your device. They are not sent to us. Backups you save from Settings are files on your device too. Deleting the app's data in Settings, or clearing your browser's site data, removes them.</p>
+
+  <h2>What reaches our servers, and why</h2>
+  <div class="wrap"><table>
+    <tr><th>What</th><th>When</th><th>Why, and how long we keep it</th></tr>
+    <tr><td>A shared catch card (the image, species, size, lure, date, and the water name if you leave that on)</td><td>Only when you tap Share</td><td>So the link you send shows the catch. Anyone with the link can see it. Kept until you ask us to delete it. Exact spots and GPS are never included.</td></tr>
+    <tr><td>Your email address, optional first name, the date you joined and your consent</td><td>Only if you join the fishr Pro waitlist</td><td>To email you about fishr Pro. Kept until you unsubscribe or ask us to remove it. We never sell or share it.</td></tr>
+    <tr><td>Your approximate location (rounded to about 100 m)</td><td>When the app looks up the nearest river gauge</td><td>To find the gauge. Used for that request and not stored.</td></tr>
+    <tr><td>Crash reports: the error message, which file and line, your browser type, screen size and country</td><td>Only if the app hits an error</td><td>To fix bugs. No trips, photos, location or contact details are included. Deleted after 90 days.</td></tr>
+    <tr><td>Anonymous visit counts</td><td>When you open the app</td><td>Cloudflare Web Analytics, which uses no cookies and doesn't track you across sites.</td></tr>
+  </table></div>
+
+  <h2>Services the app connects to</h2>
+  <ul>
+    <li><b>Cloudflare</b> hosts the app and stores shared catches, the waitlist and crash reports.</li>
+    <li><b>Open-Meteo</b> provides weather, pressure and forecasts. Your phone sends it approximate coordinates to get local weather.</li>
+    <li><b>Environment and Climate Change Canada</b> provides river gauge data, fetched by our server.</li>
+    <li><b>CARTO and OpenStreetMap</b> provide map tiles when you open the map.</li>
+    <li><b>Google Fonts</b> provides the app's typefaces.</li>
+  </ul>
+  <p class="muted">Each of these receives your IP address when your phone talks to it, as with any website.</p>
+
+  <h2>Emails</h2>
+  <p>We only email people who ticked the consent box on the waitlist, and only about fishr Pro. Every email has a one-tap unsubscribe link, and we act on unsubscribes right away. This follows Canada's Anti-Spam Legislation (CASL).</p>
+
+  <h2 id="remove">Remove your email</h2>
+  <p>Enter the address you joined with and we'll delete it from the waitlist.</p>
+  <form id="rm"><input type="email" id="rmEmail" placeholder="you@example.com" autocomplete="email" required><button type="submit">Remove me</button><p id="msg" class="muted"></p></form>
+
+  <h2>Your rights</h2>
+  <p>Under Canadian privacy law (PIPEDA) you can ask what we hold about you, ask us to correct it, or ask us to delete it, including a shared catch. Use the form above for the waitlist. For anything else, contact us using the details below.</p>
+
+  <h2>Children</h2>
+  <p>fishr.ai isn't directed at children under 13, and we don't knowingly collect their information.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, we'll update the date at the top. If a change affects how we use your email, we'll tell waitlist members before it takes effect.</p>
+
+  <h2>Contact</h2>
+  <p id="contact">Privacy questions and requests: use the removal form above, or reach us through the app's waitlist page.</p>
+</main>
+<script>
+document.getElementById("rm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = document.getElementById("msg"), email = document.getElementById("rmEmail").value.trim();
+  msg.textContent = "Removing…";
+  try {
+    const r = await fetch("/api/waitlist", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) });
+    const d = await r.json().catch(() => ({}));
+    msg.textContent = r.ok ? "Done. If that address was on the list, it's gone." : (d.error || "Couldn't remove it right now. Try again in a minute.");
+  } catch (err) { msg.textContent = "No connection. Try again when you have signal."; }
+});
+</script>
+</body>
+</html>

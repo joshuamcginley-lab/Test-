@@ -28,3 +28,28 @@ export function b64url(s) {
 }
 
 export const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
+// Admin access for /admin.html: the ADMIN_KEY secret set in Cloudflare (WAITLIST_KEY also accepted).
+export function isAdmin(request, env) {
+  const key = env.ADMIN_KEY || env.WAITLIST_KEY;
+  const got = request.headers.get("x-admin-key") || "";
+  if (!key || got.length !== key.length) return false;
+  let diff = 0; for (let i = 0; i < key.length; i++) diff |= key.charCodeAt(i) ^ got.charCodeAt(i);
+  return diff === 0;
+}
+
+// Signed unsubscribe token for an email address, so links in emails can't be forged for other people.
+export async function unsubToken(email, env) {
+  const secret = env.ADMIN_KEY || env.WAITLIST_KEY;
+  if (!secret) return null;
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", k, new TextEncoder().encode("unsub:" + email));
+  return [...new Uint8Array(sig)].slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Remove a waitlist sign-up (same key scheme as /api/waitlist: waitlist/<sha256 of email>.json).
+export async function removeEmail(env, email) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email));
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  await env.CATCHES.delete(`waitlist/${hex}.json`);
+}

@@ -542,3 +542,4 @@ body{padding-top:0}
 /* App bar is see-through at the top so the glow runs unbroken behind it; it frosts only once you scroll */
 .appbar{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 .appbar.scrolled{background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6)}
+.welcome-note a,.foot a,.label a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}

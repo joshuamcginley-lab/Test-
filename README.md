@@ -52,3 +52,10 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 
 - `map.js`: Trips → Map shows each water (sized by trips, coloured by fish per trip) and pinned spots on CARTO/OpenStreetMap tiles via Leaflet, loaded on first use. Waters without a location can be placed by tapping the map.
 - `pro.js` + `functions/api/waitlist.js`: the fishr Pro waitlist. Sign-ups need a ticked consent box and are stored in R2 under `waitlist/`. Export them as CSV with `GET /api/waitlist?export=csv` and an `x-admin-key` header matching the `WAITLIST_KEY` environment variable.
+
+## Admin, privacy and crash reports
+
+- `/privacy.html` — privacy policy (PIPEDA/CASL), with a form that removes an email from the waitlist.
+- `/admin.html` — enter the `ADMIN_KEY` secret (set in Cloudflare) to see the waitlist count, download sign-ups as CSV (each row has a signed one-tap unsubscribe link) and read recent crash reports.
+- `report.js` sends anonymous crash reports to `/api/errors`, stored in R2 for 90 days.
+- `/api/unsubscribe?e=&t=` — signed unsubscribe links for waitlist emails.
