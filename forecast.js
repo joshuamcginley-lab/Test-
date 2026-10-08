@@ -79,19 +79,23 @@ function bestRanking(q, minNeff = 1) {
 let wx = null; // { lat, lon, current:{temp,sky}, hourly:[{time:Date, temp, sky}] }
 const skyFromCode = c => c == null ? null : c <= 1 ? "Clear" : c <= 48 ? "Overcast" : "Rain";
 function weatherSpot() {
+  if (demo) return null; // the sample's spots are in New Brunswick, not where the visitor is
   const pins = state.sessions.filter(s => s.lat != null);
   if (!pins.length) return null;
   return { lat: pins.reduce((a, s) => a + s.lat, 0) / pins.length, lon: pins.reduce((a, s) => a + s.lon, 0) / pins.length };
 }
 async function loadWeather(useGps) {
   const msg = $("aWeatherMsg");
-  let where = null;
+  let where = null, why = null;
   if (useGps && navigator.geolocation) {
     msg.textContent = "Locating…";
-    where = await new Promise(res => navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lon: p.coords.longitude }), () => res(null), { timeout: 12000, maximumAge: 600000 }));
-  }
-  where ??= weatherSpot();
-  if (!where) { msg.textContent = "Allow location, or pin a spot on a trip, to pull the weather. You can also type the temperature."; return; }
+    where = await new Promise(res => navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      e => { why = e.code === 1 ? "denied" : "nofix"; res(null); }, { timeout: 12000, maximumAge: 600000 }));
+  } else if (useGps) why = "nofix";
+  // No GPS: fall back to a town the angler typed, then to where their pinned trips are.
+  const via = where ? "gps" : state.settings.home ? "town" : "spots";
+  where ??= state.settings.home || weatherSpot();
+  if (!where) { msg.textContent = "Allow location, or type your town, to pull the weather. You can also type the temperature."; return why || "noloc"; }
   msg.textContent = "Syncing live conditions…";
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,pressure_msl,wind_speed_10m,precipitation,precipitation_probability&daily=sunrise,sunset&past_days=2&forecast_days=2&timezone=auto`;
@@ -106,6 +110,7 @@ async function loadWeather(useGps) {
       hourly: d.hourly.time.map((t, i) => ({ time: new Date(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]), p: d.hourly.pressure_msl?.[i], wind: d.hourly.wind_speed_10m?.[i], rain: d.hourly.precipitation?.[i], pop: d.hourly.precipitation_probability?.[i] })),
       sun: (d.daily?.sunrise || []).map((s, i) => ({ rise: new Date(s), set: new Date(d.daily.sunset[i]) })),
       updated: new Date(),
+      via, why, place: via === "town" ? state.settings.home.name || null : null,
     };
     const now = new Date();
     $("aTemp").value = tOut(r(wx.current.temp, 0));
@@ -117,7 +122,7 @@ async function loadWeather(useGps) {
     msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
     renderAdvice();
     if (typeof renderLive === "function") renderLive();
-  } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; if (typeof renderLive === "function") renderLive("error"); }
+  } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; return "error"; }
 }
 const isoDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 

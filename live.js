@@ -16,7 +16,28 @@ async function autoLive() {
 }
 async function goLive(useGps) {
   liveLoading = true; renderLive();
-  try { await loadWeather(useGps); } finally { liveLoading = false; renderLive(); }
+  let status;
+  try { status = await loadWeather(useGps); } finally { liveLoading = false; renderLive(status); }
+}
+
+// Without GPS (blocked, no fix, or a laptop), people can type a town. Open-Meteo's free geocoder turns it into
+// coordinates, which are kept on this phone as the weather spot.
+async function useTown(name) {
+  const msg = $("townMsg"); msg.textContent = "Looking it up…";
+  try {
+    const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`)).json();
+    const g = d.results?.[0];
+    if (!g) { msg.textContent = "Couldn't find that one. Try the nearest town or city."; return; }
+    state.settings.home = { lat: r(g.latitude, 2), lon: r(g.longitude, 2), name: [g.name, g.admin1].filter(Boolean).join(", ") };
+    save(); goLive(false);
+  } catch (e) { msg.textContent = "No connection. Try again when you have signal."; }
+}
+function locationHelp(status) {
+  if (status === "denied") return /iPhone|iPad/.test(navigator.userAgent)
+    ? "Location is off for fishr. Turn it on in Settings → Privacy &amp; Security → Location Services → Safari Websites → While Using. Or type your town:"
+    : "Location is blocked for fishr in this browser. Allow it in the browser's site settings, or type your town:";
+  if (status === "error") return "Couldn't reach the weather service. Try again in a minute, or type your town:";
+  return status === "town" ? "Type your town and fishr will pull its weather:" : "Couldn't get a GPS fix. Type your town instead:";
 }
 
 /* ---------- small drawing helpers ---------- */
@@ -77,11 +98,17 @@ function biteIndex(ctx) {
 /* ---------- render ---------- */
 function renderLive(status) {
   const box = $("live"); if (!box) return;
-  if (!wx) {
+  if (!wx || status === "town") {
     box.innerHTML = liveLoading
       ? `<div class="live-empty"><span class="live-dot"></span><div><b>Syncing 4 data sources…</b><span>Weather models · barometric pressure · river gauges · sun and moon</span></div></div><div class="live-grid">${"<div class='tile skel'></div>".repeat(6)}</div>`
-      : `<div class="live-empty"><span class="live-dot off"></span><div><b>${status === "error" ? "Couldn't reach live data" : "Live conditions are off"}</b><span>Weather, pressure, river levels, sun and moon.</span></div><button type="button" class="btn-log" id="liveGo">✦ Go live</button></div>`;
+      : ["denied", "nofix", "noloc", "error", "town"].includes(status)
+      ? `<div class="live-empty live-fix"><span class="live-dot off"></span><div><b>${status === "error" ? "Couldn't reach live data" : status === "town" ? "Pull the weather for a town" : "Couldn't get your location"}</b><span>${locationHelp(status)}</span>
+          <form class="town-form" id="townForm"><input id="townIn" placeholder="Town, e.g. Halifax" autocomplete="address-level2" enterkeyhint="go" aria-label="Your town"><button type="submit" class="btn primary">Use</button></form>
+          <span class="town-msg" id="townMsg" role="status"></span></div></div>`
+      : `<div class="live-empty"><span class="live-dot off"></span><div><b>Live conditions are off</b><span>Weather, pressure, river levels, sun and moon. <button type="button" class="text-link" id="liveTown">Or type a town</button></span></div><button type="button" class="btn-log" id="liveGo">✦ Go live</button></div>`;
     const g = $("liveGo"); if (g) g.onclick = () => goLive(true);
+    const t = $("liveTown"); if (t) t.onclick = () => { renderLive("town"); $("townIn").focus(); };
+    const f = $("townForm"); if (f) f.onsubmit = e => { e.preventDefault(); const v = $("townIn").value.trim(); if (v) useTown(v); };
     return;
   }
   const now = new Date(), H = wx.hourly, c = wx.current;
@@ -124,9 +151,10 @@ function renderLive(status) {
 
   box.innerHTML = `
   <div class="live-head">
-    <span class="live-dot"></span><b>Live</b><span class="mono">${coord}</span><span>Updated ${fmtClock(wx.updated)}</span><span>${sources} sources</span>
+    <span class="live-dot"></span><b>Live</b><span class="mono">${wx.place ? esc(wx.place) : coord}</span><span>Updated ${fmtClock(wx.updated)}</span><span>${sources} sources</span>
     <button type="button" class="linkbtn" id="liveRefresh">↻ Resync</button>
   </div>
+  ${wx.via !== "gps" ? `<p class="live-where">${wx.why === "denied" ? "Location is off, so this is" : "This is"} the weather for ${wx.place ? esc(wx.place) : "your pinned spots"}. <button type="button" class="text-link" id="liveChange">${wx.place ? "Change town" : "Use a town instead"}</button></p>` : ""}
   <div class="live-grid">
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
@@ -179,6 +207,7 @@ function renderLive(status) {
   </div>
   <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · Environment and Climate Change Canada · astronomical ephemeris.</div>`;
   $("liveRefresh").onclick = () => goLive(true);
+  const ch = $("liveChange"); if (ch) ch.onclick = () => { renderLive("town"); $("townIn").focus(); };
   countUp(box);
 }
 const compassName = deg => deg == null ? "" : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((deg % 360) + 360) % 360 / 45) % 8];

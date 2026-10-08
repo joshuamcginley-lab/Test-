@@ -784,3 +784,13 @@ label.choice{cursor:pointer}
   .v-tips li{padding:8px 11px;font-size:14.5px}
   .v-tips li .label{font-size:10px}
 }
+/* Live conditions: location help and "type your town" */
+.live-fix{align-items:flex-start}
+.live-empty .text-link{font-size:inherit;color:var(--c)}
+.town-form{display:flex;gap:8px;margin-top:10px}
+.town-form input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg);color:var(--ink)}
+.town-form input:focus{outline:2px solid var(--c);outline-offset:1px}
+.live-empty .town-msg{font-size:13px}
+.town-msg:empty{display:none}
+.live-where{margin:-4px 2px 10px;font-size:13px;color:var(--muted)}
+.live-where .text-link{color:var(--c);font-size:inherit}
