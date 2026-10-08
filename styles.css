@@ -808,3 +808,11 @@ nav.tabs button[role="tab"]{min-width:0}
 .ask,.showcase,.cloud-box,.fid-result,.g-card{grid-template-columns:minmax(0,1fr)}
 .ask > *,.showcase > *{min-width:0}
 .showcase-pick{margin:-4px 2px 12px;font-size:13px;color:var(--muted)}
+/* Bite Index: species pick and factor explanations, kept small */
+.bite-sp{font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--glass-2);border:1px solid var(--line-2);border-radius:999px;padding:4px 20px 4px 8px;margin-left:6px;vertical-align:1px;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat}
+@media (max-width:700px){.bite-sp{font-size:16px;transform:scale(.66);transform-origin:left center;margin-right:-34%}}
+@media (max-width:700px){.model-tag.has-sp{display:none}}
+button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
+.drv.mine{text-decoration:underline dotted;text-underline-offset:3px}
+.drv[aria-expanded="true"]{outline:1px solid currentColor}
+.drv-why{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted)}

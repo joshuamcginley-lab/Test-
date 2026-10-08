@@ -78,19 +78,98 @@ const fmtClock = d => d.toLocaleTimeString([], { hour: "numeric", minute: "2-dig
 const fmtDur = ms => { const m = Math.round(ms / 60000), h = Math.floor(m / 60); return h ? `${h}h ${m % 60}m` : `${m}m`; };
 const windWord = k => k == null ? "" : k < 6 ? "Calm" : k < 20 ? "Light" : k < 30 ? "Moderate" : k < 45 ? "Strong" : "Gale";
 
-/* ---------- Bite Index: live conditions blended with your own log ---------- */
+/* ---------- Bite Index: live conditions, weighted by your own log, scored for your fish ---------- */
+// Each factor starts from a general default. Once your log has enough trips in the same bucket (falling pressure,
+// overcast, low light…), the factor shifts toward what your trips say, and its chip is marked as yours.
+
+// Feeding comfort ranges in water °C, from published fisheries guidance. Matched by name.
+const SPECIES_TEMPS = [
+  [/smallmouth/i, "Smallmouth", 18, 26], [/largemouth/i, "Largemouth", 20, 28], [/brook trout|speckled/i, "Brook trout", 10, 18],
+  [/rainbow|steelhead/i, "Rainbow trout", 10, 20], [/brown trout/i, "Brown trout", 12, 19], [/lake trout|splake/i, "Lake trout", 8, 13],
+  [/salmon/i, "Salmon", 12, 18], [/char\b/i, "Arctic char", 8, 14], [/pike|muskie/i, "Pike", 12, 22], [/pickerel/i, "Pickerel", 15, 24],
+  [/walleye|sauger/i, "Walleye", 15, 22], [/perch/i, "Perch", 15, 24], [/crappie|bluegill|pumpkinseed|sunfish|rock bass/i, "Panfish", 18, 27],
+  [/catfish|bullhead/i, "Catfish", 21, 29], [/carp/i, "Carp", 18, 28], [/chub|fallfish/i, "Chub", 12, 24], [/striped bass|white bass/i, "Striped bass", 15, 24],
+];
+const speciesInfo = name => { const m = SPECIES_TEMPS.find(([re]) => re.test(name || "")); return m ? { name: m[1], lo: m[2], hi: m[3] } : null; };
+const fishFor = (s, sp) => sp ? (s.catches || []).filter(c => speciesInfo(c.species)?.name === sp).reduce((a, c) => a + (+c.count || 0), 0) : fishOf(s);
+
+// The species someone could score for: ones they've caught at least 3 of (up to 4), most-caught first.
+function biteChoices() {
+  if (demo) return [];
+  const n = {};
+  for (const s of state.sessions) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); }
+  return Object.entries(n).filter(([, k]) => k >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+}
+// Which one the score is for: their pick, or by default the fish they catch most (if it's a real share of the catch).
+function biteSpecies(choices) {
+  const set = state.settings.biteSpecies;
+  if (!choices.length || set === "all") return null;
+  if (set && choices.includes(set)) return set;
+  const total = state.sessions.reduce((a, s) => a + fishOf(s), 0), top = state.sessions.reduce((a, s) => a + fishFor(s, choices[0]), 0);
+  return total && top / total >= 0.4 ? choices[0] : null;
+}
+
+
+const lightOf = h => h == null ? null : h < 5 || h >= 21 ? "dark" : h < 9 || h >= 18 ? "low" : "day";
+const biteSky = s => { const k = s.wx?.sky || ((s.conditions || []).includes("Overcast") || (s.conditions || []).includes("Rain") ? "Overcast" : (s.conditions || []).includes("Sunny") ? "Sunny" : null); return k == null ? null : k === "Sunny" || k === "Clear" ? "clear" : "cloud"; };
+const windOf = k => k == null ? null : k < 6 ? "calm" : k <= 20 ? "light" : k <= 30 ? "breezy" : "strong";
+const tripWind = s => s.wx?.wind != null ? windOf(s.wx.wind) : (s.conditions || []).includes("Windy") ? "breezy" : (s.conditions || []).includes("Calm") ? "calm" : null;
+
+// How a bucket did in your log: fish per trip in that bucket vs all trips with that information.
+function personalEffect(bucketOf, current, sp) {
+  if (demo || current == null) return null;
+  const rows = state.sessions.map(s => ({ b: bucketOf(s), f: fishFor(s, sp) })).filter(x => x.b != null);
+  if (rows.length < 8) return null;
+  const inB = rows.filter(x => x.b === current); if (inB.length < 3) return null;
+  const avg = xs => xs.reduce((a, x) => a + x.f, 0) / xs.length, all = avg(rows), mine = avg(inB);
+  if (!all) return null;
+  return { p: Math.max(-15, Math.min(15, (mine / all - 1) * 20)), w: inB.length / (inB.length + 6), n: inB.length, mine, all };
+}
+
 function biteIndex(ctx) {
-  const d = []; const add = (v, label) => d.push({ v, label });
-  const { c, light, flow, model } = ctx;
-  if (light.golden) add(14, light.goldenLabel); else if (light.nearHrs <= 3) add(6, "Near dawn or dusk"); else if (light.dark) add(-6, "After dark");
-  if (c.dp3 != null && c.dp3 <= -3) add(12, "Pressure dropping fast"); else if (c.press === "Falling") add(9, "Falling pressure");
-  else if (c.press === "Steady") add(4, "Stable pressure"); else if (c.press === "Rising") add(-6, "Rising pressure");
-  if (c.temp != null) { if (c.temp >= 15 && c.temp <= 25) add(8, "Prime air temp"); else if (c.temp < 8 || c.temp > 30) add(-12, c.temp < 8 ? "Cold" : "Heat"); }
-  if (c.temp > 25 && light.midday) add(-8, "Midday heat");
-  if (flow) { if (flow.status === "High") add(flow.trend === "rising" ? -15 : -10, flow.trend === "rising" ? "High, rising water" : "High water"); else if (flow.status === "Low") add(-4, "Low water"); else add(5, "Normal river level"); }
-  if (c.wind != null) { if (c.wind >= 6 && c.wind <= 20) add(4, "Light chop"); else if (c.wind > 30) add(-10, "Strong wind"); }
-  if (c.sky === "Overcast") add(5, "Cloud cover");
-  if (model) add(Math.max(-15, Math.min(15, Math.round(model.delta))), model.label);
+  const { c, light, flow, model, sp, recentTemp } = ctx, d = [];
+  const unit = sp ? sp.toLowerCase() : "fish";
+  // A factor: a general default, blended with your log once it has evidence for the same conditions.
+  const factor = (def, label, bucketOf, current, what) => {
+    const e = bucketOf ? personalEffect(bucketOf, current, sp) : null;
+    const v = e ? Math.round(def * (1 - e.w) + e.p * e.w) : def;
+    const mine = !!e && e.w >= 0.4;
+    d.push({ v, label, mine, why: mine ? `Your log: ${e.mine.toFixed(1)} ${unit} per trip on ${what}, vs ${e.all.toFixed(1)} across your trips (${e.n} trips).` : null });
+  };
+  const lightNow = light.dark ? "dark" : light.golden || light.nearHrs <= 3 ? "low" : "day";
+  const lightBucket = s => lightOf(tripHour(s));
+  if (light.golden) factor(14, light.goldenLabel, lightBucket, "low", "dawn and dusk trips");
+  else if (lightNow === "low") factor(6, "Near dawn or dusk", lightBucket, "low", "dawn and dusk trips");
+  else if (lightNow === "dark") factor(-6, "After dark", lightBucket, "dark", "night trips");
+  else factor(0, "Daylight", lightBucket, "day", "daytime trips");
+  const pressBucket = s => s.wx?.trend || null;
+  if (c.dp3 != null && c.dp3 <= -3) factor(12, "Pressure dropping fast", pressBucket, "Falling", "falling-pressure trips");
+  else if (c.press === "Falling") factor(9, "Falling pressure", pressBucket, "Falling", "falling-pressure trips");
+  else if (c.press === "Steady") factor(4, "Stable pressure", pressBucket, "Steady", "steady-pressure trips");
+  else if (c.press === "Rising") factor(-6, "Rising pressure", pressBucket, "Rising", "rising-pressure trips");
+  // Temperature: for a chosen species, its comfort range (using the recent average, which water follows); otherwise air temp.
+  const info = sp ? SPECIES_TEMPS.map(([, n, lo, hi]) => ({ n, lo, hi })).find(x => x.n === sp) : null;
+  if (info && recentTemp != null) {
+    const t = recentTemp, off = t < info.lo ? info.lo - t : t > info.hi ? t - info.hi : 0, side = t < info.lo ? "cool" : "warm";
+    const why = `Temperatures here have averaged ${fmtT(r(t, 0))} lately, and water follows that. ${sp} feed best around ${fmtT(info.lo)}–${fmtT(info.hi)} water.`;
+    d.push(off === 0 ? { v: 10, label: `Good temps for ${unit}`, why } : off <= 4 ? { v: -3, label: `A bit ${side} for ${unit}`, why } : { v: -12, label: `Too ${side === "cool" ? "cold" : "warm"} for ${unit}`, why });
+  } else if (c.temp != null) {
+    if (c.temp >= 15 && c.temp <= 25) d.push({ v: 8, label: "Prime air temp" }); else if (c.temp < 8 || c.temp > 30) d.push({ v: -12, label: c.temp < 8 ? "Cold" : "Heat" });
+  }
+  if (c.temp > 25 && light.midday) d.push({ v: -8, label: "Midday heat" });
+  if (flow) {
+    const fb = waterLevelOf;
+    if (flow.status === "High") factor(flow.trend === "rising" ? -15 : -10, flow.trend === "rising" ? "High, rising water" : "High water", fb, "High", "high-water trips");
+    else if (flow.status === "Low") factor(-4, "Low water", fb, "Low", "low-water trips");
+    else factor(5, "Normal river level", fb, "Normal", "normal-water trips");
+  }
+  const w = windOf(c.wind);
+  if (w === "light") factor(4, "Light chop", tripWind, "light", "light-wind trips");
+  else if (w === "strong") factor(-10, "Strong wind", tripWind, "strong", "strong-wind trips");
+  else if (w) factor(0, w === "calm" ? "Calm" : "Breezy", tripWind, w, w === "calm" ? "calm trips" : "breezy trips");
+  if (c.sky === "Overcast" || c.sky === "Rain") factor(5, "Cloud cover", biteSky, "cloud", "overcast trips");
+  else if (c.sky) factor(0, "Clear skies", biteSky, "clear", "clear-sky trips");
+  if (model) d.push({ v: Math.max(-15, Math.min(15, Math.round(model.delta))), label: model.label });
   const score = Math.max(5, Math.min(98, Math.round(50 + d.reduce((a, x) => a + x.v, 0))));
   return { score, label: score >= 75 ? "Prime" : score >= 58 ? "Good" : score >= 40 ? "Fair" : "Slow", drivers: d.filter(x => x.v).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)) };
 }
@@ -139,7 +218,13 @@ function renderLive(status) {
     const { res, rows } = bestRanking(q);
     if (rows[0] && res.globalRate) model = { delta: (rows[0].est / res.globalRate - 1) * 25, label: `Your log: ${rows[0].water}`, top: rows[0] };
   }
-  const bi = biteIndex({ c, light, flow: wx.flow, model });
+  const choices = biteChoices(), sp = biteSpecies(choices);
+  const past = wx.hourly.filter(h => h.time <= now && h.time >= now - 48 * 36e5 && h.temp != null);
+  const recentTemp = past.length ? past.reduce((a, h) => a + h.temp, 0) / past.length : null;
+  const bi = biteIndex({ c, light, flow: wx.flow, model, sp, recentTemp });
+  // Phones show three chips: keep the strongest one learned from your log among them.
+  const mi = bi.drivers.findIndex(x => x.mine);
+  const chips = (mi > 2 ? [...bi.drivers.slice(0, 2), bi.drivers[mi], ...bi.drivers.filter((x, i) => i >= 2 && i !== mi)] : bi.drivers).slice(0, 5);
 
   // series
   const pSeries = slice(-24, 12, h => h.p), tSeries = slice(-6, 12, h => h.temp);
@@ -161,9 +246,12 @@ function renderLive(status) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ <span class="model-tag">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ ${choices.length ? `<select class="bite-sp" id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${choices.map(n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}<span class="model-tag${choices.length ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
-        <div class="drivers">${bi.drivers.slice(0, 5).map(x => `<span class="drv ${x.v > 0 ? "up" : "down"}">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</span>`).join("")}</div>
+        <div class="drivers">${chips.map(x => x.why
+          ? `<button type="button" class="drv ${x.v > 0 ? "up" : "down"}${x.mine ? " mine" : ""}" data-why="${esc(x.why)}" aria-expanded="false">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</button>`
+          : `<span class="drv ${x.v > 0 ? "up" : "down"}">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</span>`).join("")}</div>
+        <p class="drv-why" id="drvWhy" hidden></p>
       </div>
     </div>
     <div class="live-rest">
@@ -209,6 +297,14 @@ function renderLive(status) {
   </div>
   <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · Environment and Climate Change Canada · astronomical ephemeris.</div>`;
   $("liveRefresh").onclick = () => goLive(true);
+  // Tap a factor chip to see why (factors from your own log, and species temperatures).
+  box.querySelector(".drivers").onclick = e => {
+    const b = e.target.closest("[data-why]"); if (!b) return;
+    const why = $("drvWhy"), open = b.getAttribute("aria-expanded") === "true";
+    box.querySelectorAll(".drv[data-why]").forEach(x => x.setAttribute("aria-expanded", "false"));
+    why.hidden = open; why.textContent = open ? "" : b.dataset.why; if (!open) b.setAttribute("aria-expanded", "true");
+  };
+  const spSel = $("biteSp"); if (spSel) spSel.onchange = () => { state.settings.biteSpecies = spSel.value; save(); renderLive(); };
   const ch = $("liveChange"); if (ch) ch.onclick = () => { renderLive("town"); $("townIn").focus(); };
   countUp(box);
 }
