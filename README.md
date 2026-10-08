@@ -50,7 +50,7 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 
 ## Spots map and Pro waitlist
 
-- `map.js`: Trips → Map shows each water (sized by trips, coloured by fish per trip) and pinned spots on CARTO/OpenStreetMap tiles via Leaflet, loaded on first use. Waters without a location can be placed by tapping the map.
+- `map.js`: Trips → Map shows each water (sized by trips, coloured by fish per trip) and pinned spots on OpenStreetMap tiles via Leaflet, loaded on first use. Waters without a location can be placed by tapping the map.
 - `pro.js` + `functions/api/waitlist.js`: the fishr Pro waitlist. Sign-ups need a ticked consent box and are stored in R2 under `waitlist/`. Export them as CSV with `GET /api/waitlist?export=csv` and an `x-admin-key` header matching the `WAITLIST_KEY` environment variable.
 
 ## Admin, privacy and crash reports

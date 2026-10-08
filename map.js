@@ -53,12 +53,11 @@ async function renderMap() {
     map = L.map("spotsMap", { zoomControl: true, attributionControl: true }).setView([46.0, -66.6], 8);
     map.on("click", e => placeWater(e.latlng));
   }
-  const style = darkMode() ? "dark_all" : "light_all";
-  if (!tiles || tiles._style !== style) {
-    tiles?.remove();
-    tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`, { maxZoom: 19, subdomains: "abcd", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
-    tiles._style = style;
+  // OpenStreetMap's own tiles: free, no key. In dark mode a CSS filter turns them dark to match the app.
+  if (!tiles) {
+    tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
   }
+  $("spotsMap").classList.toggle("dark-tiles", darkMode());
   layer?.remove(); layer = L.layerGroup().addTo(map);
   const maxTrips = Math.max(1, ...placed.map(g => g.trips.length)), maxRate = Math.max(0.01, ...placed.map(g => g.rate));
   for (const g of placed) {
