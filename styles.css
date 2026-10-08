@@ -762,14 +762,19 @@ label.choice{cursor:pointer}
 .live-empty span{font-size:13px}
 .live-empty .btn-log{flex:none;padding:10px 14px;font-size:14px}
 /* Live conditions: Bite Index on top; the detail tiles become one swipeable row on phones */
-.live-rest{display:contents}
-@media (max-width:820px){
-  .live-grid{grid-template-columns:1fr}
-  .tile.bite{grid-column:auto}
-  .live-rest{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
-  .live-rest::-webkit-scrollbar{display:none}
-  .live-rest .tile{flex:0 0 68%;max-width:300px;scroll-snap-align:start}
-  .live-foot{display:none}
+/* Bite Index on its own row; the detail tiles sit in their own container below it.
+   Phones (the default): one swipeable row. Wide screens: a grid. No tile may span columns here,
+   or the grid quietly grows a second column (which is what squeezed the Bite Index on iPhone). */
+.live-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.live-grid > .tile{grid-column:auto!important}
+.live-rest{display:flex;flex-wrap:nowrap;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+.live-rest::-webkit-scrollbar{display:none}
+.live-rest > .tile{flex:0 0 68%;width:68%;max-width:300px;scroll-snap-align:start;grid-column:auto!important}
+.live-foot{display:none}
+@media (min-width:821px){
+  .live-rest{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;margin:0;padding:0}
+  .live-rest > .tile{width:auto;max-width:none}
+  .live-foot{display:block}
 }
 /* Top bar: four buttons fit on a phone once the Beta tag steps aside */
 @media (max-width:430px){.appbar .logo .pill{display:none}.top-actions{gap:6px}}
