@@ -523,8 +523,8 @@ $("saveNotes").onclick = () => { state.notes = $("notesText").value.split("\n").
 
 /* ---------- sample season ---------- */
 // The sample season is shown in place of your trips but never saved over them.
-async function loadSample() {
-  if (demo) return;
+async function loadSample(where) {
+  if (demo) { if (where) showSampleView(where); return; }
   try {
     // The showcase version has historical weather added on the server; fall back to the plain file.
     let data = null;
@@ -534,10 +534,16 @@ async function loadSample() {
     demo = { sessions: state.sessions, notes: state.notes, season: state.settings.season };
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
-    if (typeof showSampleCopilot === "function") showSampleCopilot(); else showTab("season");
-    let seen = false; try { seen = sessionStorage.getItem("ft-showcase") === "1"; sessionStorage.setItem("ft-showcase", "1"); } catch (e) {}
-    setSampleInfo(!seen);
+    showSampleView(where);
+    // Picked a tile on the welcome screen? They've read what this is, so keep the explainer closed.
+    setSampleInfo(!where);
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }
+}
+// Open the sample on the part of the app someone asked to see.
+function showSampleView(where) {
+  if (where === "patterns") showTab("patterns");
+  else if (where === "map") { showTab("log"); if (typeof setView === "function") setView("map"); }
+  else if (typeof showSampleCopilot === "function") showSampleCopilot(); else showTab("season");
 }
 function exitSample() {
   if (!demo) return;
@@ -545,8 +551,8 @@ function exitSample() {
   if (typeof resetAdviceInputs === "function") resetAdviceInputs();
   render(); window.scrollTo(0, 0);
 }
-$("welcomeSample").onclick = loadSample;
-$("topSample").onclick = loadSample;
+$("welcomeShowcase").addEventListener("click", e => { const t = e.target.closest("[data-sample]"); if (t) loadSample(t.dataset.sample); });
+$("topSample").onclick = () => loadSample();
 $("clearSample").onclick = exitSample;
 function setSampleInfo(open) { $("sampleInfo").hidden = !open; $("sampleInfoBtn").setAttribute("aria-expanded", open); }
 $("sampleInfoBtn").onclick = () => setSampleInfo($("sampleInfo").hidden);

@@ -79,10 +79,3 @@ function confetti() {
     } else { ind.style.transform = ""; ind.style.opacity = 0; ind.classList.remove("ready"); }
   });
 })();
-
-/* ---------- first visit: open the showcase sample so people see what fishr does ---------- */
-// Anyone without trips of their own lands in the sample season (Copilot, Bite Index, full Insights).
-// Once they log a trip, the app opens on their own log instead. Shared-catch links keep their own page.
-if (!state.sessions.length && !demo && !/^#catch=/.test(location.hash)) loadSample().finally(() => document.body.classList.remove("booting"));
-else document.body.classList.remove("booting");
-setTimeout(() => document.body.classList.remove("booting"), 4000); // never leave the welcome screen hidden

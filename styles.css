@@ -559,7 +559,6 @@ body{padding-top:0}
 p.showcase-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6}
 /* Dark map: invert OpenStreetMap's light tiles, then pull the colours back toward the app's navy */
 .spots-map.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55)}
-body.booting #welcome{visibility:hidden}
 
 /* ---------- fishr Cloud (Settings → Storage) ---------- */
 .set-group h3 .pill{margin-left:6px;vertical-align:2px;padding:4px 7px;font-size:10px}
@@ -574,3 +573,19 @@ body.booting #welcome{visibility:hidden}
 @keyframes syncPulse{50%{opacity:.35}}
 .set-group p.cloud-msg{color:var(--ink);font-size:13.5px;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--line-2)}
 .pro-feats b .pill{margin-left:6px;padding:3px 7px;font-size:9.5px;vertical-align:1px}
+
+/* ---------- welcome: the showcase card ---------- */
+.showcase{display:grid;gap:10px;padding:18px;border-radius:20px;border:1px solid var(--line-2);background:var(--glass)}
+.showcase .showcase-tag{justify-self:start}
+.showcase h2{margin:0;font-size:19px;font-weight:650;letter-spacing:-.02em;line-height:1.25}
+.welcome .showcase p{font-size:14px;line-height:1.5}
+.sc-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.sc-tile{display:grid;gap:3px;align-content:start;text-align:left;padding:12px 11px;border-radius:14px;border:1px solid var(--line-2);background:var(--glass-2);color:var(--ink);min-height:104px;transition:transform .15s,border-color .15s}
+.sc-tile:hover{border-color:var(--c)}
+.sc-tile:active{transform:scale(.97)}
+.sc-tile svg{width:20px;height:20px;color:var(--c);margin-bottom:4px}
+.sc-tile b{font-size:14.5px;font-weight:650;letter-spacing:-.01em}
+.sc-tile span{font-size:12.5px;line-height:1.35;color:var(--muted)}
+.welcome .showcase p.sc-fine{font-size:12px;color:var(--muted)}
+.text-link{background:none;border:0;padding:0;font:inherit;color:var(--ink);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+@media (max-width:360px){.sc-tiles{grid-template-columns:1fr}.sc-tile{min-height:0;grid-template-columns:24px auto 1fr;align-items:center;gap:8px}.sc-tile svg{margin:0}}

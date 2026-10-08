@@ -42,13 +42,14 @@ function mapGroups() {
 }
 
 async function renderMap() {
-  const wrap = $("mapWrap"); if (mapView !== "map") return;
+  if (mapView !== "map") return;
   const groups = mapGroups(), placed = groups.filter(g => g.lat != null), missing = groups.filter(g => g.lat == null);
   $("mapPlace").hidden = demo || !missing.length;
   $("mapPlaceSel").innerHTML = `<option value="">Choose a water…</option>` + missing.map(g => `<option>${esc(g.water)}</option>`).join("");
   $("mapNote").textContent = demo ? "Sample season: water locations are approximate." : missing.length ? `${missing.length} water${missing.length === 1 ? " has" : "s have"} no location yet.` : "";
   let L;
-  try { L = await loadLeaflet(); } catch (e) { wrap.innerHTML = `<p class="status">The map needs a connection to load.</p>`; return; }
+  // No signal: say so in the note and keep the map's controls in place for the next try.
+  try { L = await loadLeaflet(); } catch (e) { leafletP = null; $("mapNote").textContent = "The map needs a connection to load."; return; }
   if (!map) {
     map = L.map("spotsMap", { zoomControl: true, attributionControl: true }).setView([46.0, -66.6], 8);
     map.on("click", e => placeWater(e.latlng));

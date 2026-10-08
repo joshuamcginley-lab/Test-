@@ -64,6 +64,15 @@ async function signedIn(user) {
   if (demo) exitSample();
   sync = { user, cursor: 0, hashes: {}, photos: {} }; writeSync();
   account = user; renderCloud();
+
+// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
+$("welcomeCloud").hidden = !passkeysOK();
+$("welcomeSignIn").onclick = async () => {
+  const b = $("welcomeSignIn"); b.disabled = true;
+  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
+  catch (e) { toast(passkeyError(e)); }
+  finally { b.disabled = false; }
+};
   await syncNow();
   const n = realLog().sessions.length;
   cloudMsg(`Cloud is on. ${n} trip${n === 1 ? "" : "s"} synced.`);
@@ -77,6 +86,15 @@ function syncNow() {
   if (syncing) { again = true; return syncing; }
   syncing = runSync().catch(onSyncError).finally(() => { syncing = null; renderCloud(); if (again) { again = false; syncNow(); } });
   renderCloud();
+
+// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
+$("welcomeCloud").hidden = !passkeysOK();
+$("welcomeSignIn").onclick = async () => {
+  const b = $("welcomeSignIn"); b.disabled = true;
+  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
+  catch (e) { toast(passkeyError(e)); }
+  finally { b.disabled = false; }
+};
   return syncing;
 }
 function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, ms); }
@@ -252,6 +270,15 @@ $("segStore").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
   cloudPick = b.dataset.v === (cloudOn() ? "cloud" : "local") ? null : b.dataset.v;
   cloudMsg(""); renderCloud();
+
+// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
+$("welcomeCloud").hidden = !passkeysOK();
+$("welcomeSignIn").onclick = async () => {
+  const b = $("welcomeSignIn"); b.disabled = true;
+  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
+  catch (e) { toast(passkeyError(e)); }
+  finally { b.disabled = false; }
+};
 };
 $("cloudCreate").onclick = () => busy($("cloudCreate"), async () => { const d = await createPasskey(); cloudPick = null; await signedIn(d.user); });
 $("cloudSignIn").onclick = () => busy($("cloudSignIn"), async () => { const d = await usePasskey(); cloudPick = null; await signedIn(d.user); });
@@ -268,6 +295,15 @@ $("cloudDeleteYes").onclick = () => busy($("cloudDeleteYes"), async () => { awai
 // Refresh the account details whenever Settings opens.
 $("openSettings").addEventListener("click", () => {
   cloudPick = null; cloudMsg(""); $("cloudDeleteNo").onclick(); renderCloud();
+
+// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
+$("welcomeCloud").hidden = !passkeysOK();
+$("welcomeSignIn").onclick = async () => {
+  const b = $("welcomeSignIn"); b.disabled = true;
+  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
+  catch (e) { toast(passkeyError(e)); }
+  finally { b.disabled = false; }
+};
   if (cloudOn()) { api("/api/auth/me").then(d => { account = d.user; renderCloud(); }).catch(e => { if (e.status === 401) onSyncError(e); }); syncNow(); }
 });
 
@@ -283,3 +319,12 @@ addEventListener("storage", e => { if (e.key === SYNC_KEY) { sync = readSync(); 
 if (cloudOn()) syncNow();
 else if (/(^|;\s*)fishr_in=1/.test(document.cookie)) api("/api/auth/me").then(d => signedIn(d.user)).catch(() => {});
 renderCloud();
+
+// Welcome screen: "Already use fishr Cloud? Sign in" for a new phone.
+$("welcomeCloud").hidden = !passkeysOK();
+$("welcomeSignIn").onclick = async () => {
+  const b = $("welcomeSignIn"); b.disabled = true;
+  try { const d = await usePasskey(); await signedIn(d.user); const n = realLog().sessions.length; toast(`Signed in. ${n} trip${n === 1 ? "" : "s"} synced.`); }
+  catch (e) { toast(passkeyError(e)); }
+  finally { b.disabled = false; }
+};
