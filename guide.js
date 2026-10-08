@@ -81,6 +81,8 @@ document.addEventListener("keydown", e => { if (!guideEl.hidden && e.key === "Es
 addEventListener("resize", placeRing);
 addEventListener("scroll", () => { if (!guideEl.hidden) placeRing(); }, { passive: true });
 
-// "Start here" on the showcase's Copilot tile until someone has been through the guide.
-function markGuideSeen() { document.querySelector(".sc-tile.start-here")?.classList.remove("start-here"); }
+// "Start here" on the showcase's Copilot tile. During the beta it stays for everyone; after the beta,
+// set IN_BETA to false and it goes away once someone has been through the guide.
+const IN_BETA = true;
+function markGuideSeen() { if (!IN_BETA) document.querySelector(".sc-tile.start-here")?.classList.remove("start-here"); }
 try { if (localStorage.getItem(GUIDE_KEY) === "1") markGuideSeen(); } catch (e) {}
