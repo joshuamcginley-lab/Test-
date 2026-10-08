@@ -706,8 +706,9 @@ label.choice{cursor:pointer}
 .fid-choice .choice-icon svg{width:24px;height:24px;color:var(--c)}
 .fid-top{display:flex;align-items:center;gap:10px}
 .fid-top h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.03em}
-.fid-photo{border-radius:18px;overflow:hidden;background:var(--glass);border:1px solid var(--line);aspect-ratio:4/3;display:grid;place-items:center}
-.fid-photo img{width:100%;height:100%;object-fit:cover;display:block}
+/* Show the whole photo at its own shape (portrait or landscape), never cropped; tall ones are capped to fit the screen */
+.fid-photo{border-radius:18px;overflow:hidden;background:var(--glass);border:1px solid var(--line);display:grid;place-items:center;min-height:180px}
+.fid-photo img{display:block;max-width:100%;max-height:min(56vh,520px);width:auto;height:auto;object-fit:contain}
 .fid-photo img:not([src]){display:none}
 .fid-result{display:grid;gap:6px;min-height:64px}
 .fid-conf{justify-self:start;font:600 10.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line-2);color:var(--muted)}
@@ -727,3 +728,5 @@ label.choice{cursor:pointer}
 /* fishr ID buttons hold their own file input: invisible but still part of the page (iOS ignores display:none ones) */
 .fid-pick{position:relative;overflow:hidden}
 .fid-file{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.fid-photo{position:relative;isolation:isolate}
+.fid-photo::before{content:"";position:absolute;inset:-30px;background:var(--fid-bg,none) center/cover;filter:blur(28px) saturate(1.2) brightness(.85);opacity:.9;z-index:-1}

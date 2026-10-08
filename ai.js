@@ -103,11 +103,12 @@ document.addEventListener("change", e => {
 });
 async function runFishrId(f) {
   closeSheets(); $("scrim").hidden = false; $("fidSheet").hidden = false; $("fidSheet").scrollTop = 0;
-  $("fidLog").hidden = true; $("fidFoot").textContent = ""; $("fidImg").removeAttribute("src");
+  $("fidLog").hidden = true; $("fidFoot").textContent = ""; $("fidImg").removeAttribute("src"); $("fidImg").parentElement.style.removeProperty("--fid-bg");
   showFid(`<p class="fid-busy"><span class="fid-scan"></span>Identifying…</p>`);
   let blob;
   try { blob = await shrinkPhoto(f); } catch (err) { showFid(`<p class="fid-err">Couldn't read that image. Try a JPEG or PNG.</p>`); return; }
-  $("fidImg").src = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  $("fidImg").src = url; $("fidImg").parentElement.style.setProperty("--fid-bg", `url("${url}")`);
   fid = { blob };
   try {
     const d = await identify(blob);
