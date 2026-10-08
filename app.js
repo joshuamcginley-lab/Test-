@@ -541,6 +541,7 @@ async function loadSample(where) {
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
     showSampleView(where);
+    if (where === "advice" && typeof maybeGuide === "function") maybeGuide(); // first look at Copilot: how it works
     // Picked a tile on the welcome screen? They've read what this is, so keep the explainer closed.
     setSampleInfo(!where);
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }
