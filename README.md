@@ -34,7 +34,7 @@ Then open http://localhost:8000.
 
 Hosted on Cloudflare Pages. It's a static site with no build step: framework preset None, build command empty, output directory `/`. `_headers` sets caching for the offline worker.
 
-When you change `app.js` or `styles.css`, bump `VERSION` in `sw.js` so installed copies pick up the update.
+When you change any script or `styles.css`, bump `VERSION` in `sw.js` and the matching `?v=` on every script and stylesheet link in `index.html` and in the `APP` list in `sw.js`, so a page only ever loads scripts from its own release. `tests/unit/scripts.test.mjs` fails if they disagree.
 
 ## Shared catch links (server)
 

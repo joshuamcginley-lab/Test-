@@ -25,4 +25,18 @@ for (const s of srcs) {
 try { new vm.Script(srcs.map(s => fs.readFileSync(ROOT + s, "utf8")).join("\n;\n"), { filename: "all-scripts.js" }); ok(true, "combined"); }
 catch (e) { ok(false, "scripts don't load together: " + e.message); }
 
+// Every script and the stylesheet carry the release number, and the offline cache stores those exact URLs. Without
+// it, a phone on a weak signal can get the new page with an old cached script, which crashes before the welcome
+// screen shows (that happened when the top-bar Sample button was removed).
+{
+  const sw = fs.readFileSync(ROOT + "sw.js", "utf8"), v = sw.match(/VERSION = "fishr-v(\d+)"/)?.[1];
+  ok(v, "sw.js has a numbered VERSION");
+  const assets = [...html.matchAll(/<(?:script[^>]*\ssrc|link[^>]*rel="stylesheet"[^>]*\shref)="([^"]+)"/g)].map(m => m[1]).filter(u => !/^https?:/.test(u));
+  ok(assets.length >= 13, "found scripts and stylesheet: " + assets.length);
+  for (const a of assets) {
+    ok(a.endsWith(`?v=${v}`), `${a} carries ?v=${v} (bump it with the service worker VERSION)`);
+    ok(sw.includes(`"${a}"`), `sw.js caches ${a}`);
+  }
+}
+
 console.log(`${pass} passed, ${failN} failed`);
