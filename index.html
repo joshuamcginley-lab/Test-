@@ -40,7 +40,7 @@
   </div>
 </section>
 <header class="appbar" id="appbar"><div class="wrap appbar-in">
-  <div class="logo"><img class="mark" src="icons/mark-128.png" alt="" width="30" height="30"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
+  <a class="logo" id="homeLink" href="./" aria-label="fishr.ai home"><img class="mark" src="icons/mark-128.png" alt="" width="30" height="30"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></a>
   <div class="top-actions">
     <button type="button" class="chip-btn" id="topSample" title="See a sample season"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Sample</span></button>
     <button type="button" class="chip-btn pro-btn" id="topPro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><span>Pro</span></button>
@@ -55,22 +55,27 @@
       <div class="hero-mark"><img src="icons/mark-512.png" alt="" width="132" height="132"></div>
       <span class="pill live">Bite Intelligence™ is live</span>
       <h1><span class="own" id="ownerLine" hidden>Your workspace</span><span class="grad-text">Know where they're biting.</span></h1>
-      <p class="cr" id="tagline">Your AI fishing copilot. Log trips, train your model, get the call.</p>
+      <p class="cr" id="tagline">The AI fishing copilot <b>trained on you</b>. It learns your waters, your local conditions and how you fish, then tells you where to go next.</p>
+      <ul class="hero-chips" aria-label="What fishr learns">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Your waters</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z"/></svg>Your weather</li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>Your habits</li>
+      </ul>
     </div>
     <button type="button" class="choice primary-choice" id="welcomeNew">
       <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
-      <span><b>Log your first trip</b><span>Takes under a minute. Skunks count.</span></span>
+      <span><b>Start training your model</b><span>Log your first trip. Under a minute, and skunks count.</span></span>
     </button>
     <section class="showcase" id="welcomeShowcase" aria-labelledby="scTitle">
       <span class="showcase-tag">Showcase</span>
-      <h2 id="scTitle">See what fishr does with a full season</h2>
-      <p>47 real trips from one New Brunswick angler's 2026 season. Tap in and look around: everything works.</p>
+      <h2 id="scTitle">One angler. 47 trips. A model that knows the water.</h2>
+      <p>A real 2026 season in New Brunswick, fed into fishr. It learned the rivers, the lures that worked and the weather that switches the bite on. <b>Yours learns the same way.</b></p>
       <div class="sc-tiles">
         <button type="button" class="sc-tile" data-sample="advice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg><b>Copilot</b><span>Where and when to fish today</span></button>
         <button type="button" class="sc-tile" data-sample="patterns"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><b>Insights</b><span>What actually worked</span></button>
         <button type="button" class="sc-tile" data-sample="map"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b>Spots map</b><span>Every water, ranked</span></button>
       </div>
-      <p class="sc-fine">Sample data with historical weather added. It's never saved or mixed with your log.</p>
+      <p class="sc-fine">Tap in and look around: everything works. Sample data with historical weather added; it's never mixed with your log.</p>
     </section>
     <p class="welcome-note">Your trips stay on this phone unless you turn on Cloud. Works with no signal. <a href="privacy.html">Privacy</a></p>
     <p class="welcome-note" id="welcomeCloud">Already use fishr Cloud? <button type="button" class="text-link" id="welcomeSignIn">Sign in with your passkey</button></p>

@@ -425,6 +425,12 @@ function openSheet(s) {
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
   if (typeof onSheetOpen === "function") onSheetOpen(s);
 }
+// The logo goes home: out of the sample to the welcome screen, or to Copilot on your own log.
+$("homeLink").addEventListener("click", e => {
+  e.preventDefault(); closeSheets(); closeViewer();
+  if (demo) exitSample(); else if (state.sessions.length) showTab("advice");
+  window.scrollTo(0, 0);
+});
 function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; editingId = null; }
 function startNewTrip() { if (demo) exitSample(); openSheet(null); }
 $("openNew").onclick = startNewTrip;
@@ -560,8 +566,8 @@ $("sampleInfoClose").onclick = () => setSampleInfo(false);
 $("sampleStart").onclick = () => { setSampleInfo(false); startNewTrip(); };
 
 /* ---------- settings ---------- */
+// Settings opens over whatever is on screen (the sample included), so closing it goes back there.
 $("openSettings").onclick = () => {
-  if (demo) exitSample();
   $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
   $("wipeBtn").hidden = false; $("wipeConfirm").hidden = true; $("backupMsg").hidden = true;
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;
@@ -586,13 +592,14 @@ const stamp = () => new Date().toISOString().slice(0, 10);
 const toDataURL = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
 $("exportJson").onclick = async () => {
   const photos = {};
-  for (const id of state.sessions.flatMap(photoIdsOf)) { const b = await photoGet(id).catch(() => null); if (b) photos[id] = await toDataURL(b); }
-  download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "fishr.ai", version: 2, exportedAt: new Date().toISOString(), ...state, photos }), "application/json");
+  const own = demo || state; // the person's own log, even while the sample is on screen
+  for (const id of own.sessions.flatMap(photoIdsOf)) { const b = await photoGet(id).catch(() => null); if (b) photos[id] = await toDataURL(b); }
+  download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "fishr.ai", version: 2, exportedAt: new Date().toISOString(), ...state, sessions: own.sessions, notes: own.notes, settings: { ...state.settings, season: demo ? demo.season : state.settings.season }, photos }), "application/json");
 };
 $("exportCsv").onclick = () => {
   const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const rows = [["Date", "Start", "End", "Water", "Spot", "Latitude", "Longitude", "Temp low (°C)", "Temp high (°C)", "Method", "Conditions", "Combo", "Species", "Count", "Weight each (lb)", "Length (in)", "Lure", "Has photo", "Lures used", "Notes"]];
-  for (const s of [...state.sessions].sort((a, b) => a.date.localeCompare(b.date))) {
+  for (const s of [...(demo || state).sessions].sort((a, b) => a.date.localeCompare(b.date))) {
     const base = [s.date, s.start, s.end, s.water, s.spot, s.lat, s.lon, s.tempLow, s.tempHigh, s.method, (s.conditions || []).join("; "), s.combo];
     const tail = [s.lureText, s.notes];
     if (!(s.catches || []).length) rows.push([...base, "(skunked)", 0, "", "", "", "", ...tail]);
@@ -602,6 +609,7 @@ $("exportCsv").onclick = () => {
 };
 $("importFile").addEventListener("change", async e => {
   const f = e.target.files[0]; if (!f) return;
+  if (demo) exitSample();
   try {
     const data = JSON.parse(await f.text());
     if (!Array.isArray(data.sessions)) throw new Error("not a backup");
@@ -619,7 +627,7 @@ $("importFile").addEventListener("change", async e => {
   e.target.value = "";
 });
 $("wipeBtn").onclick = () => { $("wipeBtn").hidden = true; $("wipeConfirm").hidden = false; };
-$("wipeYes").onclick = () => { state.sessions = []; state.notes = []; save(); photoClear().catch(() => {}); photoUrls.clear(); closeSheets(); render(); toast("All trips deleted"); };
+$("wipeYes").onclick = () => { if (demo) exitSample(); state.sessions = []; state.notes = []; save(); photoClear().catch(() => {}); photoUrls.clear(); closeSheets(); render(); toast("All trips deleted"); };
 
 /* ---------- install ---------- */
 let installEvt = null;

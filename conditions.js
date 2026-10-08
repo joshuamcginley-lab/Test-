@@ -122,7 +122,7 @@ $("fWaterIn").addEventListener("change", () => { if (!formCond.wx && coordsForWa
 /* ---------- add weather to past trips ---------- */
 $("backfillWx").onclick = async () => {
   const msg = $("backfillMsg"); msg.hidden = false;
-  if (demo) { msg.textContent = "Exit the sample first."; return; }
+  if (demo) exitSample(); // this works on the person's own trips
   const todo = state.sessions.filter(s => !s.wx && s.date <= ymd(new Date()));
   if (!todo.length) { msg.textContent = "Every trip already has weather."; return; }
   let home = state.settings.home;
