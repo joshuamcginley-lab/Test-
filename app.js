@@ -328,7 +328,7 @@ function catchRow(c = {}) {
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
   <label class="field lu"><span class="label">Lure</span><input class="c-lu" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
-  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" hidden><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>Identify fish</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
+  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" hidden><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
   speciesPicker(d.querySelector(".combo"));
   const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
@@ -341,6 +341,7 @@ function catchRow(c = {}) {
     try { d._photoBlob = await shrinkPhoto(f); d.dataset.photoRemoved = ""; showThumb(URL.createObjectURL(d._photoBlob)); msg.textContent = ""; if (typeof onPhotoReady === "function") onPhotoReady(d); }
     catch (err) { msg.textContent = "Couldn't read that image. Try a JPEG or PNG."; }
   });
+  d.setPhoto = blob => { d._photoBlob = blob; d.dataset.photoRemoved = ""; showThumb(URL.createObjectURL(blob)); };
   rm.onclick = () => { d._photoBlob = null; d.dataset.photoRemoved = "1"; showThumb(null); msg.textContent = ""; };
   if (c.size) d.dataset.size = c.size;
   if (c.lb != null) d.dataset.lb = c.lb;
@@ -432,7 +433,7 @@ $("homeLink").addEventListener("click", e => {
   if (demo) exitSample(); else if (state.sessions.length) showTab("advice");
   window.scrollTo(0, 0);
 });
-function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; editingId = null; }
+function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; $("fidSheet").hidden = true; editingId = null; }
 function startNewTrip() { if (demo) exitSample(); openSheet(null); }
 $("openNew").onclick = startNewTrip;
 $("dockLog").onclick = startNewTrip;

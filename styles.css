@@ -690,3 +690,36 @@ body.guiding .dock{visibility:hidden}
 .c-photo .photo-msg{flex-basis:100%}
 .c-photo .photo-msg:empty{display:none}
 @media (max-width:360px){.appbar .logo .pill{display:none}.top-actions{gap:6px}}
+
+/* ---------- fishr ID ---------- */
+.fid-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--grad);color:var(--on-grad);flex:none}
+.fid-ico svg{width:21px;height:21px}
+.fid-card{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;margin:0 0 16px;padding:16px;border-radius:20px;border:1px solid var(--line-2);background:var(--glass)}
+.fid-card[hidden]{display:none}
+.fid-card h2{margin:0;font-size:17px;font-weight:650;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.fid-card h2 .pill{padding:4px 7px;font-size:10px}
+.fid-card p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.fid-card label.btn{cursor:pointer;white-space:nowrap}
+@media (max-width:420px){.fid-card{grid-template-columns:40px 1fr}.fid-card label.btn{grid-column:1/-1;justify-content:center;text-align:center}}
+label.choice{cursor:pointer}
+.fid-choice[hidden]{display:none}
+.fid-choice .choice-icon svg{width:24px;height:24px;color:var(--c)}
+.fid-top{display:flex;align-items:center;gap:10px}
+.fid-top h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.03em}
+.fid-photo{border-radius:18px;overflow:hidden;background:var(--glass);border:1px solid var(--line);aspect-ratio:4/3;display:grid;place-items:center}
+.fid-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.fid-photo img:not([src]){display:none}
+.fid-result{display:grid;gap:6px;min-height:64px}
+.fid-conf{justify-self:start;font:600 10.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line-2);color:var(--muted)}
+.fid-conf.high{color:var(--v);border-color:color-mix(in srgb,var(--v) 40%,transparent)}
+.fid-conf.medium{color:var(--warn)}
+.fid-name{margin:0;font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fid-why,.fid-alts{margin:0;font-size:14px;color:var(--muted)}
+.fid-err{margin:0;font-size:15px;color:var(--ink)}
+.fid-busy{margin:0;display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
+.fid-scan{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--v);animation:spin .8s linear infinite}
+.fid-actions{display:flex;flex-wrap:wrap;gap:8px}
+.fid-actions label.btn{cursor:pointer}
+.fid-actions .btn[hidden]{display:none}
+.fid-foot{margin:0;font:500 11px/1.5 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fid-foot:empty{display:none}

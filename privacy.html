@@ -47,9 +47,9 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
   <p>Signing in sets one cookie that keeps you signed in on that device for up to a year. It's only used to recognize your account, never for tracking or ads.</p>
   <p>Your cloud data is stored on Cloudflare's servers in eastern North America, which may be in the United States, and only you can read it. Photos are stored privately and are not public links. <b>Delete cloud account</b> in Settings erases your account, trips, notes, settings and photos from our servers right away; Cloudflare's automatic database recovery copies expire within 30 days. Trips on your devices stay there.</p>
 
-  <h2 id="ai">Ask fishr and Photo ID (optional)</h2>
-  <p>These features use Claude, an AI model made by <b>Anthropic</b>. When you ask a question, we send Anthropic your question, your earlier questions in that conversation, the conditions on your Copilot screen, and your fishing log from fishr Cloud (trips, catches, waters and spots by name, lures, weather and notes; not GPS coordinates). When you use Photo ID, we send that photo. Anthropic uses this only to produce the answer and does not train its models on it. We don't keep your questions, the answers or the photo; we only count how many you've used today.</p>
-  <p>Questions about the showcase season don't need an account. To keep them to a few a day per visitor, we count them by a scrambled (hashed) form of your IP address, never the address itself, and delete the counts after a week.</p>
+  <h2 id="ai">Ask fishr and fishr ID (optional)</h2>
+  <p>These features use Claude, an AI model made by <b>Anthropic</b>. When you ask a question, we send Anthropic your question, your earlier questions in that conversation, the conditions on your Copilot screen, and your fishing log from fishr Cloud (trips, catches, waters and spots by name, lures, weather and notes; not GPS coordinates). When you use fishr ID, we send that photo. Anthropic uses this only to produce the answer and does not train its models on it. We don't keep your questions, the answers or the photo; we only count how many you've used today.</p>
+  <p>Questions about the showcase season, and a few fishr IDs a day, don't need an account. To keep them to a few a day per visitor, we count them by a scrambled (hashed) form of your IP address, never the address itself, and delete the counts after a week.</p>
   <h2>What reaches our servers, and why</h2>
   <div class="wrap"><table>
     <tr><th>What</th><th>When</th><th>Why, and how long we keep it</th></tr>
@@ -58,14 +58,14 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
     <tr><td>Your approximate location (rounded to about 100 m)</td><td>When the app looks up the nearest river gauge</td><td>To find the gauge. Used for that request and not stored.</td></tr>
     <tr><td>Crash reports: the error message, which file and line, your browser type, screen size and country</td><td>Only if the app hits an error</td><td>To fix bugs. No trips, photos, location or contact details are included. Deleted after 90 days.</td></tr>
     <tr><td>Your fishing log, photos, settings and a passkey public key</td><td>Only if you turn on fishr Cloud</td><td>To back up and sync your log between your devices. Kept until you delete your cloud account in Settings. <a href="#cloud">Details</a></td></tr>
-    <tr><td>Your question, your log and current conditions, or a fish photo</td><td>Only when you use Ask fishr or Photo ID</td><td>Sent to Anthropic to produce the answer, then discarded. We keep only a daily count. <a href="#ai">Details</a></td></tr>
+    <tr><td>Your question, your log and current conditions, or a fish photo</td><td>Only when you use Ask fishr or fishr ID</td><td>Sent to Anthropic to produce the answer, then discarded. We keep only a daily count. <a href="#ai">Details</a></td></tr>
     <tr><td>Anonymous visit counts</td><td>When you open the app</td><td>Cloudflare Web Analytics, which uses no cookies and doesn't track you across sites.</td></tr>
   </table></div>
 
   <h2>Services the app connects to</h2>
   <ul>
     <li><b>Cloudflare</b> hosts the app and stores fishr Cloud accounts, shared catches, the waitlist and crash reports.</li>
-    <li><b>Anthropic</b> runs the Claude AI model behind Ask fishr and Photo ID.</li>
+    <li><b>Anthropic</b> runs the Claude AI model behind Ask fishr and fishr ID.</li>
     <li><b>Open-Meteo</b> provides weather, pressure and forecasts. Your phone sends it approximate coordinates to get local weather.</li>
     <li><b>Environment and Climate Change Canada</b> provides river gauge data, fetched by our server.</li>
     <li><b>OpenStreetMap</b> provides map tiles when you open the map.</li>

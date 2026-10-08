@@ -1,7 +1,8 @@
 "use strict";
-/* fishr AI in the app: Ask fishr on Copilot, and Photo ID on the log form. Both go through our /api/ai endpoints,
-   which call Claude. Free during the beta with a fishr Cloud account (a few questions a day each); the showcase
-   season can be asked about without an account. Uses globals from app.js, forecast.js and cloud.js. */
+/* fishr AI in the app: Ask fishr on Copilot, and fishr ID (name the fish in a photo) from Copilot, the welcome
+   screen or the log form. Both go through our /api/ai endpoints,
+   which call Claude. Free during the beta: fishr Cloud accounts get a few a day, and anyone can ask about the
+   showcase season or try a few fishr IDs without an account. Uses globals from app.js, forecast.js and cloud.js. */
 
 const ASK_CHIPS = {
   own: ["Where should I fish today?", "What's my best lure right now?", "When do I catch the most fish?"],
@@ -40,7 +41,7 @@ function renderAsk() {
   if (gated) delete askInfo.own;
   if (!gated && !info) askStatus(mode);
   else if (gated && !askInfo.sample) askStatus("sample"); // just to learn whether fishr AI is switched on
-  box.hidden = aiOff;
+  box.hidden = $("fidCard").hidden = $("fidChoice").hidden = aiOff;
   if (aiOff) return;
   $("askSub").textContent = own ? "Answers from your log and today's conditions." : "Ask about this showcase season. Answers come from its 47 trips.";
   $("askGate").hidden = !gated; $("askForm").hidden = gated;
@@ -84,20 +85,62 @@ $("askCloud").onclick = () => {
 { const _renderForAsk = render; render = function () { _renderForAsk(); renderAsk(); }; }
 renderAsk();
 
-/* ---------- Photo ID on the log form ---------- */
+/* ---------- fishr ID ---------- */
 const blobToB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+const identify = async blob => api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" });
+const fidLeft = d => d.left == null ? "" : cloudOn()
+  ? `${d.left} fishr ID${d.left === 1 ? "" : "s"} left today · Powered by Claude`
+  : `${d.left} free fishr ID${d.left === 1 ? "" : "s"} left today. fishr Cloud (free) gets you more. · Powered by Claude`;
 
+// The fishr ID sheet: pick or take a photo from anywhere, see the species, then log it as a catch.
+let fid = null; // { blob, species, isFish }
+function showFid(html) { $("fidResult").innerHTML = html; }
+$("fidFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  closeSheets(); $("scrim").hidden = false; $("fidSheet").hidden = false; $("fidSheet").scrollTop = 0;
+  $("fidLog").hidden = true; $("fidFoot").textContent = ""; $("fidImg").removeAttribute("src");
+  showFid(`<p class="fid-busy"><span class="fid-scan"></span>Identifying…</p>`);
+  let blob;
+  try { blob = await shrinkPhoto(f); } catch (err) { showFid(`<p class="fid-err">Couldn't read that image. Try a JPEG or PNG.</p>`); return; }
+  $("fidImg").src = URL.createObjectURL(blob);
+  fid = { blob };
+  try {
+    const d = await identify(blob);
+    fid = { blob, species: d.species, isFish: d.isFish };
+    if (!d.isFish) showFid(`<p class="fid-err">That doesn't look like a fish. Try a clearer shot of the whole fish.</p>`);
+    else showFid(`<span class="fid-conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span><h3 class="fid-name" id="fidName">${esc(d.species)}</h3>`
+      + (d.reason ? `<p class="fid-why">${esc(d.reason)}</p>` : "")
+      + (d.alternatives.length ? `<p class="fid-alts">Could also be: ${d.alternatives.map(a => `<button type="button" class="text-link fid-alt">${esc(a)}</button>`).join(", ")}</p>` : ""));
+    $("fidLog").hidden = !d.isFish;
+    $("fidFoot").textContent = fidLeft(d);
+  } catch (err) {
+    if (err.status === 401) onSyncError(err);
+    showFid(`<p class="fid-err">${esc(err.message || "Couldn't identify that photo.")}</p>`);
+  }
+});
+$("fidResult").addEventListener("click", e => {
+  const b = e.target.closest(".fid-alt"); if (!b || !fid) return;
+  const was = fid.species; fid.species = b.textContent; $("fidName").textContent = fid.species; b.textContent = was;
+});
+$("fidClose").onclick = closeSheets;
+$("fidLog").onclick = () => {
+  if (!fid?.isFish) return;
+  const { blob, species } = fid;
+  closeSheets(); startNewTrip();
+  const row = $("catchRows").querySelector(".catch-row"); if (!row) return;
+  row.querySelector(".c-sp").value = species; row.setPhoto(blob);
+  row.querySelector(".photo-msg").innerHTML = `<span class="id-hit">Identified by fishr ID: <b>${esc(species)}</b></span>`;
+};
+
+/* ---------- fishr ID on each catch in the log form ---------- */
 async function identifyFish(row, auto) {
   const msg = row.querySelector(".photo-msg"), btn = row.querySelector(".id-photo");
-  if (!cloudOn()) {
-    if (!auto) msg.textContent = "Photo ID is free in the beta with a fishr Cloud account. Turn it on in Settings → Storage.";
-    return;
-  }
+  if (auto && !cloudOn()) return; // without Cloud, it only runs when tapped (it counts toward the free tries)
   const blob = row._photoBlob || (row.dataset.photo && !row.dataset.photoRemoved ? await photoGet(row.dataset.photo).catch(() => null) : null);
   if (!blob) return;
   btn.disabled = true; btn.classList.add("busy"); msg.textContent = "Identifying…";
   try {
-    const d = await api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" });
+    const d = await identify(blob);
     if (!d.isFish) { msg.textContent = "That doesn't look like a fish. Try a clearer shot."; return; }
     row.querySelector(".c-sp").value = d.species;
     msg.innerHTML = `<span class="id-hit"><b>${esc(d.species)}</b> · ${esc(d.confidence)} confidence${d.alternatives.length ? `. Or: ${d.alternatives.map(a => `<button type="button" class="text-link id-alt">${esc(a)}</button>`).join(", ")}` : ""}</span>${d.reason ? `<span class="id-why">${esc(d.reason)}</span>` : ""}`;

@@ -1,4 +1,4 @@
-// fishr AI (Ask fishr and Photo ID): the Claude client, daily allowances, and turning a fishing log into prompt text.
+// fishr AI (Ask fishr and fishr ID): the Claude client, daily allowances, and turning a fishing log into prompt text.
 // Needs the ANTHROPIC_API_KEY secret in Cloudflare. Usage is counted per account per day in D1 (table ai_usage).
 import Anthropic from "./_vendor/anthropic-sdk.js";
 import { db, fail } from "./_auth.js";
@@ -27,6 +27,7 @@ const int = (v, d) => { const n = Number.parseInt(v, 10); return Number.isFinite
 export function allowance(env, kind, plan) {
   const pro = plan === "pro";
   if (kind === "sample") return int(env.AI_DAILY_SAMPLE, 3);
+  if (kind === "idguest") return int(env.AI_DAILY_ID_GUEST, 3);
   if (kind === "chat") return pro ? int(env.AI_DAILY_CHAT_PRO, 50) : int(env.AI_DAILY_CHAT, 5);
   return pro ? int(env.AI_DAILY_PHOTO_PRO, 100) : int(env.AI_DAILY_PHOTO, 10);
 }
@@ -52,7 +53,8 @@ export async function takeOne(env, who, kind, limit) {
   const mine = await bump(who, kind);
   if (mine.n > limit) {
     await Promise.all([drop("*", "all"), drop(who, kind)]);
-    fail(kind === "photo" ? `That's all ${limit} photo IDs for today. More tomorrow.` : `That's all ${limit} questions for today. More tomorrow.`, 429);
+    fail(kind === "idguest" ? `That's today's ${limit} free fishr IDs. Turn on fishr Cloud (free) for more.`
+      : kind === "photo" ? `That's all ${limit} fishr IDs for today. More tomorrow.` : `That's all ${limit} questions for today. More tomorrow.`, 429);
   }
   return { left: limit - mine.n, release: () => Promise.all([drop("*", "all"), drop(who, kind)]) };
 }
@@ -113,7 +115,7 @@ export function conditionsText(c) {
   return lines.join("\n") || "No current conditions were sent.";
 }
 
-// Names the species picker uses, so Photo ID fills in a name the log already knows.
+// Names the species picker uses, so fishr ID fills in a name the log already knows.
 export const SPECIES = ["Smallmouth bass", "Largemouth bass", "Spotted bass", "Striped bass", "White bass", "Rock bass", "Brook trout", "Rainbow trout", "Brown trout", "Lake trout",
   "Cutthroat trout", "Steelhead", "Atlantic salmon", "Chinook salmon", "Coho salmon", "Sockeye salmon", "Pink salmon", "Arctic char", "Splake", "Northern pike", "Muskie", "Tiger muskie",
   "Pickerel", "Walleye", "Sauger", "Yellow perch", "White perch", "Bluegill", "Pumpkinseed", "Black crappie", "White crappie", "Redear sunfish", "Green sunfish", "Channel catfish",

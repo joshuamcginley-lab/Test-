@@ -1,8 +1,10 @@
-// Photo ID: POST /api/ai/identify { image: <base64 JPEG/PNG/WebP>, type } -> { isFish, species, confidence, alternatives, reason, left }
-// Needs a fishr Cloud account (free during the beta, with a daily allowance). The photo isn't stored.
+// fishr ID: name the fish in a photo. The photo isn't stored.
+// GET  /api/ai/identify -> { left, limit, signedIn }   today's allowance
+// POST /api/ai/identify { image: <base64 JPEG/PNG/WebP>, type } -> { isFish, species, confidence, alternatives, reason, left }
+// Anyone can try a few a day (counted by hashed IP); fishr Cloud accounts get more.
 import { json } from "../../_lib.js";
-import { handle, fail, requireUser } from "../../_auth.js";
-import { MODEL, claude, aiError, textOf, allowance, requireAI, takeOne, SPECIES } from "../../_ai.js";
+import { handle, fail, currentUser } from "../../_auth.js";
+import { MODEL, claude, aiError, textOf, allowance, requireAI, usedToday, takeOne, visitorId, SPECIES } from "../../_ai.js";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_B64 = 3_000_000; // about 2.2 MB of image; the app sends ~1600 px JPEGs well under this
@@ -25,6 +27,20 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
+async function who(request, env) {
+  const user = await currentUser(request, env);
+  if (!user) return { who: await visitorId(request), kind: "idguest", limit: allowance(env, "idguest") };
+  requireAI(user, env);
+  return { user, who: user.id, kind: "photo", limit: allowance(env, "photo", user.plan) };
+}
+
+export async function onRequestGet({ request, env }) {
+  return handle(async () => {
+    const a = await who(request, env);
+    return json({ signedIn: !!a.user, limit: a.limit, left: Math.max(0, a.limit - await usedToday(env, a.who, a.kind)), ready: !!env.ANTHROPIC_API_KEY });
+  });
+}
+
 export async function onRequestPost({ request, env }) {
   return handle(async () => {
     if (!(request.headers.get("content-type") || "").includes("application/json")) fail("Send JSON.", 415);
@@ -33,8 +49,8 @@ export async function onRequestPost({ request, env }) {
     if (!TYPES.includes(type)) fail("Photos must be JPEG, PNG or WebP.", 415);
     if (!image || image.length > MAX_B64 || !/^[A-Za-z0-9+/]+=*$/.test(image)) fail("That photo couldn't be read. Try another.", 400);
     const ai = claude(env);
-    const user = await requireUser(request, env); requireAI(user, env);
-    const { left, release } = await takeOne(env, user.id, "photo", allowance(env, "photo", user.plan));
+    const a = await who(request, env);
+    const { left, release } = await takeOne(env, a.who, a.kind, a.limit);
     let msg;
     try {
       msg = await ai.messages.create({
