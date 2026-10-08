@@ -42,6 +42,7 @@
   <div class="topbar">
     <div class="logo"><img class="mark" src="icons/mark-128.png" alt="" width="28" height="28"><span>fishr<span class="tld">.ai</span></span><span class="pill beta">Beta</span></div>
     <div class="top-actions">
+      <button type="button" class="btn sm pro-btn" id="topPro">✦ Pro</button>
       <button type="button" class="btn sm" id="topSample">👀 Sample season</button>
       <div class="season-pick"><label for="seasonSel">Season</label><select id="seasonSel"></select></div>
       <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
@@ -89,6 +90,7 @@
     <div id="panel-advice" role="tabpanel" hidden>
       <section class="live" id="live" aria-live="polite"></section>
       <div id="advice"></div>
+      <button type="button" class="pro-banner" id="copilotPro"><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Ask fishr AI chat, Photo ID, Bite alerts and cloud sync.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
       <summary><span>Adjust model inputs</span><span class="more-hint">plan a different time, temperature or conditions</span></summary>
       <div class="more-in">
@@ -135,6 +137,17 @@
     </div>
 
     <div id="panel-log" role="tabpanel" hidden>
+      <div class="seg view-seg" id="viewSeg"><button type="button" data-v="list" aria-pressed="true">List</button><button type="button" data-v="map" aria-pressed="false">Map</button></div>
+      <div id="mapWrap" hidden>
+        <div class="map-place" id="mapPlace" hidden>
+          <span>Place a water on the map:</span>
+          <select id="mapPlaceSel" aria-label="Water to place"></select>
+          <span class="photo-msg" id="mapHint" hidden>Now tap its location on the map.</span>
+        </div>
+        <div id="spotsMap" class="spots-map" role="region" aria-label="Map of your fishing spots"></div>
+        <div class="map-legend"><span><i style="background:#C4FF2E"></i>Most fish per trip</span><span><i style="background:#FFB21A"></i>Middle</span><span><i style="background:#FF6A13"></i>Fewest</span><span>Bigger dot = more trips</span></div>
+        <p class="label" id="mapNote" style="margin:8px 2px 0"></p>
+      </div>
       <div class="filters">
         <select id="fWater" aria-label="Filter by water"></select>
         <select id="fSpecies" aria-label="Filter by species"></select>
@@ -208,6 +221,11 @@
         <label class="field"><span class="label">Open locations in</span><select id="sMaps"><option value="auto">Automatic (Apple Maps on Apple devices)</option><option value="apple">Apple Maps</option><option value="google">Google Maps</option></select></label>
       </div>
     </div>
+    <div class="set-group">
+      <h3>fishr Pro</h3>
+      <p>AI chat, photo ID, bite alerts and cloud sync are in development.</p>
+      <div class="btn-row"><button class="btn" id="settingsPro" type="button">✦ Join the Pro waitlist</button></div>
+    </div>
     <div class="set-group" id="installGroup">
       <h3>Put it on your home screen</h3>
       <p id="installHelp">iPhone: tap Share, then “Add to Home Screen”. Android: tap ⋮, then “Add to Home screen” or “Install app”.</p>
@@ -239,6 +257,33 @@
 </div>
 
 <datalist id="dlWater"></datalist><datalist id="dlSpot"></datalist><datalist id="dlCombo"></datalist><datalist id="dlSpecies"></datalist><datalist id="dlLure"></datalist>
+<!-- fishr Pro waitlist -->
+<div class="sheet" id="proSheet" hidden role="dialog" aria-modal="true" aria-labelledby="proTitle">
+  <div class="sheet-in">
+    <span class="pill live" style="justify-self:start">Early access</span>
+    <h2 id="proTitle">fishr <span class="grad-text">Pro</span></h2>
+    <p class="pro-lede">The next generation of fishr. Built for anglers who want an unfair advantage.</p>
+    <ul class="pro-feats">
+      <li><span class="pf-ico">✦</span><span><b>Ask fishr</b>Chat with an AI copilot that knows your log and today's conditions.</span></li>
+      <li><span class="pf-ico">◎</span><span><b>Photo ID</b>Snap a fish and the species fills itself in.</span></li>
+      <li><span class="pf-ico">⚡</span><span><b>Bite alerts</b>Get a ping when the Bite Index spikes at your spots.</span></li>
+      <li><span class="pf-ico">☁</span><span><b>Cloud sync</b>Your trips, photos and spots backed up and on every device.</span></li>
+    </ul>
+    <div class="wl-count" id="wlCount"></div>
+    <form id="wlForm" class="wl-form" novalidate>
+      <label class="field"><span class="label">Email</span><input type="email" id="wlEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" required></label>
+      <label class="field"><span class="label">First name (optional)</span><input id="wlName" autocomplete="given-name" placeholder="Josh"></label>
+      <input type="text" id="wlWebsite" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+      <label class="check"><input type="checkbox" id="wlConsent"> Email me when fishr Pro opens. I can unsubscribe at any time.</label>
+      <div class="err" id="wlErr" hidden></div>
+      <button type="submit" class="btn-log" id="wlGo">Join the waitlist</button>
+    </form>
+    <div class="wl-done" id="wlDone" hidden></div>
+    <p class="label" style="margin:0">We only email you about fishr Pro. No spam, no selling your address.</p>
+    <div class="sheet-actions"><span></span><button type="button" class="btn" id="proClose">Close</button></div>
+  </div>
+</div>
+
 <!-- Share a catch -->
 <div class="sheet" id="shareSheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
   <div class="sheet-in">
@@ -262,6 +307,8 @@
 <script src="forecast.js"></script>
 <script src="conditions.js"></script>
 <script src="live.js"></script>
+<script src="map.js"></script>
+<script src="pro.js"></script>
 <script src="share.js"></script>
 </body>
 </html>

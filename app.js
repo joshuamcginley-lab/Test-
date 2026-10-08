@@ -301,6 +301,7 @@ function showTab(t) {
   for (const p of ["advice", "season", "patterns", "log"]) $("panel-" + p).hidden = p !== t;
   try { sessionStorage.setItem("ft-tab", t); } catch (e) {}
   if (t === "advice" && typeof autoLive === "function") autoLive();
+  if (t === "log" && typeof renderMap === "function") renderMap();
 }
 document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
 ["fWater", "fSpecies", "fResult"].forEach(id => $(id).addEventListener("change", renderLog));
@@ -413,7 +414,7 @@ function openSheet(s) {
   $("scrim").hidden = false; $("sheet").hidden = false; $("sheet").scrollTop = 0;
   if (typeof onSheetOpen === "function") onSheetOpen(s);
 }
-function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; editingId = null; }
+function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; editingId = null; }
 function startNewTrip() { if (demo) exitSample(); openSheet(null); }
 $("openNew").onclick = startNewTrip;
 $("dockLog").onclick = startNewTrip;

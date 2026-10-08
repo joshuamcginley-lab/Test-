@@ -371,3 +371,57 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 @media (max-width:520px){.tile.bite{grid-template-columns:1fr;justify-items:start}.bite-ring{width:104px;height:104px}}
 .model-tag{display:inline-block;margin-left:6px;padding:3px 6px;border-radius:6px;border:1px solid var(--line-2);color:var(--faint);font-size:9.5px;letter-spacing:.04em;text-transform:none}
 .live-foot b{color:var(--muted);font-weight:600}
+
+/* Spots map */
+.view-seg{margin-bottom:12px}
+.spots-map{height:min(62vh,520px);border-radius:20px;border:1px solid var(--line-2);overflow:hidden;background:var(--bg-2);z-index:0}
+.map-place{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:14px}
+.map-place select{font:inherit;font-size:14px;padding:8px 12px;border:1px solid var(--line-2);border-radius:999px;background:var(--glass);color:var(--ink)}
+.map-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font:500 11px/1 var(--f-mono);color:var(--muted)}
+.map-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--solid)!important;color:var(--ink)!important;border:1px solid var(--line-2);box-shadow:0 12px 30px -10px rgba(0,0,0,.5)!important}
+.leaflet-popup-content-wrapper{border-radius:14px!important}
+.leaflet-container{font-family:var(--f-body)!important;background:var(--bg-2)!important}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--solid) 80%,transparent)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-bar a{background:var(--solid)!important;color:var(--ink)!important;border-color:var(--line-2)!important}
+.map-pop{display:grid;gap:6px;font-size:13px;min-width:180px}
+.map-pop > b{font-size:15px}
+.map-pop .approx{font:500 10px/1 var(--f-mono);color:var(--muted);text-transform:uppercase}
+.mp-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font:500 12px/1.4 var(--f-mono);color:var(--muted)}
+.mp-stats b{color:var(--ink)}
+.map-pop a{color:var(--v)!important;font-weight:600}
+
+/* fishr Pro */
+.pro-btn{border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;font-weight:600}
+.pro-banner{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;width:100%;text-align:left;margin:4px 0 14px;padding:14px 16px;border-radius:18px;border:1px dashed var(--line-2);background:var(--glass);font-size:14px;color:var(--ink)}
+.pro-banner:hover{border-color:var(--v)}
+.pro-go{margin-left:auto;font-weight:600;color:var(--v)}
+.pro-lede{margin:0;color:var(--muted);font-size:16px}
+.pro-feats{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.pro-feats li{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--glass)}
+.pro-feats b{display:block;font-weight:650}
+.pro-feats li span:last-child{color:var(--muted);font-size:14px}
+.pro-feats li span:last-child b{color:var(--ink);font-size:15px}
+.pf-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--grad);color:var(--on-grad);font-size:18px;font-weight:700}
+.wl-count{display:flex;align-items:center;gap:8px;font:500 13px/1 var(--f-mono);color:var(--muted)}
+.wl-count:empty{display:none}
+.wl-count b{color:var(--ink)}
+.wl-form{display:grid;gap:12px}
+.wl-form .btn-log{justify-self:start}
+.wl-done{padding:16px;border-radius:16px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;font-size:15px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+/* iPhone zooms into any field under 16px when you tap it; keep every field at 16px on phones */
+@media (max-width:700px){input,select,textarea,.catch-row input,.filters select,.season-pick select,.map-place select{font-size:16px!important}}
+/* Top bar must fit a phone: actions wrap, the season label hides, buttons shrink to icons */
+.topbar{min-width:0}
+.top-actions{flex-wrap:wrap;justify-content:flex-end;min-width:0;max-width:100%}
+@media (max-width:520px){
+  .topbar{display:grid;grid-template-columns:1fr auto;align-items:center}
+  .top-actions{grid-column:1/-1;justify-content:flex-start;gap:6px}
+  .season-pick label{display:none}
+  .season-pick select{max-width:110px}
+  #topSample{font-size:0;padding:7px 10px}
+  #topSample::before{content:"👀 Sample";font-size:13px}
+}
+@media (max-width:520px){.band .wrap{position:relative}#openSettings{position:absolute;top:18px;right:16px}}

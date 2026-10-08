@@ -47,3 +47,8 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 
 - `conditions.js` pulls weather, barometric pressure (and its 3-hour trend), wind and 48-hour rain from Open-Meteo for each trip, using the forecast API for recent dates and the archive for older ones. Settings → "Add weather to past trips" fills in older trips.
 - `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Copilot and Insights use both.
+
+## Spots map and Pro waitlist
+
+- `map.js`: Trips → Map shows each water (sized by trips, coloured by fish per trip) and pinned spots on CARTO/OpenStreetMap tiles via Leaflet, loaded on first use. Waters without a location can be placed by tapping the map.
+- `pro.js` + `functions/api/waitlist.js`: the fishr Pro waitlist. Sign-ups need a ticked consent box and are stored in R2 under `waitlist/`. Export them as CSV with `GET /api/waitlist?export=csv` and an `x-admin-key` header matching the `WAITLIST_KEY` environment variable.
