@@ -320,10 +320,10 @@ function renderCombos(list) {
 
 function tableHTML(rows, head) {
   const maxR = Math.max(...rows.map(r => r.n ? r.fish / r.n : 0), 0.01);
-  return `<tr><th>${head}</th><th class="r">Trips</th><th class="r">Fish</th><th class="r">Per trip</th><th></th><th class="r">Skunk</th></tr>` + rows.map(r => {
+  return `<tr><th>${head}</th><th class="r">Trips</th><th class="r">Fish</th><th class="r">Per trip</th><th></th><th class="r">Skunk</th></tr>` + (rows.map(r => {
     const rate = r.n ? r.fish / r.n : 0, skp = r.n ? Math.round(r.skunk / r.n * 100) : 0;
     return `<tr><td>${esc(r.label ?? r.k)}</td><td class="r">${r.n}</td><td class="r">${r.fish}</td><td class="r">${rate.toFixed(1)}</td><td><span class="spark" style="width:${Math.max(2, rate / maxR * 70)}px"></span></td><td class="r skunkpct${skp >= 50 && r.n >= 2 ? " hi" : ""}">${skp}%</td></tr>`;
-  }).join("") || `<tr><td colspan="6" style="color:var(--muted)">Not enough trips yet</td></tr>`;
+  }).join("") || `<tr><td colspan="6" style="color:var(--muted)">Not enough trips yet</td></tr>`); // the fallback is for the rows, not the header
 }
 
 function renderPatterns(list) {
@@ -355,7 +355,7 @@ function renderPatterns(list) {
   const bigL = []; for (const s of list) for (const c of s.catches || []) if (c.lb >= 2 && c.lure) bigL.push(c.lure);
   if (bigL.length >= 2) { const t = {}; bigL.forEach(l => t[l] = (t[l] || 0) + 1); const top = Object.entries(t).sort((a, b) => b[1] - a[1])[0]; out.push(["info", "Big fish", `${top[1]} of ${bigL.length} fish of ${fmtW(2)}+ came on a <b>${esc(top[0].toLowerCase())}</b>.`]); }
   const cold = list.filter(s => avgT(s) != null && avgT(s) < 15);
-  if (cold.length >= 2) { const all = cold.reduce((a, s) => a + fishOf(s), 0); const sp = {}; cold.forEach(s => (s.catches || []).forEach(c => sp[c.species] = (sp[c.species] || 0) + c.count)); const top = Object.entries(sp).sort((a, b) => b[1] - a[1])[0]; out.push(["info", "Cold water", `Under ${fmtT(15)}: ${all} fish in ${cold.length} trips${top ? `, mostly ${esc(top[0].toLowerCase())}` : ""}.`]); }
+  if (cold.length >= 2) { const all = cold.reduce((a, s) => a + fishOf(s), 0); const sp = {}; cold.forEach(s => (s.catches || []).forEach(c => sp[c.species] = (sp[c.species] || 0) + c.count)); const top = Object.entries(sp).sort((a, b) => b[1] - a[1])[0]; out.push(["info", "Cold days", `Under ${fmtT(15)}: ${all} fish in ${cold.length} trips${top ? `, mostly ${esc(top[0].toLowerCase())}` : ""}.`]); }
   const meth = group(list, s => s.method).filter(g => g.n >= 2);
   if (meth.length > 1) out.push(["info", "Method", meth.map(g => `${esc(g.k)}: ${(g.fish / g.n).toFixed(1)} per trip`).join(" · ")]);
   $("callouts").innerHTML = out.length ? out.map(([cls, l, t]) => `<div class="callout"><span class="chip ${cls}">${l}</span><span>${t}</span></div>`).join("") : `<div class="callout"><span class="chip info">Patterns</span><span>Log a few more trips and your patterns show up here.</span></div>`;
@@ -471,7 +471,7 @@ function speciesPicker(box) {
   const open = q => { draw(q); list.hidden = false; input.setAttribute("aria-expanded", "true"); };
   const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); };
   input.addEventListener("focus", () => open(input.value === "" ? "" : ""));
-  input.addEventListener("input", () => open(input.value));
+  input.addEventListener("input", () => { const q = input.value.trim().toLowerCase(); if (q && [...recentSpecies(), ...SPECIES].some(s => s.toLowerCase() === q)) close(); else open(input.value); });
   input.addEventListener("blur", () => setTimeout(close, 150));
   input.addEventListener("keydown", e => {
     if (e.key === "Escape" && !list.hidden) { close(); e.stopPropagation(); } // a second Escape closes the form
@@ -696,6 +696,9 @@ async function loadSampleNow(where) {
     state.sessions = data; state.notes = SAMPLE_NOTES.slice(); state.settings.season = "2026";
     render(); window.scrollTo(0, 0);
     showSampleView(where);
+    // The phone's Back button leaves the sample (instead of leaving fishr). Added once any sheet that was just
+    // closed has finished its own Back step.
+    setTimeout(() => { if (demo && !history.state?.fishrSample && !history.state?.fishrSheet && $("scrim").hidden) history.pushState({ ...(history.state || {}), fishrSample: true }, ""); }, 400);
     if (where === "advice" && typeof maybeGuide === "function") maybeGuide(); // first look at the Guide tab: how it works
     // Picked a tile on the welcome screen? They've read what this is, so keep the explainer closed.
     setSampleInfo(!where);
@@ -711,6 +714,7 @@ function showSampleView(where) {
 }
 function exitSample() {
   if (!demo) return;
+  if (history.state?.fishrSample && !history.state?.fishrSheet) history.back(); // take the sample's Back step off
   state.sessions = demo.sessions; state.notes = demo.notes; state.settings.season = demo.season; demo = null;
   if (typeof resetAdviceInputs === "function") resetAdviceInputs();
   render(); window.scrollTo(0, 0);
@@ -718,6 +722,7 @@ function exitSample() {
 $("welcomeShowcase").addEventListener("click", e => { const t = e.target.closest("[data-sample]"); if (t) loadSample(t.dataset.sample); });
 $("settingsSample").onclick = () => { closeSheets(); loadSample(); };
 $("clearSample").onclick = exitSample;
+addEventListener("popstate", () => { if (demo && !history.state?.fishrSample && $("scrim").hidden) exitSample(); });
 function setSampleInfo(open) { $("sampleInfo").hidden = !open; $("sampleInfoBtn").setAttribute("aria-expanded", open); }
 $("sampleInfoBtn").onclick = () => setSampleInfo($("sampleInfo").hidden);
 $("sampleInfoClose").onclick = () => setSampleInfo(false);
@@ -729,6 +734,7 @@ $("openSettings").onclick = () => {
   $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
   $("wipeBtn").hidden = false; $("wipeConfirm").hidden = true; $("backupMsg").hidden = true;
   $("settingsSample").closest(".set-group").hidden = !!demo; // already looking at it
+  $("wipeBtn").closest(".set-group").hidden = !!demo; // "Delete all trips" over the sample would delete your own log, unseen
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;
 };
 $("closeSettings").onclick = closeSheets;

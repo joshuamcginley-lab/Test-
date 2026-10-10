@@ -325,7 +325,7 @@ function renderCloud() {
   if (on) {
     $("cloudStatus").innerHTML = syncing ? `<span class="sync-dot busy"></span>Syncing…`
       : syncErr ? `<span class="sync-dot err"></span>${esc(syncErr)}`
-      : `<span class="sync-dot"></span>Synced ${sync.lastSync ? ago(sync.lastSync) : "—"} · ${realLog().sessions.length} trips`;
+      : `<span class="sync-dot"></span>Synced ${sync.lastSync ? ago(sync.lastSync) : "—"} · ${realLog().sessions.length} trip${realLog().sessions.length === 1 ? "" : "s"}`;
     const keys = account?.passkeys || [];
     $("cloudKeys").innerHTML = keys.length ? `Passkeys: ${keys.map(k => esc(k.label)).join(", ")}` : "";
   }
@@ -405,7 +405,7 @@ function renderKeepSafe() {
       ? "Safari can clear a site's data if you don't open it for a while. Add fishr to your Home Screen (Share, then “Add to Home Screen”) or turn on Cloud."
       : `Your log lives only in this browser. ${canInstall ? "Install fishr, or turn" : "Turn"} on Cloud to back it up.`}</p>
     <div class="btn-row"><button type="button" class="btn primary sm" id="ksCloud">Turn on Cloud</button>${canInstall ? `<button type="button" class="btn sm" id="ksInstall">Install app</button>` : ""}<button type="button" class="linkbtn" id="ksLater">Not now</button></div>`;
-  $("ksCloud").onclick = () => { $("openSettings").click(); $("cloudGroup").scrollIntoView({ block: "start" }); };
+  $("ksCloud").onclick = () => { $("openSettings").click(); cloudPick = "cloud"; renderCloud(); $("cloudGroup").scrollIntoView({ block: "start" }); }; // open on Cloud, ready to create the account
   const ins = $("ksInstall"); if (ins) ins.onclick = () => $("installBtn").click();
   $("ksLater").onclick = () => { try { localStorage.setItem(KEEP_KEY, String(Date.now())); } catch (e) {} box.hidden = true; };
 }

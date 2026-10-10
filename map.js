@@ -85,7 +85,9 @@ function placeWater(latlng) {
   const name = $("mapPlaceSel").value; if (!name || demo) return;
   const lat = r(latlng.lat, 5), lon = r(latlng.lng, 5);
   let n = 0; for (const s of state.sessions) if (s.water === name && s.lat == null) { s.lat = lat; s.lon = lon; n++; }
-  save(); toast(`${name} placed (${n} trip${n === 1 ? "" : "s"})`); render();
+  if (save() === false) return; // out of storage: save() said so
+  $("mapHint").hidden = true; // placed: the "tap its location" hint is done
+  toast(`${name} placed (${n} trip${n === 1 ? "" : "s"})`); render();
 }
 
 function setView(v) {

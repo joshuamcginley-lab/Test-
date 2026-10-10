@@ -34,5 +34,37 @@ ok(g.status === "Normal" && g.pct14 === 0.5, "flat river: Normal " + JSON.string
 g = await gauge(i => (i < 235 ? 40 : 50));
 ok(g.status === "High", "at the 14-day high (tied with 30% of readings): High " + JSON.stringify({ s: g.status, p: g.pct14 }));
 
+// Server: the size cap counts only trips a push will really write; a deleted account's alert device is unlinked;
+// unreadable passkey data is a 400.
+{
+  const { d1, r2, authenticator } = await import("../helpers/cfmock.mjs");
+  const auth = await import("../../functions/api/auth/[action].js"), syncFn = await import("../../functions/api/sync.js"), account = await import("../../functions/api/account.js"), push = await import("../../functions/api/push/[action].js");
+  const env = { DB: d1(), CATCHES: r2(), VAPID_PUBLIC: "x", VAPID_PRIVATE: "y" }, ORIGIN = "https://fishr.monster";
+  let jar = {};
+  const call = async (fn, path, { method = "POST", body, params = {} } = {}) => {
+    const h = { cookie: Object.entries(jar).map(([k, v]) => `${k}=${v}`).join("; "), "cf-connecting-ip": "5.5.5.5" }; if (body !== undefined) h["content-type"] = "application/json";
+    const res = await fn({ request: new Request(ORIGIN + path, { method, headers: h, body: body !== undefined ? JSON.stringify(body) : undefined }), env, params });
+    for (const c of res.headers.getSetCookie?.() || []) { const [kv] = c.split(";"); const [k, v] = kv.split("="); if (v) jar[k] = v; else delete jar[k]; }
+    return { status: res.status, data: await res.json().catch(() => null) };
+  };
+  const key = await authenticator(), o = await call(auth.onRequest, "/api/auth/register-options", { body: { name: "x" }, params: { action: "register-options" } });
+  let r = await call(auth.onRequest, "/api/auth/register", { body: { challengeId: o.data.challengeId, ...(await key.create(o.data.publicKey, ORIGIN)), clientDataJSON: "%%%" }, params: { action: "register" } });
+  ok(r.status === 400 && /readable/.test(r.data.error), "unreadable passkey data: 400, not 500 " + r.status);
+  const o2 = await call(auth.onRequest, "/api/auth/register-options", { body: { name: "x" }, params: { action: "register-options" } });
+  r = await call(auth.onRequest, "/api/auth/register", { body: { challengeId: o2.data.challengeId, ...(await key.create(o2.data.publicKey, ORIGIN)) }, params: { action: "register" } });
+  const uid = r.data.user.id;
+  // Fill close to the 20 MB cap, then try to make room with old-timestamped copies that lose last-write-wins.
+  const big = "x".repeat(60000), fut = new Date(Date.now() + 864e5 / 2).toISOString();
+  for (let k = 0; k < 330; k += 110) await call(syncFn.onRequestPost, "/api/sync", { body: { since: 0, trips: Array.from({ length: 110 }, (_, i) => ({ id: `b-${k + i}`, data: { date: "2026-06-01", water: "W", notes: big }, updated: fut })) } });
+  r = await call(syncFn.onRequestPost, "/api/sync", { body: { since: 0, trips: [...Array.from({ length: 100 }, (_, i) => ({ id: `b-${i}`, deleted: true, updated: "2000-01-01T00:00:00Z" })), ...Array.from({ length: 100 }, (_, i) => ({ id: `n-${i}`, data: { date: "2026-06-01", water: "W", notes: big }, updated: fut }))] } });
+  ok(r.status === 413, "losing old copies can't make room past the size cap " + r.status);
+  // Alert device signed in to the account, then the account is deleted: the device row no longer names it.
+  await call(push.onRequest, "/api/push/subscribe", { body: { endpoint: "https://fcm.googleapis.com/fcm/send/z", keys: { p256dh: "BN" + "A".repeat(85), auth: "A".repeat(22) }, lat: 45.9, lon: -66.6, tz: "America/Moncton" }, params: { action: "subscribe" } });
+  const before = env.DB._sql.prepare("SELECT user_id FROM push_subs").all();
+  await call(account.onRequestDelete, "/api/account", { method: "DELETE", body: {} });
+  const after = env.DB._sql.prepare("SELECT user_id FROM push_subs").all();
+  ok(before.length === 1 && before[0].user_id === uid && after.length === 1 && after[0].user_id === null, "deleting the account unlinks its alert device " + JSON.stringify({ before, after }));
+}
+
 console.log(`${pass} passed, ${failN} failed`);
 if (failN) process.exit(1);

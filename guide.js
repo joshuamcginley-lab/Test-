@@ -15,7 +15,7 @@ const guideSteps = () => [
   { target: "live", title: "Today's conditions", body: "Live weather, pressure and river level where you are, once you allow location. This is what your guide compares against your data set." },
   { target: "advice", title: "The call comes from your data", body: `Your guide finds the trips in ${demo ? "this log" : "your log"} with conditions most like these, and shows what worked: the water, the time of day, the lure. <b>The more you log, the sharper the call.</b>` },
   { target: "ask", title: "Or just ask", body: `Ask fishr is the old-timer on the dock who has read the whole log. Ask him where to go Saturday, or what to throw after a cold front.${demo ? " Try one of the suggested questions on this season." : ""} <b>Free during the beta.</b>` },
-  { target: "inputsBox", open: true, title: "Ask “what if?”", body: `Change the date, time, temperature or sky to plan a trip. The call updates from the same data.${demo ? " The showcase starts on a July evening at ${fmtT(22)}." : ""}` },
+  { target: "inputsBox", open: true, title: "Ask “what if?”", body: `Change the date, time, temperature or sky to plan a trip. The call updates from the same data.${demo ? ` The showcase starts on a July evening at ${fmtT(22)}.` : ""}` },
 ];
 
 let gStep = 0, gSteps = [], gOpened = null;
@@ -28,6 +28,7 @@ guideEl.innerHTML = `<div class="g-ring" id="gRing"></div>
     <div class="g-actions"><button type="button" class="btn" id="gBack">Back</button><button type="button" class="btn" id="gClose" hidden>Close</button><button type="button" class="btn primary" id="gNext">Next</button></div>
   </div>`;
 document.body.append(guideEl);
+guideEl.addEventListener("click", e => { if (e.target === guideEl) closeGuide(); }); // a tap outside the card closes it
 
 function placeRing() {
   const s = gSteps[gStep], ring = $("gRing");

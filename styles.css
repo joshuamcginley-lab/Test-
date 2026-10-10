@@ -191,7 +191,7 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 .v-warn{font-size:calc(14*var(--u))!important;color:var(--warn)!important;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent)}
 .meter{height:6px;background:var(--line);border-radius:999px;overflow:hidden}
 .meter span{display:block;height:100%;background:var(--grad);border-radius:999px}
-.window{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:14px 16px;margin-bottom:14px;font-size:calc(15*var(--u));background:var(--glass);border:1px solid var(--line);border-radius:var(--r)}
+.window{display:grid;grid-template-columns:auto minmax(0,1fr);overflow-wrap:anywhere;gap:12px;align-items:baseline;padding:14px 16px;margin-bottom:14px;font-size:calc(15*var(--u));background:var(--glass);border:1px solid var(--line);border-radius:var(--r)}
 #panel-advice .card{margin-bottom:14px}
 .cond-h{font-size:calc(13*var(--u));font-weight:500;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 10px}
 .now-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end}
@@ -203,7 +203,7 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 .sheet-in{max-width:720px;margin:0 auto;display:grid;gap:14px}
 .sheet h2{font-size:calc(26*var(--u));font-weight:700;letter-spacing:-.03em}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(140*var(--u)),1fr));gap:10px}
-.field{display:grid;gap:6px;min-width:0}
+.field{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;min-width:0}
 .field input,.field select,.field textarea,.now-row .field input,#fLocPaste{font:inherit;font-size:calc(16*var(--u));padding:10px 12px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg-2);color:var(--ink);width:100%;min-width:0}
 .field input:focus,.field textarea:focus,.field select:focus,#fLocPaste:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 22%,transparent)}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -215,6 +215,8 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 @media (max-width:620px){.catch-row{grid-template-columns:repeat(4,1fr)}.catch-row .sp,.catch-row .lu{grid-column:span 4}.catch-row .cnt{grid-column:span 2}.catch-row .x{grid-column:4}}
 /* Count: − and + either side of the number, each a full fingertip wide. */
 .stepper{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:6px}
+/* Small phones: the count gets a full row, so its number is never squeezed between − and +. */
+@media (max-width:380px){.catch-row{grid-template-columns:1fr 1fr}.catch-row .sp,.catch-row .lu,.catch-row .cnt{grid-column:span 2}.catch-row .x{grid-column:2}}
 .stepper .step{min-height:44px;border:1px solid var(--line-2);background:var(--glass);border-radius:10px;padding:0;font-size:calc(22*var(--u));font-weight:500;line-height:1;color:var(--ink);touch-action:manipulation}
 .stepper .step:active{background:var(--line)}
 @media (min-width:621px){.stepper{grid-template-columns:32px minmax(0,1fr) 32px;gap:4px}.stepper .step{min-height:0;font-size:calc(18*var(--u))}}
@@ -232,7 +234,7 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 .add-catch{justify-self:start;border:1px dashed var(--line-2);background:none;padding:9px 14px;font-weight:500;border-radius:999px}
 .loc-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:calc(14*var(--u))}
 .loc-row a{color:var(--c);font-weight:500}
-#fLocPaste{flex:1 1 220px;width:auto}
+#fLocPaste{flex:1 1 220px;width:auto;min-width:0}
 #locText:empty{display:none}
 .sheet-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:14px}
 .btn{border:1px solid var(--line-2);background:var(--glass);padding:10px 16px;font-weight:500;border-radius:999px;font-size:calc(14*var(--u))}
@@ -293,7 +295,7 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 .more summary::before{content:"+";font:500 calc(16*var(--u))/1 var(--f-mono);color:var(--c);width:12px}
 .more[open] summary::before{content:"–"}
 .more-hint{font-weight:400;font-size:calc(13*var(--u));color:var(--muted)}
-.more-in{display:grid;gap:14px;padding:4px 16px 16px}
+.more-in{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:4px 16px 16px}
 
 .dock-log{display:none}
 @media (max-width:700px){
@@ -454,6 +456,8 @@ body{padding-top:0}
 .appbar{position:sticky;top:0;z-index:8;padding-top:env(safe-area-inset-top,0px);background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid transparent;transition:border-color .2s,background .2s}
 .appbar.scrolled{border-bottom-color:var(--line);background:color-mix(in srgb,var(--bg) 82%,transparent)}
 .appbar-in{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:10px}
+/* The app bar grows with large text only a little, so the logo and its buttons stay on one line on small phones. */
+.appbar{--u:clamp(1px,calc(1rem / 17),1.1px)}
 .appbar .logo{font-size:calc(19*var(--u))}
 .appbar .logo .mark{width:30px;height:30px;border-radius:9px}
 .top-actions{display:flex;align-items:center;gap:8px}
@@ -467,7 +471,8 @@ body{padding-top:0}
 /* undo older phone-specific header rules */
 @media (max-width:520px){.topbar,.top-actions{display:flex}#openSettings{position:static}.top-actions{grid-column:auto}}
 
-.screen-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:18px 0 16px}
+.screen-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:18px 0 16px;flex-wrap:wrap}
+.screen-head > :first-child{min-width:0}
 .screen-head h1{font-size:clamp(calc(30*var(--u)),8vw,calc(40*var(--u)));font-weight:700;letter-spacing:-.045em;line-height:1}
 .screen-head .ws-line{margin-top:6px}
 .season-pick.off{visibility:hidden}
@@ -545,6 +550,7 @@ body{padding-top:0}
 /* compact sample banner */
 .sample-bar{padding:8px 8px 8px 14px;margin:0 0 14px;border-radius:999px;font-size:calc(13*var(--u));gap:8px;flex-wrap:nowrap}
 .sample-bar > span{min-width:0}
+.sample-bar .sb-info{overflow:hidden}.sample-bar .sb-info b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sample-bar button{padding:7px 12px;font-size:calc(12.5*var(--u));white-space:nowrap}
 @media (max-width:420px){.sample-bar .sb-long{display:none}}
 /* Bite Index side by side on phones too */
@@ -622,6 +628,8 @@ p.showcase-note{margin:12px 0 0;font-size:calc(12.5*var(--u));color:var(--muted)
 .g-ring{position:fixed;border-radius:20px;border:2px solid var(--v);box-shadow:0 0 0 9999px rgba(3,5,12,.66),0 0 24px color-mix(in srgb,var(--v) 45%,transparent);pointer-events:none;transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}
 .g-card{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:440px;margin:0 auto;display:grid;gap:10px;padding:18px;border-radius:22px;border:1px solid transparent;background:linear-gradient(var(--solid),var(--solid)) padding-box,var(--grad) border-box;box-shadow:0 20px 60px rgba(0,0,0,.45);animation:gIn .25s ease}
 .guide.intro .g-card{top:50%;bottom:auto;transform:translateY(-50%)}
+/* Never taller than the screen (large text on a small phone): the card scrolls, so Skip and Next stay reachable. */
+.g-card{max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow-y:auto;overscroll-behavior:contain}
 @keyframes gIn{from{opacity:0;translate:0 10px}}
 .g-top{display:flex;align-items:center}
 .g-step{font:500 calc(11*var(--u))/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -763,7 +771,7 @@ label.choice{cursor:pointer}
 /* fishr ID in the top bar */
 .fid-top{cursor:pointer}
 .fid-top svg{color:var(--v)}
-@media (max-width:520px){.fid-top span{display:none}.fid-top{padding:0 10px}}
+@media (max-width:520px){label.fid-top span{display:none}label.fid-top{padding:0 10px}} /* the app-bar chip only, not the fishr ID sheet's header */
 /* Insights: one table at a time */
 .ins-seg{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding-bottom:2px}
 .ins-seg::-webkit-scrollbar{display:none}

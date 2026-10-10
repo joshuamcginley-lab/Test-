@@ -14,7 +14,7 @@ export async function onRequestGet({ params, env, request }) {
   const fish = meta.ct > 1 ? `${meta.ct} ${String(meta.sp).toLowerCase()}` : `${/^[aeiou]/i.test(meta.sp || "") ? "an" : "a"} ${String(meta.sp || "fish").toLowerCase()}`;
   const size = meta.lb != null ? ` (${meta.lb} lb)` : meta.in != null ? ` (${meta.in}")` : "";
   const title = `${who} ${fish}${size}`;
-  const desc = [meta.lu ? `On a ${String(meta.lu).toLowerCase()}` : "", meta.w || "", "Logged with fishr.ai"].filter(Boolean).join(" · ");
+  const desc = [meta.lu ? `On ${/^[aeiou]/i.test(String(meta.lu).trim()) ? "an" : "a"} ${String(meta.lu).toLowerCase()}` : "", meta.w || "", "Logged with fishr.ai"].filter(Boolean).join(" · ");
   const app = `${origin}/#catch=${b64url(JSON.stringify(meta))}&img=${id}`;
   const img = `${origin}/img/${id}`;
 

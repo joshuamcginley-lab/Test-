@@ -1,4 +1,5 @@
 "use strict";
+const aOr = w => /^[aeiou]/i.test(String(w).trim()) ? "an" : "a"; // "an inline spinner", "a jig"
 /* Share a catch: draws a 1080×1350 card (photo + stats) and opens the phone's share sheet.
    Exact spots and coordinates are never shared; the water name is optional. */
 
@@ -47,7 +48,7 @@ function shareText(link) {
   const d = cardData();
   const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(", ");
   const what = `${d.ct > 1 ? `${d.ct} ` : ""}${d.sp.toLowerCase()}${size ? ` (${size})` : ""}`;
-  return `${what}${d.lu ? ` on a ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it on fishr.ai: ${link || catchLink(d)}`;
+  return `${what}${d.lu ? ` on ${aOr(d.lu)} ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it on fishr.ai: ${link || catchLink(d)}`;
 }
 
 function cover(ctx, img, x, y, w, h) {
@@ -134,7 +135,7 @@ async function renderCard(cv, d) {
     ctx.fillStyle = k === 0 ? gradH(ctx, x, x + vw) : "#EDEDF3"; ctx.fillText(v, x, y); x += vw + 8;
     ctx.fillStyle = "#8C8CA0"; ctx.font = `500 36px ${MONO}`; ctx.fillText(u, x, y); x += ctx.measureText(u).width + 48;
   }
-  if (d.lu) { y += 66; ctx.fillStyle = "#C9C9D6"; ctx.font = `500 34px ${SANS}`; let L = `On a ${d.lu.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
+  if (d.lu) { y += 66; ctx.fillStyle = "#C9C9D6"; ctx.font = `500 34px ${SANS}`; let L = `On ${aOr(d.lu)} ${d.lu.toLowerCase()}`; while (ctx.measureText(L).width > W - pad * 2 && L.length > 10) L = L.slice(0, -2); ctx.fillText(L, pad, y); }
 
   ctx.fillStyle = "#5E5E72"; ctx.font = `500 21px ${MONO}`;
   ctx.fillText(`✦ LOGGED WITH FISHR.AI · ${APP_URL.toUpperCase()}`, pad, H - 50);
@@ -183,7 +184,7 @@ async function showSharedCatch() {
   const d = readCatchLink(); if (!d) return;
   const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(" · ");
   $("scTitle").textContent = `${d.n ? `${d.n} caught` : "Check out this catch:"} ${d.ct > 1 ? `${d.ct} ${d.sp.toLowerCase()}` : /^[aeiou]/i.test(d.sp) ? `an ${d.sp.toLowerCase()}` : `a ${d.sp.toLowerCase()}`}`;
-  $("scMeta").textContent = [size, d.lu ? `on a ${d.lu.toLowerCase()}` : "", d.w, fmtDate(d.d), d.t != null ? fmtT(r(d.t, 0)) : ""].filter(Boolean).join(" · ");
+  $("scMeta").textContent = [size, d.lu ? `on ${aOr(d.lu)} ${d.lu.toLowerCase()}` : "", d.w, fmtDate(d.d), d.t != null ? fmtT(r(d.t, 0)) : ""].filter(Boolean).join(" · ");
   const hasLog = state.sessions.length > 0;
   $("scStart").textContent = hasLog ? "Back to my log" : "Start my own fishing log";
   $("scSample").hidden = hasLog;
