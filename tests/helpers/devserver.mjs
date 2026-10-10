@@ -3,7 +3,7 @@ import http from "node:http"; import fs from "node:fs"; import path from "node:p
 import { d1, r2 } from "./cfmock.mjs";
 import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."), F = ROOT + "/functions/", PORT = +process.argv[2] || 8790;
-const env = { DB: d1(), CATCHES: r2(), CLOUD_PRO_ONLY: process.env.PRO_ONLY || "", ANTHROPIC_API_KEY: process.env.NO_AI ? "" : "sk-test", AI_DAILY_ID_GUEST: process.env.ID_GUEST || "", AI_DAILY_SAMPLE: process.env.SAMPLE_Q || "", AI_DAILY_GUEST_TOTAL: process.env.GUEST_TOTAL || "", ASSETS: { fetch: async u => new Response(fs.readFileSync(ROOT + new URL(u).pathname)) } };
+const env = { DB: d1(), CATCHES: r2(), ADMIN_KEY: "test-admin", CLOUD_PRO_ONLY: process.env.PRO_ONLY || "", ANTHROPIC_API_KEY: process.env.NO_AI ? "" : "sk-test", AI_DAILY_ID_GUEST: process.env.ID_GUEST || "", AI_DAILY_SAMPLE: process.env.SAMPLE_Q || "", AI_DAILY_GUEST_TOTAL: process.env.GUEST_TOTAL || "", ASSETS: { fetch: async u => new Response(fs.readFileSync(ROOT + new URL(u).pathname)) } };
 // Fake Claude API so tests never spend money: answers depend on what was asked.
 const realFetch = globalThis.fetch; globalThis.aiCalls = [];
 globalThis.fetch = async (url, init) => {
@@ -18,7 +18,10 @@ globalThis.fetch = async (url, init) => {
 };
 const ask = await import(F + "api/ai/ask.js"), ident = await import(F + "api/ai/identify.js");
 const auth = await import(F + "api/auth/[action].js"), syncFn = await import(F + "api/sync.js"), photo = await import(F + "api/photo/[id].js"), account = await import(F + "api/account.js");
+const usage = await import(F + "api/usage.js"), errorsFn = await import(F + "api/errors.js");
 const routes = [
+  [/^\/api\/usage$/, () => ({ fn: ctx => ctx.request.method === "GET" ? usage.onRequestGet(ctx) : usage.onRequestPost(ctx) })],
+  [/^\/api\/errors$/, () => ({ fn: ctx => ctx.request.method === "GET" ? errorsFn.onRequestGet(ctx) : errorsFn.onRequestPost(ctx) })],
   [/^\/api\/auth\/([\w-]+)$/, m => ({ fn: auth.onRequest, params: { action: m[1] } })],
   [/^\/api\/sync$/, () => ({ fn: syncFn.onRequestPost, method: "POST" })],
   [/^\/api\/photo\/([^/]+)$/, m => ({ fn: photo.onRequest, params: { id: decodeURIComponent(m[1]) } })],

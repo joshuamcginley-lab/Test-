@@ -74,6 +74,7 @@ async function askFishr(q) {
     if (mode === "own") await syncNow(); // so the answer sees your latest trips
     const d = await api("/api/ai/ask", { mode, question: q, history, conditions: askConditions(), units: { weight: state.settings.units, temp: state.settings.temp } });
     hist.push({ role: "assistant", text: d.answer });
+    if (typeof usage === "function") usage("ask");
     if (askInfo[mode]) askInfo[mode].left = d.left;
   } catch (e) {
     if (e.status === 401 && mode === "own") onSyncError(e);
@@ -96,7 +97,11 @@ renderAsk();
 
 /* ---------- fishr ID ---------- */
 const blobToB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
-const identify = async blob => api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" });
+const identify = async blob => {
+  const d = await api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" });
+  if (typeof usage === "function") usage("fishrid");
+  return d;
+};
 const fidLeft = d => d.left == null ? "" : cloudOn()
   ? `${d.left} fishr ID${d.left === 1 ? "" : "s"} left today · Powered by Claude`
   : `${d.left} free fishr ID${d.left === 1 ? "" : "s"} left today. fishr Cloud (free) gets you more. · Powered by Claude`;

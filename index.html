@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=63">
-<script src="report.js?v=63"></script>
+<link rel="stylesheet" href="styles.css?v=64">
+<script src="report.js?v=64"></script>
 </head>
 <body>
 <!-- Shown when a friend's shared catch link is opened -->
@@ -277,6 +277,11 @@
       <p id="cloudMsg" class="cloud-msg" role="status" hidden></p>
     </div>
     <div class="set-group">
+      <h3>Usage counts</h3>
+      <label class="check"><input type="checkbox" id="sUsage" checked> Send anonymous usage counts</label>
+      <p class="fine">Milestones only, like “logged a first trip”, so we can tell whether fishr is useful. Never your trips, places, photos or name. <a href="privacy.html#usage">Details</a></p>
+    </div>
+    <div class="set-group">
       <h3>Sample season</h3>
       <p>See what fishr does with a full season: one angler's 47 trips. Your log stays as it is.</p>
       <div class="btn-row"><button class="btn" id="settingsSample" type="button">Show the sample season</button></div>
@@ -383,16 +388,17 @@
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="celebrate" id="celebrate" hidden aria-live="polite"><canvas id="confetti"></canvas><div class="cel-card"><svg class="cel-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28"/><path d="M20 33l8 8 16-17"/></svg><b id="celTitle">Trip logged</b><span id="celSub"></span></div></div>
 <div class="splash" id="splash" aria-hidden="true"><img src="icons/mark-512.png" alt="" width="120" height="120"><span>fishr<span class="tld">.ai</span></span></div>
-<script src="app.js?v=63"></script>
-<script src="forecast.js?v=63"></script>
-<script src="conditions.js?v=63"></script>
-<script src="live.js?v=63"></script>
-<script src="map.js?v=63"></script>
-<script src="pro.js?v=63"></script>
-<script src="cloud.js?v=63"></script>
-<script src="polish.js?v=63"></script>
-<script src="guide.js?v=63"></script>
-<script src="ai.js?v=63"></script>
-<script src="share.js?v=63"></script>
+<script src="app.js?v=64"></script>
+<script src="forecast.js?v=64"></script>
+<script src="conditions.js?v=64"></script>
+<script src="live.js?v=64"></script>
+<script src="map.js?v=64"></script>
+<script src="pro.js?v=64"></script>
+<script src="cloud.js?v=64"></script>
+<script src="polish.js?v=64"></script>
+<script src="guide.js?v=64"></script>
+<script src="ai.js?v=64"></script>
+<script src="share.js?v=64"></script>
+<script src="usage.js?v=64"></script>
 </body>
 </html>

@@ -80,6 +80,7 @@ Both call Claude (Claude Haiku 5.5) from Pages Functions, using the official Ant
 ## Admin, privacy and crash reports
 
 - `/privacy.html` — privacy policy (PIPEDA/CASL), with a form that removes an email from the waitlist.
-- `/admin.html` — enter the `ADMIN_KEY` secret (set in Cloudflare) to see the waitlist count, download sign-ups as CSV (each row has a signed one-tap unsubscribe link) and read recent crash reports.
+- `/admin.html` — enter the `ADMIN_KEY` secret (set in Cloudflare) to see anonymous usage (the funnel from opening fishr to still logging a month later, and phones that logged a trip each week), the waitlist count, download sign-ups as CSV (each row has a signed one-tap unsubscribe link) and read recent crash reports.
+- Usage counts: `usage.js` sends each milestone name once per device to `functions/api/usage.js`, which keeps only daily totals in D1 (`usage_counts`). Settings has an off switch; nothing is sent from localhost unless `localStorage["fishr.usage.test"] = "1"`.
 - `report.js` sends anonymous crash reports to `/api/errors`, stored in R2 for 90 days.
 - `/api/unsubscribe?e=&t=` — signed unsubscribe links for waitlist emails.
