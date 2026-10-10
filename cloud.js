@@ -77,7 +77,9 @@ async function signedIn(user) {
   let prev = null; try { prev = JSON.parse(localStorage.getItem(PREV_KEY)); } catch (e) {}
   const same = prev && prev.user === user.id;
   syncGen++;
-  sync = { user, cursor: 0, hashes: same ? prev.hashes || {} : {}, photos: same ? prev.photos || {} : {} }; writeSync();
+  sync = { user, cursor: 0, hashes: same ? prev.hashes || {} : {}, photos: same ? prev.photos || {} : {} };
+  if (same && prev.metaAt != null) Object.assign(sync, { metaAt: prev.metaAt, metaHash: prev.metaHash, metaData: prev.metaData }); // notes/settings changed while signed out still win
+  writeSync();
   try { localStorage.removeItem(PREV_KEY); } catch (e) {}
   account = user; renderCloud();
 
@@ -94,7 +96,7 @@ const missingPhotos = new Set();
 function syncNow() {
   if (!cloudOn()) return Promise.resolve();
   if (syncing) { again = true; return syncing; }
-  syncing = runSync().catch(onSyncError).finally(() => { syncing = null; renderCloud(); if (again) { again = false; syncNow(); } });
+  syncing = runSync().catch(e => { if (e.saveFailed) sync = readSync(); onSyncError(e); }).finally(() => { syncing = null; renderCloud(); if (again) { again = false; syncNow(); } });
   renderCloud();
 
   return syncing;
@@ -102,9 +104,12 @@ function syncNow() {
 function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, ms); }
 function onSyncError(e) {
   if (e.status === 401) { forgetAccount(); toast("Signed out of fishr Cloud. Your trips are still on this phone."); return; }
-  syncErr = e.status === 402 ? "Cloud sync is part of fishr Pro. Your trips are safe on this phone." : navigator.onLine ? e.message : "Offline. Changes will sync when you're back online.";
+  syncErr = e.status === 402 ? "Cloud sync is part of fishr Pro. Your trips are safe on this phone." : e.saveFailed || navigator.onLine ? e.message : "Offline. Changes will sync when you're back online.";
 }
-function saveQuiet() { applying = true; try { save(); } finally { applying = false; } }
+function saveQuiet() { applying = true; try { return save(); } finally { applying = false; } }
+// What arrived from the account must be on this phone before the sync can count it as synced. If it can't be saved
+// (phone out of storage), stop here: recording it as synced would make the next sync think it had been deleted.
+function saveOrStop() { if (saveQuiet() === false) throw Object.assign(new Error("Your phone is out of storage, so fishr couldn't save what synced. Free up some space and it'll sync again."), { saveFailed: true }); }
 
 async function runSync() {
   if (!navigator.onLine) throw new Error("offline");
@@ -114,6 +119,9 @@ async function runSync() {
   if (!live()) return;
   // Read the log only now: the sample season may have been opened while photos uploaded.
   const log = realLog(), now = new Date().toISOString(), first = sync.metaAt == null;
+  // The saved log couldn't be read when the app started: it wasn't emptied by the angler, so don't send deletes for
+  // it. Start over from the account's copy instead.
+  if (typeof logUnreadable !== "undefined" && logUnreadable && !log.sessions.length) { sync.hashes = {}; sync.cursor = 0; logUnreadable = false; }
 
   // Trips that changed or were deleted since the last sync.
   const push = [], here = new Set();
@@ -167,6 +175,8 @@ function applyTrips(rows) {
   for (const r of rows) {
     const i = log.sessions.findIndex(s => s.id === r.id), local = i < 0 ? null : log.sessions[i];
     if (local && (local.updatedAt || "") >= r.updated) continue; // this device has the same or a newer copy
+    // Deleted here since this phone last had it (e.g. while this sync was on its way): the delete goes up next round.
+    if (!local && !r.deleted && sync.hashes[r.id] && r.updated <= sync.hashes[r.id][1]) continue;
     if (r.deleted) {
       delete sync.hashes[r.id];
       if (local) { log.sessions.splice(i, 1); changed = true; photoDel(photoIdsOf(local).filter(id => !log.sessions.some(s => photoIdsOf(s).includes(id)))).catch(() => {}); }
@@ -176,7 +186,7 @@ function applyTrips(rows) {
     if (local) log.sessions[i] = data; else log.sessions.push(data);
     sync.hashes[r.id] = [hashStr(JSON.stringify(data)), r.updated]; changed = true;
   }
-  if (changed) { saveQuiet(); render(); }
+  if (changed) { saveOrStop(); render(); }
 }
 
 function applyMeta(remote, first, local) {
@@ -190,15 +200,20 @@ function applyMeta(remote, first, local) {
     sync.metaAt = remote?.updated || "";
     sync.metaHash = remote ? hashStr(JSON.stringify(remote.data)) : null;
     sync.metaData = remote?.data || null;
-    saveQuiet(); render();
+    saveOrStop(); render();
     if (!remote || hashStr(JSON.stringify({ notes, settings: Object.fromEntries(SYNC_SETTINGS.map(k => [k, state.settings[k]])) })) !== sync.metaHash) again = true;
     return;
   }
   if (!remote || remote.updated <= (sync.metaAt || "")) return;
   // If this phone also changed its notes since the last sync, keep both sides' notes rather than dropping these.
   const mine = hashStr(JSON.stringify({ notes: log.notes, settings: Object.fromEntries(SYNC_SETTINGS.map(k => [k, state.settings[k]])) })) !== sync.metaHash;
-  const notes = [...(remote.data.notes || [])];
-  if (mine) { for (const n of log.notes) if (!notes.includes(n)) notes.push(n); again = true; }
+  let notes = [...(remote.data.notes || [])];
+  if (mine) {
+    const base = Array.isArray(sync.metaData?.notes) ? sync.metaData.notes : null;
+    if (base) notes = notes.filter(n => !(base.includes(n) && !log.notes.includes(n))); // deleted here since last sync
+    for (const n of log.notes) if (!notes.includes(n) && (!base || !base.includes(n))) notes.push(n); // added here
+    again = true;
+  }
   log.notes = notes;
   // Settings: a setting this phone changed since the last sync keeps its value; the rest follow the account.
   const base = sync.metaData?.settings;
@@ -207,7 +222,7 @@ function applyMeta(remote, first, local) {
     if (!changedHere && remote.data.settings?.[k] != null) state.settings[k] = remote.data.settings[k];
   }
   sync.metaAt = remote.updated; sync.metaHash = hashStr(JSON.stringify(remote.data)); sync.metaData = remote.data;
-  saveQuiet(); render();
+  saveOrStop(); render();
 }
 
 /* ---------- photos ---------- */
@@ -246,7 +261,7 @@ async function cloudPhoto(id) {
 function forgetAccount(keepHistory = true) {
   // Remember what this phone had synced, so deletes made while signed out reach the account on the next sign-in.
   try {
-    if (keepHistory && sync.user) localStorage.setItem(PREV_KEY, JSON.stringify({ user: sync.user.id, hashes: sync.hashes || {}, photos: sync.photos || {} }));
+    if (keepHistory && sync.user) localStorage.setItem(PREV_KEY, JSON.stringify({ user: sync.user.id, hashes: sync.hashes || {}, photos: sync.photos || {}, metaAt: sync.metaAt, metaHash: sync.metaHash, metaData: sync.metaData }));
     else if (!keepHistory) localStorage.removeItem(PREV_KEY);
   } catch (e) {}
   syncGen++; sync = {}; writeSync(); account = null; syncErr = null; renderCloud();

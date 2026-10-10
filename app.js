@@ -31,11 +31,12 @@ const KEY = "firetiger.v1";
 /* ---------- storage ---------- */
 let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null, maps: "auto" } };
 let demo = null; // the person's own trips, set aside while the sample season is on screen
+let logUnreadable = false; // the saved log was there but couldn't be read (fishr Cloud then restores it)
 function load() {
   // First visit from the US: show °F. Everyone else starts on °C (it's one tap to change in Settings).
   try { if (!localStorage.getItem(KEY) && /-US$/i.test(navigator.language || "")) state.settings.temp = "F"; } catch (e) {}
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
-  catch (e) { console.warn("Could not read saved log", e); }
+  catch (e) { console.warn("Could not read saved log", e); logUnreadable = true; }
   // The sample used to be saved into the log; it's view-only now. (Its notes only go with it: an account that was
   // given the season as its own keeps them.)
   const n = state.sessions.length;
@@ -457,7 +458,13 @@ function speciesPicker(box) {
   input.addEventListener("blur", () => setTimeout(close, 150));
   input.addEventListener("keydown", e => {
     if (e.key === "Escape" && !list.hidden) { close(); e.stopPropagation(); } // a second Escape closes the form
-    if (e.key === "Enter" && !list.hidden) { e.preventDefault(); const first = list.querySelector(".combo-opt"); if (first && input.value.trim()) { input.value = first.dataset.v; close(); } }
+    if (e.key === "Enter" && !list.hidden) {
+      e.preventDefault();
+      // An exact match (any case) wins over the first suggestion: "Pickerel" stays Pickerel, not "Chain pickerel".
+      const opts = [...list.querySelectorAll(".combo-opt")], typed = input.value.trim().toLowerCase();
+      const pick = opts.find(o => o.dataset.v.toLowerCase() === typed) || opts[0];
+      if (pick && typed) { input.value = pick.dataset.v; close(); }
+    }
   });
   btn.addEventListener("pointerdown", e => e.preventDefault());
   btn.addEventListener("click", () => { if (list.hidden) { open(""); list.scrollTop = 0; } else close(); });
@@ -630,9 +637,16 @@ function trainingNext(trip) {
 
 /* ---------- notes ---------- */
 $("editNotes").onclick = () => {
-  if (demo) { toast("Exit the sample to write your own notes"); return; } $("notesText").value = state.notes.join("\n"); $("notesEditor").hidden = false; $("notesList").hidden = true; $("editNotes").hidden = true; };
+  if (demo) { toast("Exit the sample to write your own notes"); return; } notesOpened = state.notes.slice(); $("notesText").value = state.notes.join("\n"); $("notesEditor").hidden = false; $("notesList").hidden = true; $("editNotes").hidden = true; };
 $("cancelNotes").onclick = () => { $("notesEditor").hidden = true; $("notesList").hidden = false; $("editNotes").hidden = false; };
-$("saveNotes").onclick = () => { state.notes = $("notesText").value.split("\n").map(s => s.trim()).filter(Boolean); save(); $("cancelNotes").onclick(); render(); toast("Notes saved"); };
+let notesOpened = []; // the notes when the editor opened
+$("saveNotes").onclick = () => {
+  if (demo) { $("cancelNotes").onclick(); toast("Exit the sample to write your own notes"); return; }
+  const typed = $("notesText").value.split("\n").map(s => s.trim()).filter(Boolean);
+  // Notes that synced in from another phone while the editor was open are kept, not overwritten.
+  state.notes = [...typed, ...state.notes.filter(n => !notesOpened.includes(n) && !typed.includes(n))];
+  save(); $("cancelNotes").onclick(); render(); toast("Notes saved");
+};
 
 /* ---------- sample season ---------- */
 // The sample season is shown in place of your trips but never saved over them.
@@ -748,6 +762,8 @@ $("importFile").addEventListener("change", async e => {
     for (const raw of data.sessions) {
       const s = cleanTrip(raw); if (!s) continue;
       const mine = byId.get(s.id);
+      // Not on this phone and not in the account (deleted there): restoring is a new decision, so it beats the delete.
+      if (!mine && typeof cloudOn === "function" && cloudOn() && !sync.hashes?.[s.id]) s.updatedAt = new Date().toISOString();
       if (!mine) added++;
       else if ((mine.updatedAt || "") > (s.updatedAt || "")) continue; // this phone's copy is newer: keep it
       byId.set(s.id, s);

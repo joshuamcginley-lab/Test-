@@ -168,8 +168,10 @@ async function identifyFish(row, auto) {
   try {
     const d = await identify(blob);
     if (!d.isFish) { msg.textContent = "That doesn't look like a fish. Try a clearer shot."; return; }
-    row.querySelector(".c-sp").value = d.species;
-    msg.innerHTML = `<span class="id-hit"><b>${esc(d.species)}</b> · ${esc(d.confidence)} confidence${d.alternatives.length ? `. Or: ${d.alternatives.map(a => `<button type="button" class="text-link id-alt">${esc(a)}</button>`).join(", ")}` : ""}</span>${d.reason ? `<span class="id-why">${esc(d.reason)}</span>` : ""}`;
+    // Run on its own after adding a photo: if the angler typed a species meanwhile, theirs stays; this is a suggestion.
+    const sp = row.querySelector(".c-sp"), typed = auto && sp.value.trim() && sp.value.trim() !== d.species;
+    if (!typed) sp.value = d.species;
+    msg.innerHTML = `<span class="id-hit">${typed ? `fishr ID thinks <button type="button" class="text-link id-alt">${esc(d.species)}</button>` : `<b>${esc(d.species)}</b>`} · ${esc(d.confidence)} confidence${d.alternatives.length ? `. Or: ${d.alternatives.map(a => `<button type="button" class="text-link id-alt">${esc(a)}</button>`).join(", ")}` : ""}</span>${d.reason ? `<span class="id-why">${esc(d.reason)}</span>` : ""}`;
   } catch (e) {
     if (e.status === 401) onSyncError(e);
     msg.textContent = e.message || "Couldn't identify that photo.";
