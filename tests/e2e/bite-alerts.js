@@ -52,7 +52,7 @@ const STUB = () => {
   ok(await p.evaluate(() => /bite alerts are in beta now, free/i.test($('settings').textContent) && !/in development/i.test(document.body.innerHTML)), 'Settings: bite alerts listed as a free beta');
   let sent = null; p.on('request', r => { if (r.url().endsWith('/api/push/subscribe')) sent = JSON.parse(r.postData()); });
   await toggle(p, true);
-  ok(/^On\. fishr checks the forecast near Fredericton on Friday and Saturday\.$/.test(await msg(p)), 'turned on: ' + await msg(p));
+  ok(/^On\. Bite Intelligence™ is now monitoring your personal Bite Index near Fredericton\.$/.test(await msg(p)), 'turned on: ' + await msg(p));
   const so = await p.evaluate(() => ({ asked: window.__permAsked, opts: window.__subOpts, setting: state.settings.alerts }));
   ok(so.asked === 1 && so.opts.userVisibleOnly && so.opts.keyLen === 65 && so.setting === true, 'asked permission once, subscribed with the 65-byte push key, setting saved');
   ok(sent && sent.endpoint.endsWith('/__push/device1') && sent.keys.p256dh && sent.lat === 45.9612 && sent.tz === 'America/Moncton' && sent.place === 'Fredericton', 'sent push address, location, time zone and town ' + JSON.stringify({ lat: sent?.lat, tz: sent?.tz, place: sent?.place }));

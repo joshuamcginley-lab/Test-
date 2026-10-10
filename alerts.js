@@ -35,7 +35,7 @@ async function alertsSubscribe(interactive) {
     body: JSON.stringify({ ...sub.toJSON(), lat: spot.lat, lon: spot.lon, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, place: spot.place }) });
   if (!res.ok) return (await res.json().catch(() => ({}))).error || "Couldn't turn on bite alerts. Try again.";
   try { localStorage.setItem(ALERTS_REFRESH, new Date().toDateString()); } catch (e) {}
-  return { ok: `On. fishr checks the forecast ${spot.place ? `near ${spot.place}` : "where you are"} on Friday and Saturday.` };
+  return { ok: `On. Bite Intelligence™ is now monitoring your personal Bite Index ${spot.place ? `near ${spot.place}` : "for your waters"}.` };
 }
 async function alertsUnsubscribe() {
   try {
