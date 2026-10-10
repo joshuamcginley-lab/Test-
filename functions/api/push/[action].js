@@ -17,6 +17,9 @@ const BATCH = 3; // subscribers per call: keeps each call well inside Cloudflare
 const idOf = async endpoint => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint)))].slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
 const sameText = (a, b) => { a = String(a || ""); b = String(b || ""); if (!a || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
 const num = v => typeof v === "number" && Number.isFinite(v) ? v : null;
+// A fishr Cloud angler's trips, for alerts weighted by (and naming the water and lure from) their own log.
+const loadLog = async (DB, userId) => !userId ? [] : (await DB.prepare("SELECT data FROM trips WHERE user_id = ? AND deleted = 0 LIMIT 2000").bind(userId).all()).results
+  .map(r => { try { return JSON.parse(r.data); } catch (e) { return null; } }).filter(Boolean);
 
 const actions = {
   async key({ env }) { return json({ key: env.VAPID_PUBLIC && env.VAPID_PRIVATE ? env.VAPID_PUBLIC : null }); },
@@ -64,8 +67,8 @@ const actions = {
       try {
         const W = await fetchSpotWeather(sub.lat, sub.lon, sub.tz);
         // fishr Cloud anglers get scores weighted by their own log, the same as in the app.
-        const log = sub.user_id ? (await DB.prepare("SELECT data FROM trips WHERE user_id = ? AND deleted = 0 LIMIT 2000").bind(sub.user_id).all()).results.map(r => { try { return JSON.parse(r.data); } catch (e) { return null; } }).filter(Boolean) : [];
-        result = decide(sub, scoreWindows(W, { log }), now);
+        const log = await loadLog(DB, sub.user_id);
+        result = decide(sub, scoreWindows(W, { log }), now, { log });
       } catch (e) { continue; } // weather service down: leave this send time open so the next hour tries again
       let status = null;
       if (result.send) {
@@ -101,7 +104,7 @@ const actions = {
   // with that day's real sunset. For checking the wording; it doesn't touch anyone's weekend or weekly allowance.
   async preview({ request, env }) {
     if (!isAdmin(request, env)) return json({ error: "Not allowed." }, 403);
-    const subs = (await (await db(env)).prepare("SELECT * FROM push_subs LIMIT 200").all()).results;
+    const DB = await db(env), subs = (await DB.prepare("SELECT * FROM push_subs LIMIT 200").all()).results;
     let sent = 0;
     for (const sub of subs) {
       const L = localParts(Date.now(), sub.tz), ahead = ((6 - L.dow + 7) % 7) || 7, sat = new Date(Date.parse(L.date + "T12:00:00Z") + ahead * 864e5).toISOString().slice(0, 10);
@@ -110,8 +113,12 @@ const actions = {
         const d = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${sub.lat}&longitude=${sub.lon}&daily=sunset&forecast_days=8&timezone=${encodeURIComponent(sub.tz)}&timeformat=unixtime`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
         const i = d.daily.time.findIndex(t => new Date((t + d.utc_offset_seconds) * 1000).toISOString().slice(0, 10) === sat); if (i >= 0) sun = d.daily.sunset[i] * 1000;
       } catch (e) {}
-      const window = { date: sat, part: "pm", sun, score: 88, drivers: [{ v: 14, label: "Evening golden hour" }, { v: 9, label: "Falling pressure" }, { v: 5, label: "Cloud cover" }] };
-      const { title, body } = message({ kind: "weekend", window }, sub, Date.now());
+      // A Saturday evening scoring 88 with its peak in the hour before sunset, against a month of ordinary windows.
+      const window = { date: sat, part: "pm", sun, score: 88, at: sun - 36e5, hour: 18, c: { temp: 20, sky: "Overcast", press: "Falling" },
+        hours: [{ at: sun - 2 * 36e5, score: 84 }, { at: sun - 36e5, score: 88 }, { at: sun, score: 87 }],
+        drivers: [{ v: 14, label: "Evening golden hour" }, { v: 9, label: "Falling pressure" }, { v: 5, label: "Cloud cover" }] };
+      const past = Array.from({ length: 56 }, (_, i) => ({ score: 55 + (i * 7) % 32 }));
+      const { title, body } = message({ kind: "weekend", window }, sub, Date.now(), { past, log: await loadLog(DB, sub.user_id) });
       const status = await sendPush(env, sub, { title, body, url: "/?go=advice", tag: "fishr-bite" }).catch(() => 0);
       if (status >= 200 && status < 300) sent++;
     }

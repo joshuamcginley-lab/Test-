@@ -134,5 +134,77 @@
     return null;
   }
 
-  G.BiteCore = { SPECIES_TEMPS, speciesInfo, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront };
+  /* ---------- The Guide's call: which water (and lure, spot) did best in conditions like these ---------- */
+  // Every past trip is weighted by how similar its conditions were (temperature, time of day, time of year, sky,
+  // pressure, river level); waters are ranked by weighted fish per trip, pulled toward the angler's average when the
+  // evidence is thin. q = { temp, hour, doy, sky, press, flow }.
+  const avgT = s => s.tempLow == null ? null : (s.tempLow + (s.tempHigh ?? s.tempLow)) / 2;
+  const dayOfYear = iso => { const d = new Date(iso + "T12:00:00"); return Math.round((d - new Date(d.getFullYear(), 0, 1)) / 864e5); };
+  const gauss = (d, sd) => Math.exp(-0.5 * (d / sd) ** 2);
+  const tripSky = s => conds(s).includes("Rain") ? "Rain" : conds(s).includes("Overcast") ? "Overcast" : null;
+  function similarity(s, q) {
+    const k = q.k || 1; // widens every tolerance when nothing in the log is close
+    const t = avgT(s);
+    const wT = t == null ? 0.35 : gauss(t - q.temp, 3.5 * k);
+    const h = tripHour(s);
+    const wH = h == null ? 0.5 : gauss(Math.min(Math.abs(h - q.hour), 24 - Math.abs(h - q.hour)), 2.2 * k);
+    let dd = Math.abs(dayOfYear(s.date) - q.doy); dd = Math.min(dd, 365 - dd);
+    const wS = 0.3 + 0.7 * gauss(dd, 40 * k);
+    const sky = tripSky(s);
+    const wC = q.sky && sky ? (sky === q.sky || (q.sky !== "Clear" && sky !== "Clear") ? 1.25 : 0.8) : 1;
+    const wP = q.press && s.wx?.trend ? (s.wx.trend === q.press ? 1.3 : 0.75) : 1;
+    const lvl = BUCKETS.level(s), wF = q.flow && lvl ? (lvl === q.flow ? 1.35 : 0.7) : 1;
+    return wT * wH * wS * wC * wP * wF;
+  }
+  function rankWaters(log, q) {
+    const trips = log.filter(s => s.water);
+    const scored = trips.map(s => ({ s, w: similarity(s, q), f: fishOf(s) }));
+    const totW = scored.reduce((a, x) => a + x.w, 0) || 1;
+    const globalRate = scored.reduce((a, x) => a + x.w * x.f, 0) / totW;
+    const byWater = new Map();
+    for (const x of scored) { if (!byWater.has(x.s.water)) byWater.set(x.s.water, []); byWater.get(x.s.water).push(x); }
+    const K = 2; // pulls thin evidence toward the angler's overall average
+    const rows = [...byWater].map(([water, xs]) => {
+      const W = xs.reduce((a, x) => a + x.w, 0), W2 = xs.reduce((a, x) => a + x.w * x.w, 0);
+      const fishW = xs.reduce((a, x) => a + x.w * x.f, 0), skunkW = xs.reduce((a, x) => a + x.w * (x.f ? 0 : 1), 0);
+      const neff = W2 ? W * W / W2 : 0;
+      const similar = xs.filter(x => x.w >= 0.2).sort((a, b) => b.w - a.w);
+      return { water, est: (fishW + K * globalRate) / (W + K), raw: W ? fishW / W : 0, skunk: W ? skunkW / W : 0, neff, W, trips: xs.length, similar, xs };
+    }).filter(r => r.trips >= ((q.k || 1) > 1 ? 1 : 2));
+    rows.sort((a, b) => b.est - a.est);
+    const sim = scored.filter(x => x.w >= 0.2);
+    return { rows, globalRate, nSimilar: sim.length, skunkSimilar: sim.length ? sim.filter(x => !x.f).length / sim.length : 0, anySeason: scored.some(x => { let dd = Math.abs(dayOfYear(x.s.date) - q.doy); return Math.min(dd, 365 - dd) <= 30; }) };
+  }
+  function bestOf(xs, key) {
+    const t = {};
+    for (const x of xs) for (const c of x.s.catches || []) { const k = key(c, x.s); if (k) t[k] = (t[k] || 0) + x.w * (+c.count || 0); }
+    return Object.entries(t).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  }
+  function bestSpot(xs) {
+    const t = {};
+    for (const x of xs) if (x.s.spot) t[x.s.spot] = (t[x.s.spot] || 0) + x.w * (x.f + 0.2);
+    return Object.entries(t).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  }
+  // Start strict, then widen the tolerances step by step until some water has enough evidence.
+  // Always returns a ranking, so the Guide never answers "nothing works".
+  const WIDEN = [1, 1.6, 2.5, 4, 8];
+  function bestRanking(log, q, minNeff = 1) {
+    let res = null;
+    for (const k of WIDEN) {
+      res = rankWaters(log, { ...q, k });
+      const rows = res.rows.filter(x => x.W >= 0.6 && x.neff >= minNeff);
+      if (rows.length) return { res, rows, k };
+    }
+    return { res, rows: res.rows, k: WIDEN[WIDEN.length - 1] };
+  }
+  // The call in short: the top water, and the spot and lure that did best there in similar trips.
+  function bestCall(log, q) {
+    const { rows, k } = bestRanking(log, q), top = rows[0];
+    if (!top) return null;
+    const simTop = top.similar.length ? top.similar : [...top.xs].sort((a, b) => b.w - a.w);
+    return { water: top.water, spot: bestSpot(simTop), lure: bestOf(simTop, c => c.lure), est: top.est, k, neff: top.neff };
+  }
+
+  G.BiteCore = { SPECIES_TEMPS, speciesInfo, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront,
+    avgT, dayOfYear, similarity, rankWaters, bestOf, bestSpot, bestRanking, bestCall };
 })(typeof globalThis !== "undefined" ? globalThis : self);

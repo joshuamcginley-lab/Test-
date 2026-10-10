@@ -56,15 +56,15 @@ export function scoreWindows(W, opts = {}) {
     const dp3 = H[i].p != null && H[i - 3].p != null ? Math.round((H[i].p - H[i - 3].p) * 10) / 10 : null;
     const c = { temp: H[i].temp, sky: skyFromCode(H[i].code), press: dp3 == null ? null : dp3 >= 1 ? "Rising" : dp3 <= -1 ? "Falling" : "Steady", dp3, wind: H[i].wind };
     const light = { ...Core.lightAt(t, rise, set), midday: localHour >= 11 && localHour < 15 };
-    return Core.score({ c, light, flow: null, model: null, sp: null, recentTemp: null, front: Core.coldFront(H, new Date(t + 1)) }, { log, memo });
+    return { ...Core.score({ c, light, flow: null, model: null, sp: null, recentTemp: null, front: Core.coldFront(H, new Date(t + 1)) }, { log, memo }), c, hour: localHour };
   };
   const out = [];
   W.daily.time.forEach((day, d) => {
     const rise = W.daily.sunrise[d] * 1000, set = W.daily.sunset[d] * 1000, date = new Date(day * 1000 + off).toISOString().slice(0, 10);
     for (const [part, from, to, sun] of [["am", rise - 36e5, rise + 3 * 36e5, rise], ["pm", set - 3 * 36e5, set + 36e5, set]]) {
-      let best = null;
-      H.forEach((x, i) => { if (+x.time >= from && +x.time <= to) { const s = hourScore(i, rise, set); if (s && (!best || s.score > best.score)) best = { ...s, at: +x.time }; } });
-      if (best) out.push({ date, part, sun, score: best.score, drivers: best.drivers, at: best.at });
+      let best = null; const hours = [];
+      H.forEach((x, i) => { if (+x.time >= from && +x.time <= to) { const s = hourScore(i, rise, set); if (s) { hours.push({ at: +x.time, score: s.score }); if (!best || s.score > best.score) best = { ...s, at: +x.time }; } } });
+      if (best) out.push({ date, part, sun, score: best.score, drivers: best.drivers, at: best.at, c: best.c, hour: best.hour, hours });
     }
   });
   return out;
@@ -83,7 +83,7 @@ export function decideKeys(nowMs, tz) {
   return { weekendKey: sat, weekKey: isoWeek(L.date) };
 }
 // Decide for one subscriber now. Returns { send: {kind, window, title, body} | null, slotKey, weekendKey, weekKey }.
-export function decide(sub, windows, nowMs) {
+export function decide(sub, windows, nowMs, opts = {}) {
   const L = localParts(nowMs, sub.tz), plan = slotPlan(L.dow, L.hour);
   if (!plan) return { send: null };
   const slotKey = `${L.date}-${plan.slot}`, { weekendKey, weekKey } = decideKeys(nowMs, sub.tz);
@@ -98,22 +98,40 @@ export function decide(sub, windows, nowMs) {
   if (!send && plan.weekly.length && sub.weekly !== weekKey) { const w = pick(plan.weekly, RULES.weekly); if (w) send = { kind: "weekly", window: w }; }
   // A weekend window good enough to be the week's best uses up the weekly alert too, so it isn't sent twice.
   if (send?.kind === "weekend" && send.window.score >= Math.max(RULES.weekly.min, cutoff(past, RULES.weekly.top))) send.alsoWeekly = true;
-  if (send) Object.assign(send, message(send, sub, nowMs));
+  if (send) Object.assign(send, message(send, sub, nowMs, { past, log: opts.log }));
   return { send, slotKey, weekendKey, weekKey };
 }
 
-// The notification text, sized for a lock screen: the projected Bite Index™ and the window in a short title
-// ("Bite Index™ 88 · Sat evening"), then one tight line of why and the sun time. "Projected": it's scored from the
-// forecast, so the live score on the day can land a few points either way.
+// The notification, sized for a lock screen (Option C: Bite Intelligence™ is the speaker).
+//   Bite Intelligence™: 88 Saturday
+//   Peak 5:30–6:30 PM. Keswick River, near mouth · chatterbait. Top 4% of your month.
+// Water, spot and lure come from the angler's own log (fishr Cloud), the same way the Guide makes its call; without
+// a log, the top reasons stand in. The score is projected from the forecast, so the live one can land a few points off.
 const SHORT = { "Evening golden hour": "golden hour", "Morning golden hour": "golden hour", "Prime air temp": "prime temps", "Light chop": "light chop", "Pressure dropping fast": "pressure dropping fast" };
-export function message({ kind, window: w }, sub, nowMs) {
-  const L = localParts(nowMs, sub.tz), day = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, weekday: "short" }).format(new Date(w.sun));
-  const part = w.part === "am" ? "morning" : "evening";
-  const when = w.date === L.date ? `This ${part}` : `${day} ${part}`;
-  const reasons = w.drivers.filter(d => d.v > 0).slice(0, 3).map(d => SHORT[d.label] || d.label.toLowerCase());
-  const why = reasons.length ? reasons.join(", ") : "conditions lining up";
-  const sunTime = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, hour: "numeric", minute: "2-digit" }).format(new Date(w.sun)).replace(/\s?[AP]M$/, "");
-  const where = sub.place ? ` near ${sub.place}` : "";
-  const lead = kind === "weekend" ? `Top ${part} of your month${where}.` : `Best window of your week${where}.`;
-  return { title: `Bite Index™ ${w.score} · ${when}`, body: `${lead} ${why.charAt(0).toUpperCase() + why.slice(1)}. ${w.part === "am" ? "Sunrise" : "Sunset"} ${sunTime}.` };
+const clip = (t, n) => { t = String(t || "").trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t; };
+// "5:30–6:30 PM": the hours within 2 points of the window's best, half an hour either side of them.
+function peakSpan(w, tz) {
+  const good = (w.hours?.length ? w.hours : [{ at: w.at ?? w.sun, score: w.score }]).filter(h => h.score >= w.score - 2 && Number.isFinite(h.at)).map(h => h.at);
+  if (!good.length) return null;
+  const fmt = ms => new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(new Date(ms)).replace(":00", "");
+  const a = fmt(Math.min(...good) - 18e5), b = fmt(Math.max(...good) + 18e5), am = s => s.slice(-2);
+  return am(a) === am(b) ? `${a.slice(0, -3)}–${b}` : `${a}–${b}`;
+}
+export function message({ kind, window: w }, sub, nowMs, opts = {}) {
+  const L = localParts(nowMs, sub.tz), day = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long" }).format(new Date(`${w.date}T12:00:00Z`));
+  const when = w.date === L.date ? (w.part === "am" ? "this morning" : "tonight") : day;
+  const title = `Bite Intelligence™: ${w.score} ${when}`;
+  // How rare it is: the share of the past month's windows that scored this high or higher.
+  const past = opts.past || [], share = past.length ? Math.max(1, Math.ceil(past.filter(p => p.score >= w.score).length / past.length * 100)) : null;
+  const rank = kind === "weekly" ? "Best of your week." : share ? `Top ${share}% of your month.` : "One of your best this month.";
+  // Where and with what, from their own log.
+  let call = null;
+  if (opts.log?.length && w.c) {
+    const r = Core.bestCall(opts.log, { temp: w.c.temp, hour: w.hour ?? 12, doy: Core.dayOfYear(w.date), sky: w.c.sky, press: w.c.press, flow: null });
+    if (r && r.k <= 2.5) call = `${clip(r.water, 26)}${r.spot ? `, ${clip(r.spot, 20).toLowerCase()}` : ""}${r.lure ? ` · ${clip(r.lure, 22).toLowerCase()}` : ""}`;
+  }
+  const reasons = w.drivers.filter(d => d.v > 0).slice(0, 2).map(d => SHORT[d.label] || d.label.toLowerCase()).join(", ");
+  const span = peakSpan(w, sub.tz);
+  const body = `${span ? `Peak ${span}. ` : ""}${call ? `${call}. ${rank}` : `${rank}${reasons ? ` ${reasons.charAt(0).toUpperCase() + reasons.slice(1)}.` : ""}`}`;
+  return { title, body, call };
 }
