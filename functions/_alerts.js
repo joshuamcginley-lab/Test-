@@ -50,7 +50,7 @@ export async function fetchSpotWeather(lat, lon, tz) {
 export function scoreWindows(W, opts = {}) {
   const h = W.hourly, off = (W.utc_offset_seconds || 0) * 1000;
   const H = h.time.map((t, i) => ({ time: new Date(t * 1000), temp: h.temperature_2m[i], p: h.pressure_msl[i], wind: h.wind_speed_10m[i], code: h.weather_code[i] }));
-  // Best bet, as in the app: each hour scores the angler's fish (or the common local ones) and keeps the best.
+  // Best bite, as in the app: each hour scores the angler's fish (or the common local ones) and keeps the best.
   const memo = new Map(), log = opts.log || [], cands = Core.betCandidates(log, W.latitude, W.longitude);
   const hourScore = (i, rise, set) => {
     if (i < 3 || H[i].temp == null) return null;

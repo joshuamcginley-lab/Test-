@@ -14,7 +14,7 @@
   //   lo–hi: water temperature where they feed best (°C); act: the range they stay active in (sluggish outside it).
   //   light: score for golden hour / near dawn or dusk / daylight / after dark.
   //   cloud: overcast vs clear skies; chop: light wind on the water; note: one line on their habits.
-  //   bycatch: caught while fishing for something else, rarely the goal, so it never leads "Best bet" (it can be pinned).
+  //   bycatch: caught while fishing for something else, rarely the goal, so it never leads "Best bite" (it can be pinned).
   // Temperatures follow published thermal preferences (e.g. Coker, Portt & Minns 2001, Fisheries and Oceans Canada).
   const SPECIES = [
     { re: /smallmouth/i, name: "Smallmouth", lo: 18, hi: 26, act: [10, 29], light: [12, 6, 0, -4], cloud: 4, chop: 5, note: "feed hardest at dawn and dusk, and on windy, overcast days" },
@@ -70,7 +70,7 @@
   // Is this fish found around lat/lon? With no location, every fish counts.
   const foundNear = (sp, lat, lon) => lat == null || lon == null || !RANGE[sp] || RANGE[sp](lat, lon);
 
-  // "Best bet": the Bite Index scores each fish an angler goes after and leads with whichever is biting best now.
+  // "Best bite": the Bite Index scores each fish an angler goes after and leads with whichever is biting best now.
   // Their fish are the ones they've caught 3 or more of (up to 4, most-caught first). Someone without a log gets the
   // most commonly fished species found around them, from North American angler surveys (bass, trout and walleye lead).
   const POPULAR = ["Smallmouth", "Brook trout", "Walleye", "Largemouth", "Rainbow trout", "Pike", "Perch", "Salmon", "Panfish", "Catfish",

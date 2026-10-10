@@ -42,13 +42,13 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   let { p, ctx } = await open('iPhone 13', { log: ownLog });
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
   let r = await card(p);
-  ok(r.pill && r.pill.options[0] === 'Best bet' && r.pill.yours.length >= 1 && r.pill.yours.length <= 4, 'own log: species pill lists their fish first ' + JSON.stringify(r.pill.yours));
+  ok(r.pill && r.pill.options[0] === 'Best bite' && r.pill.yours.length >= 1 && r.pill.yours.length <= 4, 'own log: species pill lists their fish first ' + JSON.stringify(r.pill.yours));
   ok(r.pill.others.includes('Salmon') && r.pill.others.includes('Muskie') && !['Walleye', 'Pike', 'Carp'].some(n => r.pill.others.includes(n)), 'other fish: only ones found around Fredericton (no walleye, pike or carp) ' + JSON.stringify(r.pill.others));
   const counts = await p.evaluate(() => { const n = {}; for (const s of state.sessions) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); } return n; });
   const total = Object.values(counts).reduce((a, x) => a + x, 0), top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  // Best bet by default: each of their fish is scored and the best leads; the others show with their scores.
+  // Best bite by default: each of their fish is scored and the best leads; the others show with their scores.
   const others = r.pill.also.split(' · ').filter(Boolean);
-  ok(r.pill.value === 'best' && /^Best bet · /.test(r.pill.shown) && others.length === r.pill.yours.filter(n => n !== 'Chub').length - 1 && !/Chub/.test(r.pill.shown + r.pill.also) && others.every(o => /^[A-Za-z ]+ \d+$/.test(o)) && others.every(o => +o.split(' ').pop() <= r.score), `Best bet leads with the best of the fish they go after, never by-catch like chub (${r.pill.shown} ${r.score}; others ${r.pill.also})`);
+  ok(r.pill.value === 'best' && /^Best bite · /.test(r.pill.shown) && others.length === r.pill.yours.filter(n => n !== 'Chub').length - 1 && !/Chub/.test(r.pill.shown + r.pill.also) && others.every(o => /^[A-Za-z ]+ \d+$/.test(o)) && others.every(o => +o.split(' ').pop() <= r.score), `Best bite leads with the best of the fish they go after, never by-catch like chub (${r.pill.shown} ${r.score}; others ${r.pill.also})`);
   ok(r.pill.yours.every(n => counts[n] >= 3), 'only species with 3+ fish are listed as theirs');
 
   // Personal chips: try each pressure trend; at least one should be backed by their log, with a reason.
@@ -87,9 +87,9 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   r = await card(p); const spMine = r.chips.find(c => c.mine);
   ok(!spMine || / smallmouth per trip /.test(spMine.why), 'learned chips use smallmouth counts when scoring for smallmouth ' + (spMine?.why || 'none'));
   await p.selectOption('#biteSp', 'best'); r = await card(p);
-  ok(/^Best bet/.test(r.pill.shown) && await p.evaluate(() => state.settings.biteSpecies) === 'best', '"Best bet" goes back to comparing their fish');
+  ok(/^Best bite/.test(r.pill.shown) && await p.evaluate(() => state.settings.biteSpecies) === 'best', '"Best bite" goes back to comparing their fish');
   await p.reload(); await p.waitForTimeout(700); await p.evaluate(() => { showTab('advice'); goLive(true); }); await p.waitForTimeout(1500);
-  ok((await card(p)).pill?.value === 'best', '"Best bet" is remembered after a reload');
+  ok((await card(p)).pill?.value === 'best', '"Best bite" is remembered after a reload');
   // Cold fronts, from the hourly pressure and temperature around now.
   const series = kind => p.evaluate(kind => {
     const base = new Date(); base.setMinutes(0, 0, 0); const H = [];
@@ -124,8 +124,8 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   ({ p, ctx } = await open('iPhone 13', { log: [] }));
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
   r = await card(p);
-  ok(r.score && r.pill?.value === 'best' && !r.pill.yours.length && r.pill.others.includes('Brook trout') && !r.pill.others.includes('Walleye') && !r.chips.some(c => c.mine), 'new user: Best bet, any local fish to pick, no learned chips ' + JSON.stringify(r.pill));
-  ok(/^Best bet · (Smallmouth|Brook trout|Rainbow trout|Perch)$/.test(r.pill.shown) && r.pill.also.split(' · ').length === 2, 'new user near Fredericton: Best bet compares the common local fish (smallmouth, brook trout, rainbow, perch) ' + r.pill.shown + ' / ' + r.pill.also);
+  ok(r.score && r.pill?.value === 'best' && !r.pill.yours.length && r.pill.others.includes('Brook trout') && !r.pill.others.includes('Walleye') && !r.chips.some(c => c.mine), 'new user: Best bite, any local fish to pick, no learned chips ' + JSON.stringify(r.pill));
+  ok(/^Best bite · (Smallmouth|Brook trout|Rainbow trout|Perch)$/.test(r.pill.shown) && r.pill.also.split(' · ').length === 2, 'new user near Fredericton: Best bite compares the common local fish (smallmouth, brook trout, rainbow, perch) ' + r.pill.shown + ' / ' + r.pill.also);
   // A new angler after brook trout gets the trout's own rules, explained.
   await p.$eval('#biteSp', e => { e.value = 'Brook trout'; e.dispatchEvent(new Event('change')); }); await p.waitForTimeout(300);
   r = await card(p);

@@ -93,7 +93,7 @@ function spOptions(choices, sp) {
   return choices.length ? `<optgroup label="Your fish">${choices.map(opt).join("")}</optgroup><optgroup label="Other fish">${rest.map(opt).join("")}</optgroup>` : rest.map(opt).join("");
 }
 function biteChoices() { return demo ? [] : BiteCore.yourFish(state.sessions); }
-// A fish the angler pinned in the picker (any fish fishr knows); otherwise the Bite Index runs as "Best bet".
+// A fish the angler pinned in the picker (any fish fishr knows); otherwise the Bite Index runs as "Best bite".
 function pinnedSpecies() {
   const set = state.settings.biteSpecies;
   return !demo && set && BiteCore.SPECIES.some(f => f.name === set) ? set : null;
@@ -161,7 +161,7 @@ function renderLive(status, quiet) {
   const recentTemp = past.length ? past.reduce((a, h) => a + h.temp, 0) / past.length : null;
   const front = coldFront(H, now);
   const ctx = { c, light, flow: wx.flow, model, recentTemp, front };
-  // Best bet: score each of their fish (or the common local ones) and lead with the one biting best right now.
+  // Best bite: score each of their fish (or the common local ones) and lead with the one biting best right now.
   let sp = pinned, bi, also = [];
   if (demo || pinned) bi = biteIndex({ ...ctx, sp: pinned });
   else {
@@ -192,7 +192,7 @@ function renderLive(status, quiet) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(pinned || (sp ? `Best bet · ${sp}` : "Best bet"))}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="best"${pinned ? "" : " selected"}>Best bet</option>${spOptions(choices, pinned)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(pinned || (sp ? `Best bite · ${sp}` : "Best bite"))}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="best"${pinned ? "" : " selected"}>Best bite</option>${spOptions(choices, pinned)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
         ${also.length ? `<span class="bite-also">${also.map(a => `<span>${esc(a.sp)} ${a.bi.score}</span>`).join(" · ")}</span>` : ""}
         <div class="drivers">${chips.map(x => x.why

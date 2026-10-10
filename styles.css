@@ -840,7 +840,7 @@ nav.tabs button[role="tab"]{min-width:0}
 /* Species pill: the look comes from the label; the real dropdown sits on top, invisible, at 16px so iOS doesn't zoom */
 .bite-sp{position:relative;display:inline-flex;align-items:center;max-width:100%;font:600 calc(10.5*var(--u))/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--glass-2);border:1px solid var(--line-2);border-radius:999px;padding:4px 20px 4px 8px;margin-left:6px;vertical-align:1px;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat}
 .bite-sp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bite-also{display:block;margin:-2px 0 6px;font:500 calc(11*var(--u))/1.3 var(--f-mono);letter-spacing:.04em;color:var(--muted)} /* the other fish in Best bet, and their scores */
+.bite-also{display:block;margin:-2px 0 6px;font:500 calc(11*var(--u))/1.3 var(--f-mono);letter-spacing:.04em;color:var(--muted)} /* the other fish in Best bite, and their scores */
 .bite-also > span{white-space:nowrap}
 .bite-sp select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:calc(16*var(--u));cursor:pointer;-webkit-appearance:none;appearance:none}
 .bite-sp:focus-within{outline:2px solid var(--c);outline-offset:1px}

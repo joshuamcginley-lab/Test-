@@ -29,7 +29,7 @@ ok(/^Walleye: light-shy/.test(why) && /that rule gives \+8/.test(why), "a fish's
 const T = (sp, n) => ({ date: "2026-06-01", water: "W", catches: [{ species: sp, count: n }] });
 ok(C.topSpecies([T("Smallmouth bass", 6), T("Brook trout", 2)]) === "Smallmouth" && C.topSpecies([T("Perch", 1), T("Pike", 1)]) === null && C.topSpecies([]) === null, "top species: a real share of the catch, or none");
 
-// Best bet: an angler's fish (3+ caught, most first), or the common fish found around someone without a log.
+// Best bite: an angler's fish (3+ caught, most first), or the common fish found around someone without a log.
 const log2 = [T("Smallmouth bass", 9), T("Brook trout", 5), T("Perch", 1), T("Fallfish", 6)];
 ok(C.betCandidates(log2, 45.96, -66.64).join() === "Smallmouth,Brook trout", "their fish: 3+ caught, most first, by-catch (fallfish/chub) left out " + C.betCandidates(log2, 45.96, -66.64));
 ok(C.betCandidates([], 45.96, -66.64).join() === "Smallmouth,Brook trout,Rainbow trout" && C.betCandidates([], 43.65, -79.38).join() === "Smallmouth,Brook trout,Walleye", "no log: the common local fish (no walleye in NB, walleye in Ontario) " + C.betCandidates([], 45.96, -66.64) + " / " + C.betCandidates([], 43.65, -79.38));
