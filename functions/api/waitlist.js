@@ -4,6 +4,8 @@
 // GET  /api/waitlist?export=csv with header x-admin-key: <ADMIN_KEY secret> -> CSV of sign-ups, with unsubscribe links
 // DELETE /api/waitlist {email} -> removes that address (used by the privacy page's removal form)
 import { json, isAdmin, unsubToken } from "../_lib.js";
+import { isJson } from "../_auth.js";
+import { underLimit } from "../_limits.js";
 
 const PREFIX = "waitlist/";
 const CONSENT_TEXT = "Email me when fishr Pro opens. I can unsubscribe at any time.";
@@ -13,9 +15,10 @@ async function sha256(s) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
+// Pages through every sign-up (the cap only guards against a runaway loop, far above any real list).
 async function listAll(bucket) {
   const keys = []; let cursor;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 500; i++) {
     const page = await bucket.list({ prefix: PREFIX, cursor, limit: 1000 });
     keys.push(...page.objects.map(o => o.key));
     if (!page.truncated) break; cursor = page.cursor;
@@ -44,6 +47,9 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   if (!env.CATCHES) return json({ error: "The waitlist isn't set up yet." }, 503);
+  // JSON only (a plain cross-site form can't send it), and a few sign-ups per visitor per day.
+  if (!isJson(request)) return json({ error: "Send JSON." }, 415);
+  if (!await underLimit(env, request, "waitlist", 5)) return json({ error: "Too many sign-ups from here today." }, 429);
   let body;
   try { body = await request.json(); } catch { return json({ error: "Send your email address." }, 400); }
   if (body.website) return json({ ok: true, count: 0 }); // honeypot field: bots fill it, people never see it

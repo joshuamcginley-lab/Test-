@@ -6,9 +6,11 @@
 // POST /api/auth/login             {challengeId, id, clientDataJSON, authenticatorData, signature, userHandle} -> { user }
 // POST /api/auth/logout
 import { json } from "../../_lib.js";
+import { underLimit } from "../../_limits.js";
 import { db, handle, fail, randomId, currentUser, requireUser, startSession, endSession, withCookies, newChallenge,
   registrationOptions, verifyRegistration, verifyLogin, accountInfo, isJson } from "../../_auth.js";
 
+const SIGNUPS_PER_DAY = 5;
 const cleanLabel = s => String(s || "").replace(/[^\w ·().,'-]/g, "").trim().slice(0, 40) || "Passkey";
 
 const actions = {
@@ -19,6 +21,8 @@ const actions = {
 
   async "register-options"({ request, env, body }) {
     const u = await currentUser(request, env), DB = await db(env);
+    // New accounts per visitor per day (adding a passkey to your own account doesn't count).
+    if (!u && !await underLimit(env, request, "signup", SIGNUPS_PER_DAY)) fail("Too many new accounts from here today. Try again tomorrow.", 429);
     const userId = u ? u.id : randomId(16);
     const exclude = u ? (await DB.prepare("SELECT id FROM passkeys WHERE user_id = ?").bind(u.id).all()).results.map(r => r.id) : [];
     const { id, challenge } = await newChallenge(env, u ? "add" : "new", userId);
@@ -59,7 +63,7 @@ const actions = {
 
 export async function onRequest({ request, env, params }) {
   return handle(async () => {
-    const fn = actions[params.action];
+    const fn = Object.hasOwn(actions, params.action) ? actions[params.action] : null;
     if (!fn) fail("Not found.", 404);
     const isGet = params.action === "me";
     if (isGet !== (request.method === "GET")) fail("Method not allowed.", 405);

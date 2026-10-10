@@ -1,6 +1,6 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "fishr-v61";
-const APP = ["./", "index.html", "styles.css?v=61", "app.js?v=61", "forecast.js?v=61", "conditions.js?v=61", "live.js?v=61", "map.js?v=61", "pro.js?v=61", "cloud.js?v=61", "polish.js?v=61", "guide.js?v=61", "ai.js?v=61", "report.js?v=61", "privacy.html", "share.js?v=61", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
+const VERSION = "fishr-v62";
+const APP = ["./", "index.html", "styles.css?v=62", "app.js?v=62", "forecast.js?v=62", "conditions.js?v=62", "live.js?v=62", "map.js?v=62", "pro.js?v=62", "cloud.js?v=62", "polish.js?v=62", "guide.js?v=62", "ai.js?v=62", "report.js?v=62", "privacy.html", "share.js?v=62", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));

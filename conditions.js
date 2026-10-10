@@ -72,6 +72,7 @@ function askDevice() {
     navigator.geolocation.getCurrentPosition(p => {
       const c = { lat: r(p.coords.latitude, 3), lon: r(p.coords.longitude, 3) };
       state.settings.home = c; save(); res(c);
+      for (const id of awaitingLocation) { awaitingLocation.delete(id); fillTripLater(id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === id)) || "Your guide has it."}`); }); }
     }, () => res(null), { timeout: 12000, maximumAge: 600000 });
   });
 }
@@ -104,27 +105,36 @@ function applyToForm(wx, flow) {
   if (flow?.status === "Low") on.add("Low water");
   segSet($("segCond"), [...on]);
 }
+// Each lookup gets a number; a newer lookup, another trip opening, or the date or time changing makes an older
+// one stale, and a stale result is dropped instead of landing in whatever form is open by then.
+let formSeq = 0, filling = 0;
 async function fillConditions(allowPrompt) {
-  const date = $("fDate").value; if (!date) return;
-  let where = knownLocation($("fWaterIn").value.trim());
-  if (!where && allowPrompt) { $("wxText").textContent = "Finding you to fill in the weather…"; where = await askDevice(); }
-  if (!where) { $("wxText").textContent = allowPrompt ? "No location, so type the temperature. A trip needs one to count toward your guide." : ""; return; }
-  if (!navigator.onLine) { $("wxText").textContent = "No signal. Conditions can be filled in later from Settings."; return; }
-  $("wxText").textContent = "Pulling conditions…";
-  const hour = tripHourOf(date, $("fStart").value, null);
-  const recent = (Date.now() - new Date(date + "T12:00:00")) / 864e5 <= 2;
-  const [wx, flow] = await Promise.all([
-    fetchWeather(where.lat, where.lon, date, hour).catch(() => null),
-    recent ? fetchWater(where.lat, where.lon).catch(() => null) : Promise.resolve(null),
-  ]);
-  if (flow) delete flow.series;
-  formCond = { wx: wx || formCond.wx, flow: flow || formCond.flow };
-  applyToForm(wx, flow);
-  showFormChips();
-  $("wxText").textContent = wx || flow ? "" : "Couldn't reach the weather service. Type the temperature instead.";
+  const date = $("fDate").value, start = $("fStart").value; if (!date) return;
+  const seq = ++formSeq, stale = () => seq !== formSeq || $("sheet").hidden || $("fDate").value !== date || $("fStart").value !== start;
+  filling = seq;
+  try {
+    let where = knownLocation($("fWaterIn").value.trim());
+    if (!where && allowPrompt) { $("wxText").textContent = "Finding you to fill in the weather…"; where = await askDevice(); if (stale()) return; }
+    if (!where) { $("wxText").textContent = allowPrompt ? "No location, so type the temperature. A trip needs one to count toward your guide." : ""; return; }
+    if (!navigator.onLine) { $("wxText").textContent = "No signal. Conditions can be filled in later from Settings."; return; }
+    $("wxText").textContent = "Pulling conditions…";
+    const hour = tripHourOf(date, start, null);
+    const recent = (Date.now() - new Date(date + "T12:00:00")) / 864e5 <= 2;
+    const [wx, flow] = await Promise.all([
+      fetchWeather(where.lat, where.lon, date, hour).catch(() => null),
+      recent ? fetchWater(where.lat, where.lon).catch(() => null) : Promise.resolve(null),
+    ]);
+    if (stale()) return;
+    if (flow) delete flow.series;
+    formCond = { wx: wx || formCond.wx, flow: flow || formCond.flow };
+    applyToForm(wx, flow);
+    showFormChips();
+    $("wxText").textContent = wx || flow ? "" : "Couldn't reach the weather service. Type the temperature instead.";
+  } finally { if (filling === seq) filling = 0; }
 }
 // Called by openSheet: show stored readings, or fetch quietly for a new trip when the location is already known.
 function onSheetOpen(s) {
+  formSeq++; filling = 0; // anything still looking up belongs to the previous form
   formCond = { wx: s?.wx || null, flow: s?.flow || null };
   $("wxText").textContent = ""; showFormChips();
   if (s) return;
@@ -136,13 +146,21 @@ function onSheetOpen(s) {
 }
 const LOC_ASKED = "fishr.locAsked";
 // A trip's temperature from its weather, when none was typed: that's what Guide counts and compares.
-function tempFromWx(s) { if (s.tempLow == null && s.wx?.t != null) s.tempLow = s.tempHigh = r(s.wx.t, 0); }
+function tempFromWx(s) {
+  if (s.tempLow != null) return false;
+  if (s.tempHigh != null) s.tempLow = s.tempHigh; // only "Temp later" was typed: use it
+  else if (s.wx?.t != null) s.tempLow = s.tempHigh = r(s.wx.t, 0);
+  else return false;
+  return true;
+}
+// Trips saved before fishr knew where you are get their weather once the location arrives (see askDevice).
+const awaitingLocation = new Set();
 // After saving a trip with no weather (no signal, or no location yet), fill it in quietly once fishr knows where.
 async function fillTripLater(id) {
   const s0 = state.sessions.find(s => s.id === id);
   if (demo || !s0 || s0.wx || !navigator.onLine) return false;
   const where = (s0.lat != null ? { lat: s0.lat, lon: s0.lon } : null) || coordsForWater(s0.water) || state.settings.home;
-  if (!where) return false;
+  if (!where) { awaitingLocation.add(id); return false; }
   const wx = await fetchWeather(where.lat, where.lon, s0.date, tripHourOf(s0.date, s0.start, s0.period)).catch(() => null);
   const s = !demo && state.sessions.find(x => x.id === id);
   if (!wx || !s || s.updatedAt !== s0.updatedAt || s.wx) return false; // deleted, edited or filled meanwhile
@@ -151,9 +169,11 @@ async function fillTripLater(id) {
 }
 $("fillWx").onclick = () => fillConditions(true);
 $("fWaterIn").addEventListener("change", () => { if (!formCond.wx && coordsForWater($("fWaterIn").value.trim())) fillConditions(false); });
-["fDate", "fStart"].forEach(id => $(id).addEventListener("change", () => { if (formCond.wx) { formCond = { wx: null, flow: null }; showFormChips(); fillConditions(false); } }));
+["fDate", "fStart"].forEach(id => $(id).addEventListener("change", () => { if (formCond.wx || filling) { formCond = { wx: null, flow: null }; showFormChips(); fillConditions(false); } }));
 
 /* ---------- add weather to past trips ---------- */
+// Trips that got weather before this release but never a temperature: they count once the temperature is filled in.
+{ let n = 0; for (const s of (demo || state).sessions) if (!s.sample && s.wx && tempFromWx(s)) n++; if (n) save(); }
 $("backfillWx").onclick = async () => {
   const msg = $("backfillMsg"); msg.hidden = false;
   if (demo) exitSample(); // this works on the person's own trips
@@ -170,5 +190,7 @@ $("backfillWx").onclick = async () => {
     catch (e) { failed++; }
   }
   save(); render();
-  msg.textContent = `Added weather to ${done} trip${done === 1 ? "" : "s"}.${failed ? ` ${failed} couldn't be looked up (no location or no signal).` : ""} Pressure and wind now show in Insights and feed your guide.`;
+  msg.textContent = done
+    ? `Added weather to ${done} trip${done === 1 ? "" : "s"}.${failed ? ` ${failed} couldn't be looked up (no location or no signal).` : ""} Pressure and wind now show in Insights and feed your guide.`
+    : `Couldn't add weather to ${failed === 1 ? "that trip" : `those ${failed} trips`}: fishr needs your location (or a pinned spot) and a signal. Allow location and try again.`;
 };

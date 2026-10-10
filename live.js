@@ -164,9 +164,12 @@ function biteIndex(ctx) {
     const e = bucketOf ? personalEffect(bucketOf, current, sp) : null;
     const v = e ? Math.round(def * (1 - e.w) + e.p * e.w) : def;
     const mine = !!e && e.w >= 0.4;
-    d.push({ v, label, mine, why: mine ? `Your log: ${e.mine.toFixed(1)} ${unit} per trip on ${what}, vs ${e.all.toFixed(1)} across your trips (${e.n} trips).` : null });
+    // Say where the number comes from: the general rule, and how far this angler's log moved it.
+    const sgn = x => (x > 0 ? "+" : x < 0 ? "−" : "±") + Math.abs(x);
+    const why = `Your log: ${e?.mine.toFixed(1)} ${unit} per trip on ${what}, vs ${e?.all.toFixed(1)} across your trips (${e?.n} trips). ${def ? `The general rule gives ${sgn(def)}; your log makes it ${sgn(v)}.` : `So it counts ${sgn(v)}.`}`;
+    d.push({ v, label, mine, why: mine ? why : null });
   };
-  const lightNow = light.dark ? "dark" : light.golden || light.nearHrs <= 3 ? "low" : "day";
+  const lightNow = light.golden || light.nearHrs <= 3 ? "low" : light.dark ? "dark" : "day"; // within 3 h of sunrise or sunset counts as low light, even after dark
   const lightBucket = s => lightOf(tripHour(s));
   if (light.golden) factor(14, light.goldenLabel, lightBucket, "low", "dawn and dusk trips");
   else if (lightNow === "low") factor(6, "Near dawn or dusk", lightBucket, "low", "dawn and dusk trips");
@@ -207,7 +210,7 @@ function biteIndex(ctx) {
 }
 
 /* ---------- render ---------- */
-function renderLive(status) {
+function renderLive(status, quiet) {
   const box = $("live"); if (!box) return;
   if (!wx || status === "town") {
     box.innerHTML = liveLoading
@@ -279,7 +282,7 @@ function renderLive(status) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ ${choices.length ? `<select class="bite-sp" id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${choices.map(n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}<span class="model-tag${choices.length ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ ${choices.length ? `<label class="bite-sp"><span aria-hidden="true">${esc(sp || "All fish")}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${choices.map(n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>` : ""}<span class="model-tag${choices.length ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
         <div class="drivers">${chips.map(x => x.why
           ? `<button type="button" class="drv ${x.v > 0 ? "up" : "down"}${x.mine ? " mine" : ""}" data-why="${esc(x.why)}" aria-expanded="false">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</button>`
@@ -340,7 +343,7 @@ function renderLive(status) {
   const spSel = $("biteSp"); if (spSel) spSel.onchange = () => { state.settings.biteSpecies = spSel.value; save(); renderLive(); };
   const ch = $("liveChange"); if (ch) ch.onclick = () => { renderLive("town"); $("townIn").focus(); };
   const gc = $("gaugeChange"); if (gc) gc.onclick = openGaugePicker;
-  countUp(box);
+  if (!quiet) countUp(box);
 }
 /* ---------- choose the river gauge ---------- */
 // The closest reporting gauge is used by default. If that's not the angler's water, they pick another one nearby;
@@ -364,9 +367,9 @@ $("gaList").onclick = async e => {
   setGaugePick(wx.lat, wx.lon, st, name);
   closeSheets();
   wx.flow = await fetchWater(wx.lat, wx.lon).catch(() => null);
-  if (!demo) segSet($("aFlow"), wx.flow ? [wx.flow.status] : []);
+  if (!demo) { segSet($("aFlow"), wx.flow ? [wx.flow.status] : []); if (wx.flow) $("aWeatherMsg").textContent = `River gauge: ${wx.flow.station}, ${wx.flow.status.toLowerCase()} water, ${wx.flow.trend}.`; }
   renderAdvice(); renderLive();
-  toast(st ? (wx.flow?.picked ? `Using ${name}` : `${name} isn't reporting right now, so fishr is using the closest gauge.`) : "Using the closest gauge");
+  toast(!wx.flow ? "Couldn't reach the river gauges just now. Try again in a minute." : st ? (wx.flow.picked ? `Using ${name}` : `${name} isn't reporting right now, so fishr is using the closest gauge.`) : "Using the closest gauge");
 };
 $("gaClose").onclick = closeSheets;
 
@@ -382,4 +385,7 @@ function countUp(root) {
 }
 
 renderLive();
+// Anything that redraws the app (units changed, sample opened or closed, a trip saved) redraws the live card too,
+// without replaying the number animation. Not while the "type your town" box is open.
+{ const _render = render; render = function () { _render(); if (wx && !$("townForm")) renderLive(undefined, true); }; }
 if (!$("panel-advice").hidden) autoLive();

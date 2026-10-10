@@ -3,11 +3,19 @@
 // GET    /api/photo/<id>                 -> the image
 // DELETE /api/photo/<id>                 -> { ok }
 import { json } from "../../_lib.js";
-import { handle, fail, requireUser, requireCloud } from "../../_auth.js";
+import { db, handle, fail, requireUser, requireCloud } from "../../_auth.js";
+import { readCapped } from "../../_limits.js";
 
 const ID_RE = /^p-[a-z0-9]{1,16}-[a-z0-9]{1,12}$/;
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX = 6 * 1024 * 1024;
+const MAX = 6 * 1024 * 1024, PER_DAY = 200;
+// New photos per account per day, counted in D1 (ai_usage) so one account can't fill the bucket.
+async function photoQuota(env, userId) {
+  if (!env.DB) return true;
+  const row = await (await db(env)).prepare("INSERT INTO ai_usage (user_id, day, kind, n) VALUES (?, ?, 'photo-put', 1) ON CONFLICT (user_id, day, kind) DO UPDATE SET n = n + 1 RETURNING n")
+    .bind(userId, new Date().toISOString().slice(0, 10)).first();
+  return row.n <= PER_DAY;
+}
 
 export async function onRequest({ request, env, params }) {
   return handle(async () => {
@@ -24,8 +32,9 @@ export async function onRequest({ request, env, params }) {
     if (request.method === "PUT") {
       const type = (request.headers.get("content-type") || "").split(";")[0].trim();
       if (!TYPES.includes(type)) fail("Photos must be JPEG, PNG or WebP.", 415);
-      const buf = await request.arrayBuffer();
-      if (!buf.byteLength || buf.byteLength > MAX) fail("That photo is too large.", 413);
+      const buf = await readCapped(request, MAX); // stops reading past MAX, even without a size header
+      if (!buf || !buf.byteLength) fail("That photo is too large.", 413);
+      if (!await photoQuota(env, user.id)) fail("That's the photo limit for today. The rest will upload tomorrow.", 429);
       await env.CATCHES.put(key, buf, { httpMetadata: { contentType: type } });
       return json({ ok: true });
     }

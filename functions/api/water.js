@@ -2,10 +2,12 @@
 // Canada: Environment and Climate Change Canada. United States: U.S. Geological Survey. Both are asked and the
 // closer gauge wins, which also covers spots near the border. Runs on Cloudflare so the app avoids CORS limits.
 import { json } from "../_lib.js";
+import { underLimit } from "../_limits.js";
 
 const ECCC = "https://api.weather.gc.ca/collections/hydrometric-realtime/items";
 const USGS = "https://waterservices.usgs.gov/nwis/iv/";
 const DAY = 864e5, SPANS = [0.3, 0.7, 1.5];
+const DAILY = 400; // lookups per visitor per day that miss the cache; the app makes a handful
 
 const iso = t => new Date(t).toISOString().slice(0, 19) + "Z";
 function km(aLat, aLon, bLat, bLon) {
@@ -16,10 +18,13 @@ function km(aLat, aLon, bLat, bLon) {
 // "NASHWAAK RIVER AT DURHAM BRIDGE" -> "Nashwaak River at Durham Bridge"
 const titleCase = s => String(s).toLowerCase().replace(/(^|[\s(\/-])([a-z])/g, (m, pre, c) => pre + c.toUpperCase()).replace(/\b(At|Near|Above|Below|Of|The|And)\b/g, w => w.toLowerCase());
 const num = v => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(+v) ? +v : null);
-const bboxAround = (lat, lon, span) => [lon - span, lat - span, lon + span, lat + span].map(v => v.toFixed(3)).join(",");
+const clamp = (v, m) => Math.max(-m, Math.min(m, v));
+const bboxAround = (lat, lon, span) => [clamp(lon - span, 180), clamp(lat - span, 90), clamp(lon + span, 180), clamp(lat + span, 90)].map(v => v.toFixed(3)).join(",");
+// Times in upstream URLs are rounded to 15 minutes so Cloudflare's fetch cache can actually reuse them.
+const since = ms => iso(Math.floor((Date.now() - ms) / 9e5) * 9e5);
 
 async function getJson(url, accept = "application/json") {
-  const res = await fetch(url, { headers: { accept }, cf: { cacheTtl: 900 } });
+  const res = await fetch(url, { headers: { accept }, cf: { cacheTtl: 900 }, signal: AbortSignal.timeout(8000) });
   if (res.status === 404) return null; // USGS answers 404 when nothing matches
   if (!res.ok) throw new Error(`gauge service ${res.status}`);
   return res.json();
@@ -32,11 +37,11 @@ const eccc = {
   idOk: id => /^\d{2}[A-Z]{2}[0-9A-Z]{3}$/.test(id),
   // Gauges that reported in the last 6 hours, from the smallest box that holds at least `want` of them.
   async nearby(lat, lon, want = 1) {
-    const since = iso(Date.now() - 6 * 3600e3);
+    const from = since(6 * 3600e3);
     let seen = new Map();
     for (const span of SPANS) {
       seen = new Map();
-      for (const f of await this.features(`${ECCC}?f=json&bbox=${bboxAround(lat, lon, span)}&datetime=${since}/..&limit=3000`)) {
+      for (const f of await this.features(`${ECCC}?f=json&bbox=${bboxAround(lat, lon, span)}&datetime=${from}/..&limit=3000`)) {
         const p = f.properties || {}, id = p.STATION_NUMBER, c = f.geometry?.coordinates;
         if (!id || !Array.isArray(c) || seen.has(id)) continue;
         if (num(p.DISCHARGE) == null && num(p.LEVEL) == null) continue;
@@ -48,12 +53,12 @@ const eccc = {
   },
   // One gauge by id, if it's reporting.
   async info(id, lat, lon) {
-    const f = (await this.features(`${ECCC}?f=json&STATION_NUMBER=${encodeURIComponent(id)}&datetime=${iso(Date.now() - 6 * 3600e3)}/..&limit=1`))[0];
+    const f = (await this.features(`${ECCC}?f=json&STATION_NUMBER=${encodeURIComponent(id)}&datetime=${since(6 * 3600e3)}/..&limit=1`))[0];
     const c = f?.geometry?.coordinates;
     return Array.isArray(c) ? { id, name: titleCase(f.properties?.STATION_NAME || id), distKm: km(lat, lon, c[1], c[0]) } : null;
   },
   async history(id) {
-    const feats = await this.features(`${ECCC}?f=json&STATION_NUMBER=${encodeURIComponent(id)}&datetime=${iso(Date.now() - 14 * DAY)}/..&limit=10000`);
+    const feats = await this.features(`${ECCC}?f=json&STATION_NUMBER=${encodeURIComponent(id)}&datetime=${since(14 * DAY)}/..&limit=10000`);
     return feats.map(f => f.properties || {}).map(p => ({ t: Date.parse(p.DATETIME), q: num(p.DISCHARGE), h: num(p.LEVEL) }));
   },
 };
@@ -121,22 +126,28 @@ const usgs = {
 };
 
 const SOURCES = { ECCC: eccc, USGS: usgs };
-// Ask both services; closest first. One failing doesn't stop the other.
+// Ask both services; closest first. One failing doesn't stop the other, but the answer is then marked partial
+// (and not cached), so a border spot doesn't keep the wrong "closest" gauge after the other service recovers.
 async function nearbyGauges(lat, lon, want) {
   const found = await Promise.allSettled([eccc, usgs].map(async src => (await src.nearby(lat, lon, want)).map(s => ({ ...s, src }))));
   if (found.every(r => r.status === "rejected")) throw new Error("no gauge service answered");
-  return found.flatMap(r => r.status === "fulfilled" ? r.value : []).sort((a, b) => a.distKm - b.distKm);
+  const gauges = found.flatMap(r => r.status === "fulfilled" ? r.value : []).sort((a, b) => a.distKm - b.distKm);
+  return { gauges, partial: found.some(r => r.status === "rejected") };
 }
+const reply = (body, status, cacheable) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": cacheable ? "public, max-age=1800" : "no-store" } });
 
-export async function onRequestGet({ request }) {
+export async function onRequestGet({ request, env = {} }) {
   const u = new URL(request.url);
-  const lat = num(u.searchParams.get("lat")), lon = num(u.searchParams.get("lon"));
-  if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) return json({ error: "Pass lat and lon." }, 400);
+  const rawLat = num(u.searchParams.get("lat")), rawLon = num(u.searchParams.get("lon"));
+  if (rawLat == null || rawLon == null || Math.abs(rawLat) > 90 || Math.abs(rawLon) > 180) return json({ error: "Pass lat and lon." }, 400);
+  // Work on the ~1 km cell, the same as the cache key, so nearby requests share both caches.
+  const lat = Math.round(rawLat * 100) / 100, lon = Math.round(rawLon * 100) / 100;
 
   // ?list=1: the gauges to choose from. ?station=USGS:01646500: that gauge instead of the closest one.
   const list = u.searchParams.get("list") === "1";
   const [srcName, stationId] = String(u.searchParams.get("station") || "").split(":");
-  const picked = SOURCES[srcName]?.idOk(stationId || "") ? { src: SOURCES[srcName], id: stationId } : null;
+  const src = Object.hasOwn(SOURCES, srcName) ? SOURCES[srcName] : null;
+  const picked = src?.idOk(stationId || "") ? { src, id: stationId } : null;
   if (u.searchParams.get("station") && !picked) return json({ error: "Unknown gauge." }, 400);
 
   // Cache per ~1 km grid cell for 30 minutes.
@@ -144,20 +155,24 @@ export async function onRequestGet({ request }) {
   const cache = typeof caches !== "undefined" ? caches.default : null;
   const hit = cache && await cache.match(key);
   if (hit) return hit;
+  if (!await underLimit(env, request, "water", DAILY)) return json({ error: "Too many river gauge lookups today. Try again tomorrow." }, 429);
 
-  let out;
+  let out, partial = false, status = 200;
   try {
     if (list) {
-      const gauges = (await nearbyGauges(lat, lon, 6)).slice(0, 8).map(g => ({ source: g.src.source, id: g.id, name: g.name, distKm: Math.round(g.distKm) }));
-      out = { gauges };
+      const found = await nearbyGauges(lat, lon, 6);
+      partial = found.partial;
+      out = { gauges: found.gauges.slice(0, 8).map(g => ({ source: g.src.source, id: g.id, name: g.name, distKm: Math.round(g.distKm) })) };
     }
-    const station = list ? null : picked ? await picked.src.info(picked.id, lat, lon).then(s => s && { ...s, src: picked.src }) : (await nearbyGauges(lat, lon, 1))[0];
-    if (!list && !station) return json({ error: picked ? "That gauge isn't reporting right now." : "No real-time river gauge within about 150 km." }, 404);
-    if (!list) {
+    let station = null;
+    if (!list && picked) station = await picked.src.info(picked.id, lat, lon).then(s => s && { ...s, src: picked.src });
+    else if (!list) { const found = await nearbyGauges(lat, lon, 1); partial = found.partial; station = found.gauges[0] || null; }
+    if (!list && !station) { out = { error: picked ? "That gauge isn't reporting right now." : "No real-time river gauge within about 150 km." }; status = 404; }
+    else if (!list) {
       const obs = (await station.src.history(station.id))
         .filter(o => Number.isFinite(o.t) && (o.q != null || o.h != null))
         .sort((a, b) => a.t - b.t);
-      if (!obs.length) return json({ error: "That gauge has no recent readings." }, 404);
+      if (!obs.length) return reply({ error: "That gauge has no recent readings." }, 404, false);
 
       // Flow (discharge) says more about fishing conditions than stage; fall back to water level.
       const useQ = obs.filter(o => o.q != null).length >= obs.length / 2;
@@ -190,7 +205,9 @@ export async function onRequestGet({ request }) {
   } catch (e) {
     return json({ error: "Couldn't reach the river gauge service." }, 502);
   }
-  const res = new Response(JSON.stringify(out), { headers: { "content-type": "application/json", "cache-control": "public, max-age=1800" } });
-  if (cache) await cache.put(key, res.clone());
+  // "No gauge nearby" is cached too (remote spots would otherwise cost six upstream lookups every time),
+  // but never an answer missing one of the two services.
+  const res = reply(out, status, !partial);
+  if (cache && !partial) await cache.put(key, res.clone());
   return res;
 }

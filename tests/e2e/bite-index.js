@@ -56,7 +56,7 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
     if (r.chips.some(c => c.mine)) ok(vis.length <= 3 && vis.includes(true), `${press}: a learned chip is visible on a phone (${vis.length} shown)`);
     ok(new Set(r.chips.map(c => c.t)).size === r.chips.length, `${press}: no chip shown twice`);
   }
-  ok(mineChip && /^Your log: [\d.]+ .+ per trip on .+, vs [\d.]+ across your trips \(\d+ trips\)\.$/.test(mineChip.why), 'a chip learned from their log explains itself ' + JSON.stringify(mineChip));
+  ok(mineChip && /^Your log: [\d.]+ .+ per trip on .+, vs [\d.]+ across your trips \(\d+ trips\)\. (The general rule gives [+−±]\d+; your log makes it [+−±]\d+|So it counts [+−±]\d+)\.$/.test(mineChip.why), 'a chip learned from their log explains itself ' + JSON.stringify(mineChip));
   // Tapping it shows the reason under the chips; tapping again hides it.
   const sel = `.drv.mine`;
   if (await p.$(sel)) {

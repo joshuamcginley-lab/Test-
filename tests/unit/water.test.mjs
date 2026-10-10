@@ -17,7 +17,9 @@ const usgsTs = (st, code, pts, noData = -999999) => ({
   variable: { variableCode: [{ value: code }], noDataValue: noData }, values: [{ value: pts.map(([t, v]) => ({ dateTime: new Date(t).toISOString(), value: String(v) })) }],
 });
 const inBox = (st, bbox) => { const [w, s, e, n] = bbox.split(",").map(Number); return st.lon >= w && st.lon <= e && st.lat >= s && st.lat <= n; };
+const upstream = [];
 globalThis.fetch = async url => {
+  upstream.push(String(url));
   const u = new URL(String(url)), reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   if (u.hostname === "api.weather.gc.ca") {
     if (world.ecccDown) return reply({}, 503);
@@ -105,5 +107,54 @@ ok(r.d.picked === false && r.d.station.id === "02GH003", "without station= it's 
 world = { eccc: [{ id: "01AK006", name: "MIDDLE BRANCH NASHWAAKSIS STREAM AT SANDWITH'S FARM", lat: 46.0, lon: -66.7 }], usgs: [] };
 r = await ask(46.0, -66.7);
 ok(r.d.station?.name === "Middle Branch Nashwaaksis Stream at Sandwith's Farm", "apostrophes keep lowercase: " + r.d.station?.name);
+
+// Sweep fixes. Lookup tables can't be tricked with "constructor"-style names.
+for (const st of ["constructor:1", "__proto__:x", "toString:01646500", "hasOwnProperty:01646500"]) {
+  let threw = false, x; try { x = await onRequestGet({ request: new Request(`https://fishr.monster/api/water?lat=1&lon=1&station=${st}`) }); } catch (e) { threw = true; }
+  ok(!threw && x.status === 400, "odd station names are a clean 400: " + st);
+}
+// Upstream requests use the rounded ~1 km cell (so they match the cache key) and round times to 15 minutes.
+world = { eccc: [SJR], usgs: [] }; upstream.length = 0;
+await ask(45.96123, -66.64077);
+const ecccUrl = decodeURIComponent(upstream.find(x => x.includes("api.weather.gc.ca") && x.includes("bbox=")));
+ok(/bbox=-66\.940,45\.660,-66\.340,46\.260/.test(ecccUrl), "bbox built from the rounded cell: " + ecccUrl.slice(0, 140));
+const t = ecccUrl.match(/datetime=([^/]+)\//)?.[1];
+ok(t && Date.parse(t) % 9e5 === 0, "upstream time rounded to 15 minutes: " + t);
+// Near the poles and the date line the search box stays in range.
+upstream.length = 0; world = { eccc: [], usgs: [] };
+r = await ask(89.95, 179.9);
+const boxes = upstream.map(x => decodeURIComponent(x).match(/b[bB]ox=([^&]+)/)?.[1]).filter(Boolean);
+ok(r.status === 404 && boxes.length && boxes.every(b => b.split(",").map(Number).every((v, i) => Math.abs(v) <= (i % 2 ? 90 : 180))), "extreme coordinates: box clamped, plain 404 " + boxes[boxes.length - 1]);
+ok(upstream.every(x => !x.includes("undefined")), "no undefined in upstream URLs");
+
+// Caching: a full answer and "no gauge" are cached; an answer missing one service is not.
+const store = new Map();
+globalThis.caches = { default: { match: async k => store.get(k.url)?.clone(), put: async (k, v) => { store.set(k.url, v); } } };
+world = { eccc: [SJR], usgs: [], usgsDown: true };
+r = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=45.96&lon=-66.64") });
+ok(r.status === 200 && store.size === 0 && r.headers.get("cache-control") === "no-store", "one service down: answer not cached " + r.headers.get("cache-control"));
+world = { eccc: [SJR], usgs: [] };
+r = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=45.96&lon=-66.64") });
+ok(r.status === 200 && store.size === 1 && /max-age=1800/.test(r.headers.get("cache-control")), "both answered: cached");
+upstream.length = 0;
+r = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=45.9612&lon=-66.6431") });
+ok(r.status === 200 && upstream.length === 0, "a request in the same ~1 km cell is served from the cache");
+world = { eccc: [], usgs: [] }; upstream.length = 0;
+r = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=10&lon=-40") });
+const n1 = upstream.length;
+r = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=10&lon=-40") });
+ok(r.status === 404 && n1 === 6 && upstream.length === 6, `"no gauge" cached: second ask costs nothing (${n1} then ${upstream.length - n1})`);
+delete globalThis.caches;
+
+// Daily limit per visitor on lookups that miss the cache.
+{
+  const { d1 } = await import("../helpers/cfmock.mjs");
+  const env = { DB: d1() }; world = { eccc: [SJR], usgs: [] };
+  let last;
+  for (let i = 0; i < 401; i++) last = await onRequestGet({ request: new Request(`https://fishr.monster/api/water?lat=45.96&lon=-66.64`, { headers: { "cf-connecting-ip": "9.9.9.9" } }), env });
+  ok(last.status === 429, "401st uncached lookup in a day: 429 " + last.status);
+  const other = await onRequestGet({ request: new Request(`https://fishr.monster/api/water?lat=45.96&lon=-66.64`, { headers: { "cf-connecting-ip": "8.8.8.8" } }), env });
+  ok(other.status === 200, "another visitor is unaffected");
+}
 
 console.log(`${pass} passed, ${failN} failed`);

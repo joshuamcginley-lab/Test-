@@ -82,3 +82,43 @@ function confetti() {
 
 /* ---------- long tables show their top rows (clampTables in app.js) after every render ---------- */
 { const _renderForClamp = render; render = function () { _renderForClamp(); clampTables(); }; clampTables(); }
+
+/* ---------- sheets: Back closes them, and keyboard focus stays inside ---------- */
+// Every sheet opens with the scrim, so watching the scrim covers them all. An open sheet adds one history entry;
+// the phone's Back button (or swipe back) then closes the sheet instead of leaving fishr and losing what was typed.
+// Closing a sheet any other way takes that entry back off.
+(function sheetHistory() {
+  const scrim = $("scrim"); let ownBack = false, lastFocus = null;
+  const openSheet = () => [...document.querySelectorAll(".sheet")].find(s => !s.hidden);
+  const focusables = el => [...el.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])')]
+    .filter(x => x.offsetParent !== null || x.tagName === "SELECT");
+  new MutationObserver(() => {
+    const open = !scrim.hidden;
+    if (open && !history.state?.fishrSheet) {
+      history.pushState({ ...(history.state || {}), fishrSheet: true }, "");
+      lastFocus = document.activeElement;
+      // Move focus into the sheet unless something in it already has it.
+      setTimeout(() => {
+        const s = openSheet(); if (!s || s.contains(document.activeElement)) return;
+        const h = s.querySelector("h2") || s; h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true });
+      }, 0);
+    } else if (!open && history.state?.fishrSheet) {
+      ownBack = true; history.back();
+      if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true }); lastFocus = null;
+    }
+  }).observe(scrim, { attributes: true, attributeFilter: ["hidden"] });
+  addEventListener("popstate", () => {
+    if (ownBack) { ownBack = false; return; }
+    if (!scrim.hidden) closeSheets();
+  });
+  // Tab and Shift+Tab cycle inside the open sheet.
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Tab" || scrim.hidden) return;
+    const s = openSheet(); if (!s) return;
+    const f = focusables(s); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (!s.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+})();

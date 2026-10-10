@@ -370,7 +370,7 @@ function speciesPicker(box) {
   input.addEventListener("input", () => open(input.value));
   input.addEventListener("blur", () => setTimeout(close, 150));
   input.addEventListener("keydown", e => {
-    if (e.key === "Escape") { close(); e.stopPropagation(); }
+    if (e.key === "Escape" && !list.hidden) { close(); e.stopPropagation(); } // a second Escape closes the form
     if (e.key === "Enter" && !list.hidden) { e.preventDefault(); const first = list.querySelector(".combo-opt"); if (first && input.value.trim()) { input.value = first.dataset.v; close(); } }
   });
   btn.addEventListener("pointerdown", e => e.preventDefault());
@@ -530,7 +530,7 @@ $("form").addEventListener("submit", async e => {
   else if (typeof celebrate === "function") celebrate({ fish: fc, pb: pb ? bestNow : null, species: catches.find(c => +c.lb === bestNow)?.species, next: trainingNext(doc) });
   else toast(fc ? `${fc} fish logged. Model retrained.` : "Skunk logged. Still training data.");
   // No weather yet (no signal, or location came late): add it now if fishr can, and say where that leaves Guide.
-  if (!doc.wx && typeof fillTripLater === "function") fillTripLater(doc.id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === doc.id)) || "Your guide has it."}`); });
+  if (!prev && !doc.wx && typeof fillTripLater === "function") fillTripLater(doc.id).then(added => { if (added) toast(`Weather added. ${trainingNext(state.sessions.find(s => s.id === doc.id)) || "Your guide has it."}`); });
 });
 
 // Until Guide unlocks, each new trip says how far along it is, or why it doesn't count yet.
@@ -556,6 +556,7 @@ function loadSample(where) {
   return sampleLoading ??= loadSampleNow(where).finally(() => { sampleLoading = null; });
 }
 async function loadSampleNow(where) {
+  const slow = setTimeout(() => toast("Loading the showcase…"), 600); // on a weak signal, show that the tap worked
   try {
     // The showcase version has historical weather added on the server; fall back to the plain file.
     let data = null;
@@ -572,9 +573,11 @@ async function loadSampleNow(where) {
     // Picked a tile on the welcome screen? They've read what this is, so keep the explainer closed.
     setSampleInfo(!where);
   } catch (e) { toast("Couldn't load the sample. Check your connection."); }
+  finally { clearTimeout(slow); if ($("toast").textContent === "Loading the showcase…") $("toast").hidden = true; }
 }
 // Open the sample on the part of the app someone asked to see.
 function showSampleView(where) {
+  if (typeof setSampleInputs === "function") setSampleInputs();
   if (where === "patterns") showTab("patterns");
   else if (where === "map") { showTab("log"); if (typeof setView === "function") setView("map"); }
   else if (typeof showSampleCopilot === "function") showSampleCopilot(); else showTab("season");
@@ -598,6 +601,7 @@ $("sampleStart").onclick = () => { setSampleInfo(false); startNewTrip(); };
 $("openSettings").onclick = () => {
   $("sName").value = state.settings.name; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
   $("wipeBtn").hidden = false; $("wipeConfirm").hidden = true; $("backupMsg").hidden = true;
+  $("settingsSample").closest(".set-group").hidden = !!demo; // already looking at it
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;
 };
 $("closeSettings").onclick = closeSheets;
@@ -652,6 +656,7 @@ $("importFile").addEventListener("change", async e => {
   try {
     const data = JSON.parse(await f.text());
     if (!Array.isArray(data.sessions)) throw new Error("not a backup");
+    const fresh = !state.sessions.length; // restoring onto a new or empty phone
     const byId = new Map(state.sessions.map(s => [s.id, s]));
     let added = 0;
     for (const raw of data.sessions) {
@@ -664,6 +669,15 @@ $("importFile").addEventListener("change", async e => {
     state.sessions = [...byId.values()];
     if (data.photos && typeof data.photos === "object") for (const [id, url] of Object.entries(data.photos)) { if (PHOTO_ID.test(id) && typeof url === "string" && url.startsWith("data:image/")) await photoPut(id, await (await fetch(url)).blob()); }
     if (Array.isArray(data.notes) && !state.notes.length) state.notes = data.notes.filter(x => typeof x === "string");
+    // On a fresh phone, bring the units and name along too (only values the app knows).
+    const bs = data.settings && typeof data.settings === "object" ? data.settings : {};
+    if (fresh) {
+      if (["imperial", "metric"].includes(bs.units)) state.settings.units = bs.units;
+      if (["C", "F"].includes(bs.temp)) state.settings.temp = bs.temp;
+      if (["auto", "apple", "google"].includes(bs.maps)) state.settings.maps = bs.maps;
+      if (typeof bs.name === "string" && !state.settings.name) state.settings.name = bs.name.slice(0, 40);
+      $("sName").value = state.settings.name || ""; $("sUnits").value = state.settings.units; $("sTemp").value = state.settings.temp; $("sMaps").value = state.settings.maps || "auto";
+    }
     save(); render();
     $("backupMsg").hidden = false; $("backupMsg").textContent = `Restored. ${added} new trip${added === 1 ? "" : "s"} added.`;
   } catch (err) {
@@ -701,8 +715,9 @@ function cleanTrip(t) {
 
 /* ---------- install ---------- */
 let installEvt = null;
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("installBtn").hidden = false; });
-$("installBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; };
+const keepSafeRefresh = () => { if (typeof renderKeepSafe === "function") renderKeepSafe(); };
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("installBtn").hidden = false; keepSafeRefresh(); });
+$("installBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").hidden = true; keepSafeRefresh(); };
 if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) $("installGroup").hidden = true;
 
 /* ---------- Insights: one table at a time ---------- */

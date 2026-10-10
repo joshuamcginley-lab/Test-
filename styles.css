@@ -810,8 +810,11 @@ nav.tabs button[role="tab"]{min-width:0}
 .ask > *,.showcase > *{min-width:0}
 .showcase-pick{margin:-4px 2px 12px;font-size:13px;color:var(--muted)}
 /* Bite Index: species pick and factor explanations, kept small */
-.bite-sp{font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--glass-2);border:1px solid var(--line-2);border-radius:999px;padding:4px 20px 4px 8px;margin-left:6px;vertical-align:1px;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat}
-@media (max-width:700px){.bite-sp{font-size:16px;transform:scale(.66);transform-origin:left center;margin-right:-34%}}
+/* Species pill: the look comes from the label; the real dropdown sits on top, invisible, at 16px so iOS doesn't zoom */
+.bite-sp{position:relative;display:inline-flex;align-items:center;max-width:100%;font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--glass-2);border:1px solid var(--line-2);border-radius:999px;padding:4px 20px 4px 8px;margin-left:6px;vertical-align:1px;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat}
+.bite-sp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bite-sp select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer;-webkit-appearance:none;appearance:none}
+.bite-sp:focus-within{outline:2px solid var(--c);outline-offset:1px}
 
 button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 .drv.mine{text-decoration:underline dotted;text-underline-offset:3px}
@@ -844,3 +847,7 @@ button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 .ga-opt.on b::after{content:" ✓";color:var(--c)}
 .ga-msg{margin:6px 0;color:var(--muted);font-size:14px}
 .tile.river .sub .text-link{color:var(--c);font-size:inherit}
+
+/* "Type your town" fits the card on small phones (the grid track and input could otherwise force the card wider) */
+.live-empty > div{grid-template-columns:minmax(0,1fr);min-width:0}
+.town-form input{width:0}

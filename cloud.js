@@ -26,7 +26,10 @@ function hashStr(str) { // cyrb53: a fast fingerprint to spot changed trips
 async function fetchT(url, opts = {}, ms = 25000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ctl.signal }); }
-  catch (e) { throw e.name === "AbortError" ? Object.assign(new Error("fishr Cloud took too long to answer. Try again."), { timeout: true }) : e; }
+  catch (e) {
+    if (e.name === "AbortError") throw Object.assign(new Error("fishr Cloud took too long to answer. Try again."), { timeout: true });
+    throw Object.assign(new Error(navigator.onLine ? "Couldn't reach fishr. Check your connection and try again." : "No signal right now. Try again when you're back in range."), { offline: true });
+  }
   finally { clearTimeout(t); }
 }
 async function api(path, body, method) {
@@ -69,6 +72,7 @@ async function usePasskey() {
 }
 const PREV_KEY = "fishr.sync.prev"; // what this phone last synced, kept after "sign out, keep trips on this phone"
 async function signedIn(user) {
+  try { localStorage.removeItem(LOGOUT_KEY); } catch (e) {}
   if (demo) exitSample();
   let prev = null; try { prev = JSON.parse(localStorage.getItem(PREV_KEY)); } catch (e) {}
   const same = prev && prev.user === user.id;
@@ -131,7 +135,10 @@ async function runSync() {
   // Notes and settings. A device's first sync takes the account's copy before sending its own.
   const meta = { notes: log.notes, settings: Object.fromEntries(SYNC_SETTINGS.map(k => [k, state.settings[k]])) };
   const metaHash = hashStr(JSON.stringify(meta));
-  const metaPush = !first && metaHash !== sync.metaHash ? { data: meta, updated: now } : null;
+  // base: the version this device last saw. The server only takes ours if nobody wrote after it; if someone did,
+  // we get theirs back, merge in applyMeta, and push the merge on the next round.
+  const metaPush = !first && metaHash !== sync.metaHash ? { data: meta, updated: now, base: sync.metaAt || "" } : null;
+  let metaErr = null;
 
   let since = sync.cursor || 0, i = 0, res;
   do {
@@ -139,13 +146,17 @@ async function runSync() {
     res = await api("/api/sync", { since, trips: part.map(({ h, ...t }) => t), meta: i === 0 ? metaPush : null });
     if (!live()) return;
     for (const p of part) if (p.deleted) delete sync.hashes[p.id]; else sync.hashes[p.id] = [p.h, p.updated];
-    if (i === 0 && metaPush) { sync.metaHash = metaHash; sync.metaAt = now; }
+    if (i === 0 && metaPush) {
+      if (res.metaError) metaErr = res.metaError;
+      else if (res.metaAccepted !== false) { sync.metaHash = metaHash; sync.metaAt = res.meta?.updated || now; sync.metaData = meta; }
+    }
     applyTrips(res.trips);
     applyTrips(res.kept || []); // pushes the server turned down because it holds a newer copy
     since = res.cursor; i += 400;
   } while (i < push.length || res.more);
   applyMeta(res.meta, first, meta);
   sync.cursor = since; sync.lastSync = Date.now(); writeSync();
+  if (metaErr) syncErr = metaErr === "too-large" ? "Your notes are too long to sync (200 lines at most). Trips still sync." : "Notes didn't sync. Trips still sync.";
   await prunePhotos();
   missingPhotos.clear();
 }
@@ -178,6 +189,7 @@ function applyMeta(remote, first, local) {
     log.notes = notes; for (const k of SYNC_SETTINGS) if (settings[k] != null) state.settings[k] = settings[k];
     sync.metaAt = remote?.updated || "";
     sync.metaHash = remote ? hashStr(JSON.stringify(remote.data)) : null;
+    sync.metaData = remote?.data || null;
     saveQuiet(); render();
     if (!remote || hashStr(JSON.stringify({ notes, settings: Object.fromEntries(SYNC_SETTINGS.map(k => [k, state.settings[k]])) })) !== sync.metaHash) again = true;
     return;
@@ -188,8 +200,13 @@ function applyMeta(remote, first, local) {
   const notes = [...(remote.data.notes || [])];
   if (mine) { for (const n of log.notes) if (!notes.includes(n)) notes.push(n); again = true; }
   log.notes = notes;
-  for (const k of SYNC_SETTINGS) if (remote.data.settings?.[k] != null) state.settings[k] = remote.data.settings[k];
-  sync.metaAt = remote.updated; sync.metaHash = hashStr(JSON.stringify(remote.data));
+  // Settings: a setting this phone changed since the last sync keeps its value; the rest follow the account.
+  const base = sync.metaData?.settings;
+  for (const k of SYNC_SETTINGS) {
+    const changedHere = mine && base && state.settings[k] !== base[k];
+    if (!changedHere && remote.data.settings?.[k] != null) state.settings[k] = remote.data.settings[k];
+  }
+  sync.metaAt = remote.updated; sync.metaHash = hashStr(JSON.stringify(remote.data)); sync.metaData = remote.data;
   saveQuiet(); render();
 }
 
@@ -234,8 +251,19 @@ function forgetAccount(keepHistory = true) {
   } catch (e) {}
   syncGen++; sync = {}; writeSync(); account = null; syncErr = null; renderCloud();
 }
+// Signing out must stick even without signal: if the server can't be told now, this phone drops its sign-in
+// marker straight away (so it won't sign itself back in on the next launch) and tells the server when it's online.
+const LOGOUT_KEY = "fishr.logoutPending";
+async function serverLogout() {
+  try { await api("/api/auth/logout", {}); localStorage.removeItem(LOGOUT_KEY); return true; }
+  catch (e) {
+    try { localStorage.setItem(LOGOUT_KEY, "1"); } catch (x) {}
+    document.cookie = "fishr_in=; Path=/; Max-Age=0; SameSite=Lax";
+    return false;
+  }
+}
 async function signOut(removeLocal) {
-  try { await api("/api/auth/logout", {}); } catch (e) {}
+  await serverLogout();
   forgetAccount(!removeLocal);
   if (removeLocal) {
     if (demo) exitSample();
@@ -311,13 +339,16 @@ $("openSettings").addEventListener("click", () => {
 /* ---------- when to sync ---------- */
 const _saveLocal = save;
 save = function () { const ok = _saveLocal(); if (ok && cloudOn() && !applying) scheduleSync(); return ok; };
-addEventListener("online", () => syncNow());
+addEventListener("online", () => { if (pendingLogout()) serverLogout(); else syncNow(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && cloudOn() && Date.now() - (sync.lastSync || 0) > 30e3) syncNow(); });
 setInterval(() => { if (document.visibilityState === "visible" && cloudOn()) syncNow(); }, 5 * 60e3);
 addEventListener("storage", e => { if (e.key === SYNC_KEY) { sync = readSync(); renderCloud(); } });
 
-// Boot: sync if signed in. If this phone forgot (cleared storage) but the sign-in cookie is still there, pick it back up.
-if (cloudOn()) syncNow();
+// Boot: finish a sign-out that happened offline. Otherwise sync if signed in, or, if this phone forgot (cleared
+// storage) but the sign-in cookie is still there, pick it back up.
+function pendingLogout() { try { return localStorage.getItem(LOGOUT_KEY) === "1"; } catch (e) { return false; } }
+if (pendingLogout()) { if (navigator.onLine) serverLogout(); }
+else if (cloudOn()) syncNow();
 else if (/(^|;\s*)fishr_in=1/.test(document.cookie)) api("/api/auth/me").then(d => signedIn(d.user)).catch(() => {});
 renderCloud();
 

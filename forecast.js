@@ -122,7 +122,7 @@ async function loadWeather(useGps) {
       segSet($("aPress"), press ? [press] : []);
       segSet($("aFlow"), flow ? [flow.status] : []);
       msg.textContent = `Live conditions synced at ${fmtTime($("aTime").value)}${wx.current.p ? ` · ${wx.current.p} hPa ${press ? press.toLowerCase() : ""}` : ""}${flow ? ` · ${flow.station}: ${flow.status.toLowerCase()} water, ${flow.trend}` : ""}.`;
-    }
+    } else msg.textContent = "Live weather updated. The showcase call keeps its July evening.";
     renderAdvice();
     if (typeof renderLive === "function") renderLive();
   } catch (e) { msg.textContent = "Couldn't reach the weather service. Type the temperature instead."; return "error"; }
@@ -166,7 +166,7 @@ function renderAdvice() {
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
-  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Tap “Go live” above for today's conditions, or open “Adjust model inputs” and enter a temperature and time.</p>`; return; }
+  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Turn on live conditions above for today's weather, or open “What if?” and enter a temperature and time.</p>`; return; }
   const pick = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v || null;
   const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: pick("aSky"), press: pick("aPress"), flow: pick("aFlow") };
   const { res, rows, k } = bestRanking(q);
@@ -237,11 +237,13 @@ function resetAdviceInputs() {
   $("aDate").value = isoDate(now); $("aWeatherMsg").textContent = "";
 }
 // Opening the sample lands on the Guide tab with a summer evening filled in, so the call shows straight away.
-function showSampleCopilot() {
+// The showcase's Guide inputs: a July evening at 22°C. Set whichever tile the showcase was opened from, so the
+// Guide tab never contradicts the live card's "the showcase call uses a July evening" note.
+function setSampleInputs() {
   $("aTemp").value = tOut(22); $("aTime").value = "18:30"; $("aDate").value = "2026-07-15"; segSet($("aSky"), []); segSet($("aPress"), []); segSet($("aFlow"), []);
-  $("aWeatherMsg").textContent = "Sample conditions: a July evening at 22°C. Change them to try others.";
-  showTab("advice"); renderAdvice();
+  $("aWeatherMsg").textContent = `Sample conditions: a July evening at ${fmtT(22)}. Change them to try others.`;
 }
+function showSampleCopilot() { setSampleInputs(); showTab("advice"); renderAdvice(); }
 (function initAdvice() {
   const now = new Date();
   $("aTime").value = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
