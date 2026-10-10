@@ -328,7 +328,7 @@ function renderLive(status) {
     </div>
     </div>
   </div>
-  <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · Environment and Climate Change Canada · astronomical ephemeris.</div>`;
+  <div class="live-foot"><b>fishr Bite Index™ v0.3</b> · Proprietary scoring engine fusing live weather, barometric and hydrometric telemetry with a nearest-neighbour model that learns from your trips. Sources: Open-Meteo · ${f?.source === "USGS" ? "U.S. Geological Survey" : "Environment and Climate Change Canada"} · astronomical ephemeris.</div>`;
   $("liveRefresh").onclick = () => goLive(true);
   // Tap a factor chip to see why (factors from your own log, and species temperatures).
   box.querySelector(".drivers").onclick = e => {

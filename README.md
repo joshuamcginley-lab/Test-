@@ -49,7 +49,7 @@ They need an R2 bucket named `firetiger-catches` bound to the Pages project as `
 ## Conditions (weather, pressure, river levels)
 
 - `conditions.js` pulls weather, barometric pressure (and its 3-hour trend), wind and 48-hour rain from Open-Meteo for each trip, using the forecast API for recent dates and the archive for older ones. Settings → "Add weather to past trips" fills in older trips.
-- `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Guide and Insights use both.
+- `functions/api/water.js` finds the nearest real-time river gauge (Environment and Climate Change Canada in Canada, the U.S. Geological Survey in the US; the closer one wins near the border) and rates today's flow against the last 14 days as Low / Normal / High, with a 24-hour trend. Guide and Insights use both.
 
 ## Spots map and Pro waitlist
 

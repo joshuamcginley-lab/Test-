@@ -40,7 +40,7 @@ async function fetchWater(lat, lon) {
   const d = await res.json();
   if (!d || !d.station || !["High", "Normal", "Low"].includes(d.status)) return null;
   const series = Array.isArray(d.series) ? d.series.filter(x => Array.isArray(x) && Number.isFinite(x[0]) && Number.isFinite(x[1])).slice(-120) : [];
-  return { station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time, min: d.min, max: d.max, series };
+  return { source: d.source === "USGS" ? "USGS" : "ECCC", station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time, min: d.min, max: d.max, series };
 }
 
 /* ---------- where to look up conditions ---------- */
