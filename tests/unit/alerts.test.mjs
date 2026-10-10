@@ -149,6 +149,13 @@ r = await call("test", { body: { endpoint }, headers: { "x-admin-key": "adm" } }
 ok(d.status === 201 && (await receive(pushed[0], ph)).payload.title === "Test: bite alerts work", "admin test alert arrives");
 r = await call("test", { body: { endpoint } }); ok(r.status === 403, "test needs the admin key");
 pushed.length = 0;
+const before = env.DB._sql.prepare("SELECT weekend, weekly FROM push_subs").get();
+r = await call("preview", { headers: { "x-admin-key": "adm" } }); d = await r.json();
+const pv = pushed.length ? await receive(pushed[0], ph) : null;
+ok(d.sent === 1 && d.devices === 1 && pv?.payload.title === "Prime window: Saturday evening" && /^One of the best evenings near Frederictonscript in the past month\. Evening golden hour, falling pressure and cloud cover\. Sunset \d+:\d\d PM\.$/.test(pv.payload.body), "admin sample: a real-looking Saturday evening alert to every device — " + pv?.payload.body);
+ok(JSON.stringify(env.DB._sql.prepare("SELECT weekend, weekly FROM push_subs").get()) === JSON.stringify(before), "the sample doesn't touch anyone's weekend or weekly allowance");
+r = await call("preview", {}); ok(r.status === 403, "sample needs the admin key");
+pushed.length = 0;
 r = await call("selftest", { body: { endpoint } }); d = await r.json();
 ok(d.status === 201 && (await receive(pushed[0], ph)).payload.title === "Test: bite alerts work", "a device can send itself a test alert");
 r = await call("selftest", { body: { endpoint: "https://push.test/sub/unknown" } }); ok(r.status === 404, "self-test only for a subscribed device");

@@ -6,11 +6,12 @@
 // GET  /api/push/stats       (x-admin-key)  -> { subscribers }
 // POST /api/push/test        (x-admin-key) {endpoint} -> { status }  sends a test alert to that device
 // POST /api/push/selftest    {endpoint}    -> { status }  the device's own "Send a test alert" (a few a day)
+// POST /api/push/preview     (x-admin-key) -> { sent, devices }  a sample "Prime window: Saturday evening" to every device
 import { json, isAdmin } from "../../_lib.js";
 import { db, isJson, currentUser } from "../../_auth.js";
 import { underLimit } from "../../_limits.js";
 import { sendPush, pushHostOk } from "../../_webpush.js";
-import { decide, decideKeys, fetchSpotWeather, scoreWindows, slotPlan, localParts, tzOk } from "../../_alerts.js";
+import { decide, decideKeys, fetchSpotWeather, scoreWindows, slotPlan, localParts, tzOk, message } from "../../_alerts.js";
 
 const BATCH = 3; // subscribers per call: keeps each call well inside Cloudflare's free-plan limits
 const idOf = async endpoint => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint)))].slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -96,6 +97,27 @@ const actions = {
     return actions.test({ request, env, body, self: true });
   },
 
+  // What a real Friday-night alert looks like, built by the same code: next Saturday evening at each device's spot,
+  // with that day's real sunset. For checking the wording; it doesn't touch anyone's weekend or weekly allowance.
+  async preview({ request, env }) {
+    if (!isAdmin(request, env)) return json({ error: "Not allowed." }, 403);
+    const subs = (await (await db(env)).prepare("SELECT * FROM push_subs LIMIT 200").all()).results;
+    let sent = 0;
+    for (const sub of subs) {
+      const L = localParts(Date.now(), sub.tz), ahead = ((6 - L.dow + 7) % 7) || 7, sat = new Date(Date.parse(L.date + "T12:00:00Z") + ahead * 864e5).toISOString().slice(0, 10);
+      let sun = Date.parse(sat + "T22:30:00Z"); // about 6:30 pm Atlantic, if the real sunset can't be looked up
+      try {
+        const d = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${sub.lat}&longitude=${sub.lon}&daily=sunset&forecast_days=8&timezone=${encodeURIComponent(sub.tz)}&timeformat=unixtime`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
+        const i = d.daily.time.findIndex(t => new Date((t + d.utc_offset_seconds) * 1000).toISOString().slice(0, 10) === sat); if (i >= 0) sun = d.daily.sunset[i] * 1000;
+      } catch (e) {}
+      const window = { date: sat, part: "pm", sun, score: 88, drivers: [{ v: 14, label: "Evening golden hour" }, { v: 9, label: "Falling pressure" }, { v: 5, label: "Cloud cover" }] };
+      const { title, body } = message({ kind: "weekend", window }, sub, Date.now());
+      const status = await sendPush(env, sub, { title, body, url: "/?go=advice", tag: "fishr-bite" }).catch(() => 0);
+      if (status >= 200 && status < 300) sent++;
+    }
+    return json({ sent, devices: subs.length });
+  },
+
   async test({ request, env, body, self }) {
     if (!self && !isAdmin(request, env)) return json({ error: "Not allowed." }, 403);
     const sub = await (await db(env)).prepare("SELECT * FROM push_subs WHERE id = ?").bind(await idOf(String(body.endpoint || ""))).first();
@@ -113,8 +135,9 @@ export async function onRequest({ request, env, params }) {
   if (!env.DB) return json({ error: "Not available." }, 503);
   let body = {};
   if (!isGet) {
-    if (params.action !== "run" && !isJson(request)) return json({ error: "Send JSON." }, 415);
-    body = params.action === "run" ? {} : await request.json().catch(() => ({})) || {};
+    const noBody = params.action === "run" || params.action === "preview"; // key-protected calls with nothing to send
+    if (!noBody && !isJson(request)) return json({ error: "Send JSON." }, 415);
+    body = noBody ? {} : await request.json().catch(() => ({})) || {};
   }
   return actions[params.action]({ request, env, body });
 }
