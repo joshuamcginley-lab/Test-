@@ -57,6 +57,11 @@ const STUB = () => {
   ok(so.asked === 1 && so.opts.userVisibleOnly && so.opts.keyLen === 65 && so.setting === true, 'asked permission once, subscribed with the 65-byte push key, setting saved');
   ok(sent && sent.endpoint.endsWith('/__push/device1') && sent.keys.p256dh && sent.lat === 45.9612 && sent.tz === 'America/Moncton' && sent.place === 'Fredericton', 'sent push address, location, time zone and town ' + JSON.stringify({ lat: sent?.lat, tz: sent?.tz, place: sent?.place }));
   await p.screenshot({ path: S + '/alerts-on.png' });
+  // The app's own test button (the only way on iPhone, where the Home Screen app and Safari don't share alerts).
+  ok(await p.evaluate(() => !$('alertsTestRow').hidden), 'test button shows once alerts are on');
+  await p.$eval('#alertsTest', e => e.click()); await p.waitForTimeout(1500);
+  const self = await p.evaluate(() => fetch('/__pushed').then(r => r.json()));
+  ok(/^Sent\./.test(await msg(p)) && self.some(x => x.path === '/__push/device1' && x.enc === 'aes128gcm'), 'Settings → Send a test alert reaches this device');
   // The admin page sees the device and can send it a test alert.
   const ap = await ctx.newPage(); ap.on('pageerror', e => errs.push(e.message));
   await ap.goto(URL0 + 'admin.html'); await ap.fill('#key', 'test-admin'); await ap.$eval('#keyForm button[type=submit]', e => e.click()); await ap.waitForTimeout(1200);

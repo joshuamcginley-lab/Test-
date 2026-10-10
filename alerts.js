@@ -52,9 +52,20 @@ $("sAlerts").addEventListener("change", async () => {
       const r = await alertsSubscribe(true).catch(() => "Couldn't turn on bite alerts. Try again.");
       if (r?.ok) { state.settings.alerts = true; save(); alertsMsg(r.ok); } else { box.checked = false; alertsMsg(r); }
     } else { await alertsUnsubscribe(); state.settings.alerts = false; save(); alertsMsg("Off. Nothing about this phone is kept for alerts."); }
-  } finally { box.disabled = false; }
+  } finally { box.disabled = false; $("alertsTestRow").hidden = !state.settings.alerts; }
 });
-$("openSettings").addEventListener("click", () => { $("sAlerts").checked = !!state.settings.alerts; alertsMsg(""); });
+$("openSettings").addEventListener("click", () => { $("sAlerts").checked = !!state.settings.alerts; $("alertsTestRow").hidden = !state.settings.alerts; alertsMsg(""); });
+// A test alert to this device, to see what one looks like (and that notifications get through).
+$("alertsTest").onclick = async () => {
+  const b = $("alertsTest"); b.disabled = true; alertsMsg("Sending…");
+  try {
+    const sub = pushSupported() && await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+    if (!sub) { alertsMsg("Turn bite alerts off and on again, then try the test."); return; }
+    const d = await fetch("/api/push/selftest", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }).then(r => r.json());
+    alertsMsg(d.status >= 200 && d.status < 300 ? "Sent. It should arrive in a few seconds; tap it to open the Guide." : d.error || "The alert didn't go through. Turn bite alerts off and on again, then try once more.");
+  } catch (e) { alertsMsg("Couldn't send the test. Check your connection."); }
+  finally { b.disabled = false; }
+};
 
 // Once a day while on, re-send the location so alerts follow a changed town (and the push address stays fresh).
 (async () => {

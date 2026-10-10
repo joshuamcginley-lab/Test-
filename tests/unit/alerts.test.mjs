@@ -148,6 +148,12 @@ pushed.length = 0;
 r = await call("test", { body: { endpoint }, headers: { "x-admin-key": "adm" } }); d = await r.json();
 ok(d.status === 201 && (await receive(pushed[0], ph)).payload.title === "Test: bite alerts work", "admin test alert arrives");
 r = await call("test", { body: { endpoint } }); ok(r.status === 403, "test needs the admin key");
+pushed.length = 0;
+r = await call("selftest", { body: { endpoint } }); d = await r.json();
+ok(d.status === 201 && (await receive(pushed[0], ph)).payload.title === "Test: bite alerts work", "a device can send itself a test alert");
+r = await call("selftest", { body: { endpoint: "https://push.test/sub/unknown" } }); ok(r.status === 404, "self-test only for a subscribed device");
+for (let i = 0; i < 4; i++) await call("selftest", { body: { endpoint } });
+r = await call("selftest", { body: { endpoint } }); ok(r.status === 429, "a few self-tests a day, then 429");
 // The push service says the subscription is gone: it's removed.
 pushStatus = 410;
 env.DB._sql.prepare("UPDATE push_subs SET slot = NULL, weekend = NULL, weekly = NULL").run();

@@ -5,6 +5,7 @@
 // POST /api/push/run?cursor= (x-cron-key)   -> { done, cursor, checked, sent }  called hourly; handles a few subscribers per call
 // GET  /api/push/stats       (x-admin-key)  -> { subscribers }
 // POST /api/push/test        (x-admin-key) {endpoint} -> { status }  sends a test alert to that device
+// POST /api/push/selftest    {endpoint}    -> { status }  the device's own "Send a test alert" (a few a day)
 import { json, isAdmin } from "../../_lib.js";
 import { db, isJson, currentUser } from "../../_auth.js";
 import { underLimit } from "../../_limits.js";
@@ -88,8 +89,15 @@ const actions = {
     return json({ subscribers: r?.n || 0, cloud: r?.cloud || 0, ready: !!(env.VAPID_PUBLIC && env.VAPID_PRIVATE), cron: !!env.PUSH_CRON_KEY });
   },
 
-  async test({ request, env, body }) {
-    if (!isAdmin(request, env)) return json({ error: "Not allowed." }, 403);
+  // From the app's Settings: only to a device that's already subscribed (it knows its own push address), and only
+  // a few a day, so it can't be used to spam anyone.
+  async selftest({ request, env, body }) {
+    if (!await underLimit(env, request, "push-test", 5)) return json({ error: "That's enough tests for today." }, 429);
+    return actions.test({ request, env, body, self: true });
+  },
+
+  async test({ request, env, body, self }) {
+    if (!self && !isAdmin(request, env)) return json({ error: "Not allowed." }, 403);
     const sub = await (await db(env)).prepare("SELECT * FROM push_subs WHERE id = ?").bind(await idOf(String(body.endpoint || ""))).first();
     if (!sub) return json({ error: "Turn on bite alerts on this device first (Settings in the app)." }, 404);
     const status = await sendPush(env, sub, { title: "Test: bite alerts work", body: "This is what a fishr bite alert looks like. Tap to open the Guide.", url: "/?go=advice", tag: "fishr-test" }).catch(() => 0);
