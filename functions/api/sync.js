@@ -57,13 +57,18 @@ export async function onRequestPost({ request, env }) {
     if (rows.length) {
       const { n, bytes } = await DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM trips WHERE user_id = ?").bind(user.id).first();
       if (n + rows.filter(r => !r.deleted).length > MAX_TRIPS) fail("That's more trips than fishr Cloud holds for one account.", 413);
-      // Size after this push: what's stored, minus the versions being replaced, plus the new ones.
-      let replaced = 0;
-      for (let k = 0; k < rows.length; k += 90) {
-        const part = rows.slice(k, k + 90);
-        replaced += (await DB.prepare(`SELECT COALESCE(SUM(LENGTH(data)), 0) AS b FROM trips WHERE user_id = ? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part.map(r => r.id)).first()).b;
+      // Size after this push: what's stored, with each trip that this push will actually replace (it's newer than the
+      // stored copy, or new) swapped for its new version. Versions that lose to a newer stored copy change nothing.
+      const newest = new Map(); for (const r of rows) if (!newest.has(r.id) || r.updated > newest.get(r.id).updated) newest.set(r.id, r);
+      const ids = [...newest.keys()], stored = new Map();
+      for (let k = 0; k < ids.length; k += 90) {
+        const part = ids.slice(k, k + 90);
+        const { results } = await DB.prepare(`SELECT id, updated, COALESCE(LENGTH(data), 0) AS b FROM trips WHERE user_id = ? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part).all();
+        for (const r of results) stored.set(r.id, r);
       }
-      if (bytes - replaced + rows.reduce((a, r) => a + (r.data ? r.data.length : 0), 0) > MAX_BYTES) fail("That's more data than fishr Cloud holds for one account.", 413);
+      let after = bytes;
+      for (const r of newest.values()) { const cur = stored.get(r.id); if (!cur || r.updated > cur.updated) after += (r.data ? r.data.length : 0) - (cur ? cur.b : 0); }
+      if (after > MAX_BYTES) fail("That's more data than fishr Cloud holds for one account.", 413);
       // One transaction: take the next seq and write the rows with it, so no device can see a later seq first.
       // Last write wins: an incoming version only replaces the stored one if it's newer.
       await DB.batch([DB.prepare("UPDATE users SET seq = seq + 1 WHERE id = ?").bind(user.id), ...rows.map(r => DB.prepare(

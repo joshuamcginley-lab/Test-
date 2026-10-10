@@ -29,7 +29,7 @@ export function db(env) {
 
 /* ---------- small helpers ---------- */
 export const b64u = bytes => { let s = ""; for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
-export const unb64u = s => Uint8Array.from(atob(String(s).replace(/-/g, "+").replace(/_/g, "/") + "===".slice((String(s).length + 3) % 4)), c => c.charCodeAt(0));
+export const unb64u = s => { try { return Uint8Array.from(atob(String(s).replace(/-/g, "+").replace(/_/g, "/") + "===".slice((String(s).length + 3) % 4)), c => c.charCodeAt(0)); } catch { fail("Passkey response wasn't readable."); } };
 export const randomId = (n = 16) => b64u(crypto.getRandomValues(new Uint8Array(n)));
 const sha256 = async data => new Uint8Array(await crypto.subtle.digest("SHA-256", typeof data === "string" ? enc.encode(data) : data));
 const hex = bytes => [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -102,6 +102,7 @@ async function takeChallenge(env, id, kinds) {
 /* ---------- WebAuthn ---------- */
 function checkClientData(raw, type, challenge, request) {
   let cd; try { cd = JSON.parse(new TextDecoder().decode(raw)); } catch { fail("Passkey response wasn't readable."); }
+  if (!cd || typeof cd !== "object") fail("Passkey response wasn't readable.");
   if (cd.type !== type) fail("Passkey response was the wrong type.");
   if (cd.challenge !== challenge) fail("That sign-in request expired. Try again.");
   if (cd.origin !== new URL(request.url).origin || cd.crossOrigin) fail("Passkey was made for a different site.");

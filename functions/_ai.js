@@ -114,7 +114,7 @@ export function tripLine(s) {
   return parts.join(" | ");
 }
 export function logText(trips, notes = []) {
-  const rows = [...trips].filter(s => s && s.date && s.water).sort((a, b) => a.date.localeCompare(b.date)).slice(-400);
+  const rows = [...trips].filter(s => s && s.date && s.water).sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-400);
   const fish = rows.reduce((a, s) => a + (Array.isArray(s.catches) ? s.catches : []).reduce((b, c) => b + (Number(c?.count) || 1), 0), 0);
   // Keep the prompt a sensible size: newest trips first until about 120k characters, then back in date order.
   const lines = []; let size = 0;
