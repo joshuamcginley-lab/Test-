@@ -138,6 +138,7 @@ td.r,th.r{text-align:right;font-family:var(--f-mono);font-size:calc(12.5*var(--u
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .filters select{font:inherit;font-size:calc(13.5*var(--u));padding:8px 12px;border:1px solid var(--line-2);border-radius:999px;background:var(--glass);color:var(--ink)}
 .entries{display:grid;gap:8px}
+.entries .more-trips{justify-self:center;margin-top:6px}
 .entry{display:grid;grid-template-columns:64px 1fr auto;gap:0;align-items:stretch;background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:0;text-align:left;width:100%;overflow:hidden;transition:border-color .15s,background .15s}
 .entry:hover{border-color:var(--line-2);background:var(--glass-2)}
 .entry .date{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 4px;border-right:1px solid var(--line)}

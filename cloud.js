@@ -27,16 +27,18 @@ async function fetchT(url, opts = {}, ms = 25000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ctl.signal }); }
   catch (e) {
-    if (e.name === "AbortError") throw Object.assign(new Error("fishr Cloud took too long to answer. Try again."), { timeout: true });
+    if (e.name === "AbortError") throw Object.assign(new Error("fishr took too long to answer. Try again."), { timeout: true });
     throw Object.assign(new Error(navigator.onLine ? "Couldn't reach fishr. Check your connection and try again." : "No signal right now. Try again when you're back in range."), { offline: true });
   }
   finally { clearTimeout(t); }
 }
-async function api(path, body, method) {
+async function api(path, body, method, ms) {
   const r = await fetchT(path, { method: method || (body ? "POST" : "GET"), credentials: "same-origin",
-    headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(d.error || "fishr Cloud didn't answer. Try again."), { status: r.status });
+    headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined }, ms);
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw Object.assign(new Error(d?.error || "fishr Cloud didn't answer. Try again."), { status: r.status });
+  // A 200 that isn't fishr's answer (e.g. a Wi-Fi sign-in page) is a failure, never a success.
+  if (!d || typeof d !== "object") throw new Error("Couldn't reach fishr Cloud properly. If you're on public Wi-Fi, sign in to it first.");
   return d;
 }
 function deviceLabel() {
@@ -153,6 +155,7 @@ async function runSync() {
     const part = push.slice(i, i + 400);
     res = await api("/api/sync", { since, trips: part.map(({ h, ...t }) => t), meta: i === 0 ? metaPush : null });
     if (!live()) return;
+    if (!Array.isArray(res.trips) || !Number.isFinite(res.cursor)) throw new Error("fishr Cloud sent back something unexpected. Your changes are safe and will sync next time.");
     for (const p of part) if (p.deleted) delete sync.hashes[p.id]; else sync.hashes[p.id] = [p.h, p.updated];
     if (i === 0 && metaPush) {
       if (res.metaError) metaErr = res.metaError;
@@ -169,6 +172,14 @@ async function runSync() {
   missingPhotos.clear();
 }
 
+// A trip from the account, in the shapes the app relies on (a date, a list of catches, numeric coordinates).
+function safeTrip(d) {
+  if (!d || typeof d !== "object" || typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date) || typeof d.water !== "string") return null;
+  const n = v => v == null || v === "" ? null : Number.isFinite(+v) ? +v : null;
+  const out = { ...d, catches: Array.isArray(d.catches) ? d.catches.filter(c => c && typeof c === "object") : [] };
+  if ("lat" in d) out.lat = n(d.lat); if ("lon" in d) out.lon = n(d.lon);
+  return out;
+}
 function applyTrips(rows) {
   if (!rows.length) return;
   const log = realLog(); let changed = false;
@@ -182,7 +193,8 @@ function applyTrips(rows) {
       if (local) { log.sessions.splice(i, 1); changed = true; photoDel(photoIdsOf(local).filter(id => !log.sessions.some(s => photoIdsOf(s).includes(id)))).catch(() => {}); }
       continue;
     }
-    const data = { ...r.data, id: r.id };
+    const data = safeTrip({ ...r.data, id: r.id });
+    if (!data) continue; // not a trip this app can show
     if (local) log.sessions[i] = data; else log.sessions.push(data);
     sync.hashes[r.id] = [hashStr(JSON.stringify(data)), r.updated]; changed = true;
   }

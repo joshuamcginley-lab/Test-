@@ -16,11 +16,14 @@ self.addEventListener("fetch", e => {
   if (url.origin === location.origin) {
     // Network first so updates arrive when online. On a weak signal (common on the water), fall back to the
     // cached copy after 3 seconds instead of waiting for the network to give up. Only good responses are cached.
+    // Pages aren't stored here: a new page names new script versions, and if those didn't arrive on a weak signal
+    // the stored page would point at files this phone doesn't have. The page comes from this worker's own install,
+    // which always has the matching set.
+    const page = req.mode === "navigate";
     const fromNet = fetch(req).then(res => {
-      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+      if (res.ok && !page) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;
     });
-    const page = req.mode === "navigate";
     const fromCache = () => caches.match(req).then(r => r || (page ? caches.match("index.html") : undefined));
     e.respondWith(new Promise(resolve => {
       let done = false; const use = r => { if (!done && r) { done = true; resolve(r); } };

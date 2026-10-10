@@ -16,7 +16,7 @@ async function fetchWeather(lat, lon, date, hour) {
   const day = new Date(date + "T12:00:00"), daysAgo = (Date.now() - day) / 864e5;
   const from = ymd(new Date(day - 2 * 864e5));
   const base = daysAgo > 60 ? "https://archive-api.open-meteo.com/v1/archive" : "https://api.open-meteo.com/v1/forecast";
-  const res = await fetch(`${base}?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&hourly=${WX_VARS}&start_date=${from}&end_date=${date}&timezone=auto`);
+  const res = await fetch(`${base}?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&hourly=${WX_VARS}&start_date=${from}&end_date=${date}&timezone=auto`, limit());
   if (!res.ok) throw new Error("weather " + res.status);
   const h = (await res.json()).hourly;
   const i = h.time.indexOf(`${date}T${String(Math.min(23, Math.max(0, Math.round(hour)))).padStart(2, "0")}:00`);
@@ -48,8 +48,8 @@ function setGaugePick(lat, lon, station, name) {
 async function fetchWater(lat, lon) {
   if (location.protocol === "file:") return null;
   const pick = gaugePickFor(lat, lon), base = `/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`;
-  let res = await fetch(pick ? `${base}&station=${pick.station}` : base);
-  if (!res.ok && pick) res = await fetch(base); // the picked gauge is offline: fall back to the closest
+  let res = await fetch(pick ? `${base}&station=${pick.station}` : base, limit());
+  if (!res.ok && pick) res = await fetch(base, limit()); // the picked gauge is offline: fall back to the closest
   if (!res.ok) return null;
   const d = await res.json();
   if (!d || !d.station || !["High", "Normal", "Low"].includes(d.status)) return null;

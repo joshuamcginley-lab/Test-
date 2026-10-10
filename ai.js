@@ -72,7 +72,7 @@ async function askFishr(q) {
   hist.push({ role: "user", text: q }); askBusy = mode; $("askInput").value = ""; renderAsk();
   try {
     if (mode === "own") await syncNow(); // so the answer sees your latest trips
-    const d = await api("/api/ai/ask", { mode, question: q, history, conditions: askConditions(), units: { weight: state.settings.units, temp: state.settings.temp } });
+    const d = await api("/api/ai/ask", { mode, question: q, history, conditions: askConditions(), units: { weight: state.settings.units, temp: state.settings.temp } }, undefined, 100000); // the server may take ~90 s with a retry
     hist.push({ role: "assistant", text: d.answer });
     if (typeof usage === "function") usage("ask");
     if (askInfo[mode]) askInfo[mode].left = d.left;
@@ -98,7 +98,7 @@ renderAsk();
 /* ---------- fishr ID ---------- */
 const blobToB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
 const identify = async blob => {
-  const d = await api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" });
+  const d = await api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" }, undefined, 100000);
   if (typeof usage === "function") usage("fishrid");
   return d;
 };

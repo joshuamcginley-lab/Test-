@@ -25,7 +25,7 @@ async function goLive(useGps) {
 async function useTown(name) {
   const msg = $("townMsg"); msg.textContent = "Looking it up…";
   try {
-    const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`)).json();
+    const d = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`, limit())).json();
     const g = d.results?.[0];
     if (!g) { msg.textContent = "Couldn't find that one. Try the nearest town or city."; return; }
     state.settings.home = { lat: r(g.latitude, 2), lon: r(g.longitude, 2), name: [g.name, g.admin1].filter(Boolean).join(", ") };
@@ -198,8 +198,8 @@ function renderLive(status, quiet) {
     <div class="live-rest">
     <div class="tile">
       <span class="label">Air</span>
-      <div class="big"><b data-count="${Math.round(tOut(c.temp))}">${Math.round(tOut(c.temp))}</b><small>°${T()}</small></div>
-      <span class="sub">Feels ${Math.round(tOut(c.feels))}° · ${c.hum ?? "—"}% humidity · ${c.cloud ?? "—"}% cloud</span>
+      <div class="big">${c.temp != null ? `<b data-count="${Math.round(tOut(c.temp))}">${Math.round(tOut(c.temp))}</b><small>°${T()}</small>` : "<b>—</b>"}</div>
+      <span class="sub">${c.feels != null ? `Feels ${Math.round(tOut(c.feels))}°` : "Feels —"} · ${c.hum ?? "—"}% humidity · ${c.cloud ?? "—"}% cloud</span>
       ${spark(tSeries, { nowAt: nowIn(-6) })}<span class="axis"><span>−6h</span><span>now</span><span>+12h</span></span>
     </div>
     <div class="tile">
@@ -259,7 +259,7 @@ async function openGaugePicker() {
   closeSheets(); $("scrim").hidden = false; $("gaugeSheet").hidden = false;
   list.innerHTML = `<p class="ga-msg">Finding gauges near you…</p>`;
   let gauges = null;
-  try { const res = await fetch(`/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}&list=1`); if (res.ok) gauges = (await res.json()).gauges; } catch (e) {}
+  try { const res = await fetch(`/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}&list=1`, limit()); if (res.ok) gauges = (await res.json()).gauges; } catch (e) {}
   if ($("gaugeSheet").hidden) return;
   if (!Array.isArray(gauges) || !gauges.length) { list.innerHTML = `<p class="ga-msg">Couldn't load the gauges near you. Try again in a minute.</p>`; return; }
   const pick = gaugePickFor(lat, lon);

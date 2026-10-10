@@ -197,7 +197,7 @@
   <form class="sheet-in" id="form" novalidate>
     <h2 id="sheetTitle">Log a trip</h2>
     <div class="row">
-      <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
+      <label class="field"><span class="label">Date</span><input type="date" id="fDate" required min="1950-01-01"></label>
       <label class="field"><span class="label" id="tloLabel">Temp</span><input type="number" id="fTlo" inputmode="decimal" step="1"></label>
     </div>
     <div class="cond-strip">
@@ -205,8 +205,8 @@
       <div class="wx-chips" id="wxChips"></div>
     </div>
     <div class="row">
-      <label class="field"><span class="label">Water</span><input id="fWaterIn" list="dlWater" placeholder="Lake or river name" autocomplete="off" required></label>
-      <label class="field"><span class="label">Spot (optional)</span><input id="fSpot" list="dlSpot" placeholder="e.g. by the bridge" autocomplete="off"></label>
+      <label class="field"><span class="label">Water</span><input id="fWaterIn" maxlength="120" list="dlWater" placeholder="Lake or river name" autocomplete="off" required></label>
+      <label class="field"><span class="label">Spot (optional)</span><input id="fSpot" maxlength="120" list="dlSpot" placeholder="e.g. by the bridge" autocomplete="off"></label>
     </div>
     <div class="field"><span class="label">What did you catch? Leave empty if you got skunked.</span>
       <div id="catchRows" style="display:grid;gap:8px"></div>
@@ -227,10 +227,10 @@
         <div class="field"><span class="label">Conditions</span><div class="seg" id="segCond"></div></div>
         <div class="field"><span class="label">Method</span><div class="seg" id="segMethod"><button type="button" data-v="Spin" aria-pressed="true">Spin</button><button type="button" data-v="Bait" aria-pressed="false">Bait</button><button type="button" data-v="Fly" aria-pressed="false">Fly</button><button type="button" data-v="Ice" aria-pressed="false">Ice</button><button type="button" data-v="Troll" aria-pressed="false">Troll</button></div></div>
         <div class="row">
-          <label class="field"><span class="label">Rod / combo</span><input id="fCombo" list="dlCombo" placeholder="e.g. medium spinning" autocomplete="off"></label>
-          <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" placeholder='e.g. white curly tail grub'></label>
+          <label class="field"><span class="label">Rod / combo</span><input id="fCombo" maxlength="120" list="dlCombo" placeholder="e.g. medium spinning" autocomplete="off"></label>
+          <label class="field"><span class="label">Lures / flies used</span><input id="fLureText" maxlength="200" placeholder='e.g. white curly tail grub'></label>
         </div>
-        <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" placeholder="e.g. water high after rain"></textarea></label>
+        <label class="field"><span class="label">Notes</span><textarea id="fNotes" rows="2" maxlength="4000" placeholder="e.g. water high after rain"></textarea></label>
       </div>
     </details>
     <div class="err" id="formErr" hidden></div>
@@ -246,7 +246,7 @@
   <div class="sheet-in">
     <h2 id="setTitle">Settings</h2>
     <div class="set-group">
-      <label class="field"><span class="label">Your name</span><input id="sName" placeholder="First name" autocomplete="given-name"></label>
+      <label class="field"><span class="label">Your name</span><input id="sName" placeholder="First name" autocomplete="given-name" maxlength="40"></label>
       <div class="row">
         <label class="field"><span class="label">Weight &amp; length</span><select id="sUnits"><option value="imperial">lb &amp; inches</option><option value="metric">kg &amp; cm</option></select></label>
         <label class="field"><span class="label">Temperature</span><select id="sTemp"><option value="C">°C</option><option value="F">°F</option></select></label>

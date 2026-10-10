@@ -32,11 +32,23 @@ const KEY = "firetiger.v1";
 let state = { sessions: [], notes: [], settings: { name: "", units: "imperial", temp: "C", season: null, maps: "auto" } };
 let demo = null; // the person's own trips, set aside while the sample season is on screen
 let logUnreadable = false; // the saved log was there but couldn't be read (fishr Cloud then restores it)
+// A time limit for outside services (weather, river gauges), so a weak signal on the water can't leave a screen
+// loading forever: the request gives up and the screen says it couldn't reach the service.
+const limit = (ms = 12000) => (typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(ms) } : {});
 function load() {
   // First visit from the US: show °F. Everyone else starts on °C (it's one tap to change in Settings).
   try { if (!localStorage.getItem(KEY) && /-US$/i.test(navigator.language || "")) state.settings.temp = "F"; } catch (e) {}
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
   catch (e) { console.warn("Could not read saved log", e); logUnreadable = true; }
+  // Shapes the rest of the app relies on, whatever an old version or a damaged save left behind.
+  if (!Array.isArray(state.sessions)) state.sessions = [];
+  state.sessions = state.sessions.filter(s => s && typeof s === "object" && typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date));
+  for (const s of state.sessions) {
+    s.catches = Array.isArray(s.catches) ? s.catches.filter(c => c && typeof c === "object") : [];
+    for (const k of ["lat", "lon"]) if (k in s && s[k] != null && !Number.isFinite(+s[k])) s[k] = null; else if (s[k] != null) s[k] = +s[k];
+  }
+  state.notes = Array.isArray(state.notes) ? state.notes.filter(n => typeof n === "string") : [];
+  if (!state.settings || typeof state.settings !== "object") state.settings = { name: "", units: "imperial", temp: "C", season: null, maps: "auto" };
   // The sample used to be saved into the log; it's view-only now. (Its notes only go with it: an account that was
   // given the season as its own keeps them.)
   const n = state.sessions.length;
@@ -355,20 +367,25 @@ function renderLog() {
   let pbLb = 0; for (const s of list) for (const c of s.catches || []) pbLb = Math.max(pbLb, +c.lb || 0);
   const shown = [...list].sort((a, b) => b.date.localeCompare(a.date) || (b.start || "").localeCompare(a.start || ""))
     .filter(s => (!fw || s.water === fw) && (!fs || (s.catches || []).some(c => c.species === fs)) && (!fr || (fr === "skunk" ? !fishOf(s) : fishOf(s) > 0)));
-  $("entries").innerHTML = shown.map(s => {
+  // A long log draws a page at a time, so the list opens quickly on an older phone.
+  $("entries").innerHTML = shown.slice(0, logLimit).map(s => {
     const f = fishOf(s), isPb = pbLb && (s.catches || []).some(c => c.lb === pbLb);
     const temp = s.tempLow != null ? (s.tempHigh != null && s.tempHigh !== s.tempLow ? `${tOut(s.tempLow)}–${fmtT(s.tempHigh)}` : fmtT(s.tempLow)) : null;
     const t = [s.start ? fmtTime(s.start) + (s.end ? "–" + fmtTime(s.end) : "") : null, temp, s.wx?.p ? `${s.wx.p} hPa ${s.wx.trend === "Rising" ? "↑" : s.wx.trend === "Falling" ? "↓" : "→"}` : null, s.method && s.method !== "Spin" ? s.method : null, s.event, ...(s.conditions || [])].filter(Boolean).join(" · ");
     const sizes = (s.catches || []).map(sizeOf).filter(Boolean);
     return `<button class="entry${isPb ? " pb" : ""}" type="button" data-id="${esc(s.id)}"><span class="date"><b>${+s.date.slice(8)}</b><span class="m">${MONTHS[+s.date.slice(5, 7) - 1]}</span><small>${esc(isPeriod(s) || "")}</small></span>
-      <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>${s.lat != null ? ` <span class="maplink" role="link" tabindex="0" data-map="${s.lat},${s.lon}" data-label="${esc([s.water, s.spot].filter(Boolean).join(" · "))}">Map ↗</span>` : ""}
+      <span class="body"><span class="where">${esc(s.water)}${s.spot ? ` <span>· ${esc(s.spot)}</span>` : ""}</span>${isPb ? `<span class="pbtag">PB</span>` : ""}<br><span class="meta">${esc(t)}</span>${s.lat != null ? ` <span class="maplink" role="link" tabindex="0" data-map="${esc(`${s.lat},${s.lon}`)}" data-label="${esc([s.water, s.spot].filter(Boolean).join(" · "))}">Map ↗</span>` : ""}
       <div class="catch">${esc(catchSummary(s))}${sizes.length ? ` <span class="meta">(${esc(sizes.join(", "))})</span>` : ""}</div>
       ${photoIdsOf(s).length ? `<span class="thumbs">${(s.catches || []).filter(c => c.photo).map(c => `<span class="thumb" role="button" tabindex="0" data-view="${esc(s.id)}|${esc(c.photo)}" aria-label="View ${esc(c.species)} photo"><img data-photo="${esc(c.photo)}" alt=""></span>`).join("")}</span>` : ""}
       ${s.lureText ? `<div class="lures">${esc(s.lureText)}</div>` : ""}${s.notes ? `<div class="lures"><i>${esc(s.notes)}</i></div>` : ""}</span>
       <span class="tally">${f ? `<b>${f}</b><span>fish</span><span class="share-chip" role="button" tabindex="0" data-share="${esc(s.id)}" aria-label="Share this catch">Share</span>` : `<span class="stamp">Skunked</span>`}</span></button>`;
-  }).join("") || `<p class="status">No trips match these filters.</p>`;
+  }).join("") + (shown.length > logLimit ? `<button type="button" class="btn more-trips" id="moreTrips">Show more trips (${shown.length - logLimit} older)</button>` : "")
+    || `<p class="status">No trips match these filters.</p>`;
   hydratePhotos($("entries"));
 }
+const LOG_PAGE = 150;
+let logLimit = LOG_PAGE;
+document.addEventListener("click", e => { if (e.target.closest("#moreTrips")) { logLimit += LOG_PAGE; renderLog(); } });
 
 function fillLists() {
   const all = state.sessions, uniq = a => [...new Set(a.filter(Boolean))].sort();
@@ -407,17 +424,17 @@ $("seasonSel").addEventListener("change", () => { state.settings.season = $("sea
 let editingId = null, pinned = null;
 function catchRow(c = {}) {
   const d = document.createElement("div"); d.className = "catch-row";
-  d.innerHTML = `<div class="field sp"><span class="label">Species</span><div class="combo"><input class="c-sp" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(c.species || "")}" placeholder="Type or pick a fish" aria-label="Species"><button type="button" class="combo-btn" aria-label="Show fish list" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="combo-list" role="listbox" hidden></div></div></div>
-  <div class="field cnt"><span class="label">Count</span><div class="stepper"><button type="button" class="step" data-d="-1" aria-label="One fewer">−</button><input class="c-n" type="number" min="1" inputmode="numeric" value="${esc(c.count || 1)}" aria-label="Count"><button type="button" class="step" data-d="1" aria-label="One more">+</button></div></div>
+  d.innerHTML = `<div class="field sp"><span class="label">Species</span><div class="combo"><input class="c-sp" maxlength="60" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(c.species || "")}" placeholder="Type or pick a fish" aria-label="Species"><button type="button" class="combo-btn" aria-label="Show fish list" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="combo-list" role="listbox" hidden></div></div></div>
+  <div class="field cnt"><span class="label">Count</span><div class="stepper"><button type="button" class="step" data-d="-1" aria-label="One fewer">−</button><input class="c-n" type="number" min="1" max="999" inputmode="numeric" value="${esc(c.count || 1)}" aria-label="Count"><button type="button" class="step" data-d="1" aria-label="One more">+</button></div></div>
   <label class="field"><span class="label">${wU()} each</span><input class="c-lb" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(wtOut(c.lb) ?? "")}"></label>
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
-  <label class="field lu"><span class="label">Lure</span><input class="c-lu" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
+  <label class="field lu"><span class="label">Lure</span><input class="c-lu" maxlength="80" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
   <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" class="vh-file"><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
   // − / + for the count: big targets, no keyboard needed (typing still works).
   const cn = d.querySelector(".c-n");
-  for (const b of d.querySelectorAll(".step")) b.onclick = () => { cn.value = Math.max(1, (parseInt(cn.value) || 1) + +b.dataset.d); cn.dispatchEvent(new Event("input", { bubbles: true })); };
+  for (const b of d.querySelectorAll(".step")) b.onclick = () => { cn.value = Math.min(999, Math.max(1, (parseInt(cn.value) || 1) + +b.dataset.d)); cn.dispatchEvent(new Event("input", { bubbles: true })); };
   speciesPicker(d.querySelector(".combo"));
   const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
   const idBtn = d.querySelector(".id-photo");
@@ -561,8 +578,10 @@ $("viewerClose").onclick = closeViewer;
 $("viewer").addEventListener("click", e => { if (e.target === $("viewer")) closeViewer(); });
 $("delBtn").onclick = () => { $("delBtn").hidden = true; $("delConfirm").hidden = false; };
 $("delYes").onclick = () => {
-  const gone = photoIdsOf(state.sessions.find(s => s.id === editingId));
-  state.sessions = state.sessions.filter(s => s.id !== editingId); save(); closeSheets(); render(); toast("Trip deleted");
+  const gone = photoIdsOf(state.sessions.find(s => s.id === editingId)), before = state.sessions;
+  state.sessions = state.sessions.filter(s => s.id !== editingId);
+  if (!save()) { state.sessions = before; return; } // out of storage: nothing changed, and save() said so
+  closeSheets(); render(); toast("Trip deleted");
   photoDel(gone).catch(() => {});
 };
 
@@ -574,6 +593,12 @@ $("form").addEventListener("submit", async e => {
   if (!date || !water) { $("formErr").hidden = false; $("formErr").textContent = "Add a date and the water you fished."; return; }
   const num = v => v === "" || v == null ? null : Number(v);
   const rowsEl = [...$("catchRows").querySelectorAll(".catch-row")].filter(row => row.querySelector(".c-sp").value.trim());
+  // Numbers a typo can produce (the form skips the browser's own checks so nothing blocks a save on the water).
+  const bad = m => { $("formErr").hidden = false; $("formErr").textContent = m; };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || +date.slice(0, 4) < 1950 || +date.slice(0, 4) > new Date().getFullYear() + 1) return bad("Check the date.");
+  const tempOk = v => v == null || (Number.isFinite(v) && (state.settings.temp === "F" ? v >= -60 && v <= 130 : v >= -50 && v <= 55));
+  if (!tempOk(num($("fTlo").value)) || !tempOk(num($("fThi").value))) return bad("Check the temperature.");
+  if (rowsEl.some(row => ["c-lb", "c-in"].some(c => { const v = num(row.querySelector("." + c).value); return v != null && !(v >= 0); }))) return bad("Weight and length can't be negative.");
   // Save any new photos first; a catch keeps its old photo unless it was removed or replaced.
   $("saveBtn").disabled = true;
   try {
@@ -588,7 +613,7 @@ $("form").addEventListener("submit", async e => {
     const lb = row.dataset.lb != null && lbV === wtOut(+row.dataset.lb) ? +row.dataset.lb : wtIn(lbV);
     const inches = row.dataset.in != null && inV === lenOut(+row.dataset.in) ? +row.dataset.in : lenIn(inV);
     const unchanged = row.dataset.lb != null ? lb === +row.dataset.lb : lb == null;
-    return { species: row.querySelector(".c-sp").value.trim(), count: Math.max(1, parseInt(row.querySelector(".c-n").value) || 1), lb, inches, lure: row.querySelector(".c-lu").value.trim() || null, size: unchanged ? row.dataset.size || null : null,
+    return { species: row.querySelector(".c-sp").value.trim(), count: Math.min(999, Math.max(1, Math.round(+row.querySelector(".c-n").value) || 1)), lb, inches, lure: row.querySelector(".c-lu").value.trim() || null, size: unchanged ? row.dataset.size || null : null,
       photo: row.dataset.newPhoto || (row.dataset.photoRemoved ? null : row.dataset.photo || null) };
   });
   const tlo = num($("fTlo").value), thi = num($("fThi").value);
@@ -644,8 +669,10 @@ $("saveNotes").onclick = () => {
   if (demo) { $("cancelNotes").onclick(); toast("Exit the sample to write your own notes"); return; }
   const typed = $("notesText").value.split("\n").map(s => s.trim()).filter(Boolean);
   // Notes that synced in from another phone while the editor was open are kept, not overwritten.
+  const before = state.notes;
   state.notes = [...typed, ...state.notes.filter(n => !notesOpened.includes(n) && !typed.includes(n))];
-  save(); $("cancelNotes").onclick(); render(); toast("Notes saved");
+  if (!save()) { state.notes = before; return; } // out of storage: the editor stays open with the text, and save() said so
+  $("cancelNotes").onclick(); render(); toast("Notes saved");
 };
 
 /* ---------- sample season ---------- */
@@ -705,7 +732,8 @@ $("openSettings").onclick = () => {
   $("scrim").hidden = false; $("settings").hidden = false; $("settings").scrollTop = 0;
 };
 $("closeSettings").onclick = closeSheets;
-$("sName").addEventListener("input", () => { state.settings.name = $("sName").value.trim(); save(); render(); });
+let nameTimer = null; // typing a name redraws the app once the typing pauses, not on every letter
+$("sName").addEventListener("input", () => { state.settings.name = $("sName").value.trim(); clearTimeout(nameTimer); nameTimer = setTimeout(() => { save(); render(); }, 300); });
 $("sUnits").addEventListener("change", () => { state.settings.units = $("sUnits").value; save(); render(); });
 $("sTemp").addEventListener("change", () => {
   const box = $("aTemp"), c = box && box.value !== "" ? tIn(Number(box.value)) : null; // in °C, read with the old unit
@@ -740,7 +768,8 @@ $("exportJson").onclick = async () => {
   download(`fishing-log-backup-${stamp()}.json`, JSON.stringify({ app: "fishr.ai", version: 2, exportedAt: new Date().toISOString(), ...state, sessions: own.sessions, notes: own.notes, settings: { ...state.settings, season: demo ? demo.season : state.settings.season }, photos }), "application/json");
 };
 $("exportCsv").onclick = () => {
-  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  // Text that a spreadsheet would run as a formula (=, +, -, @ at the start) gets a leading ' so it stays text.
+  const q = v => { let s = String(v ?? ""); if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const rows = [["Date", "Start", "End", "Water", "Spot", "Latitude", "Longitude", "Temp low (°C)", "Temp high (°C)", "Method", "Conditions", "Combo", "Species", "Count", "Weight each (lb)", "Length (in)", "Lure", "Has photo", "Lures used", "Notes"]];
   for (const s of [...(demo || state).sessions].sort((a, b) => a.date.localeCompare(b.date))) {
     const base = [s.date, s.start, s.end, s.water, s.spot, s.lat, s.lon, s.tempLow, s.tempHigh, s.method, (s.conditions || []).join("; "), s.combo];
