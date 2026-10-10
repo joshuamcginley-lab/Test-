@@ -36,9 +36,11 @@ function load() {
   try { if (!localStorage.getItem(KEY) && /-US$/i.test(navigator.language || "")) state.settings.temp = "F"; } catch (e) {}
   try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } }; } }
   catch (e) { console.warn("Could not read saved log", e); }
-  // The sample used to be saved into the log; it's view-only now.
+  // The sample used to be saved into the log; it's view-only now. (Its notes only go with it: an account that was
+  // given the season as its own keeps them.)
+  const n = state.sessions.length;
   state.sessions = state.sessions.filter(s => !s.sample);
-  if (state.notes.join() === SAMPLE_NOTES.join()) state.notes = [];
+  if (state.sessions.length < n && state.notes.join() === SAMPLE_NOTES.join()) state.notes = [];
 }
 function save() {
   const out = demo ? { ...state, sessions: demo.sessions, notes: demo.notes, settings: { ...state.settings, season: demo.season } } : state;

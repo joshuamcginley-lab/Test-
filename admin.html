@@ -73,6 +73,12 @@ ol.steps{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px}
       </details>
     </div>
     <div class="card">
+      <div class="row" style="justify-content:space-between"><span class="k">fishr Cloud accounts</span><button class="ghost" id="acctReload">Refresh</button></div>
+      <p class="muted" style="margin:0;font-size:13px">Passkey names and trip counts only. <b>Move showcase season here</b> copies the showcase's trips and notes into that account as its own; the showcase stays up for visitors, and running it twice adds nothing.</p>
+      <div id="accts" class="muted">Loading…</div>
+      <p id="acctMsg" class="muted" style="margin:0"></p>
+    </div>
+    <div class="card">
       <span class="k">fishr Pro waitlist</span>
       <div class="big" id="wlCount">—</div>
       <div class="row"><button id="csv">Download sign-ups (CSV)</button><span class="muted">Includes each person's consent and their one-tap unsubscribe link. Paste that link into every email you send.</span></div>
@@ -96,7 +102,7 @@ async function unlock() {
   try { localStorage.setItem("fishr-admin", key); } catch (e) {}
   $("panels").hidden = false;
   showErrors(await r.json());
-  loadUsage(); loadAlerts();
+  loadUsage(); loadAlerts(); loadAccounts();
   const c = await (await fetch("/api/waitlist")).json().catch(() => ({}));
   $("wlCount").textContent = (c.count ?? 0).toLocaleString();
 }
@@ -152,6 +158,28 @@ $("testAlert").onclick = async () => {
     const r = await api("/api/push/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }), d = await r.json();
     $("testMsg").textContent = d.status >= 200 && d.status < 300 ? "Sent. It should arrive in a few seconds." : d.error || `The push service said ${d.status}.`;
   } catch (e) { $("testMsg").textContent = "Couldn't send."; }
+};
+const day = t => t ? new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+let accounts = [];
+async function loadAccounts() {
+  const r = await api("/api/admin/accounts").catch(() => null), d = r && r.ok ? await r.json() : null;
+  if (!d) { $("accts").textContent = "Couldn't load."; return; }
+  accounts = d.accounts;
+  $("accts").innerHTML = !accounts.length ? "No accounts yet." : `<table><tr><th>Passkeys</th><th>Since</th><th class="r">Trips</th><th></th></tr>${accounts.map((a, i) => `<tr>
+    <td>${a.here ? "<b>Signed in on this browser</b><br>" : ""}${a.passkeys.map(k => `${esc(k.label || "Passkey")} <span class="muted">· last used ${day(k.lastUsed)}</span>`).join("<br>") || '<span class="muted">No passkey</span>'}<br><span class="muted" style="font:11px 'Geist Mono',monospace">${esc(a.id.slice(0, 8))}</span></td>
+    <td>${day(a.created)}</td><td class="r">${a.trips}</td>
+    <td class="r"><button class="ghost" data-claim="${i}">Move showcase season here</button></td></tr>`).join("")}</table>`;
+}
+$("acctReload").onclick = loadAccounts;
+$("accts").onclick = async e => {
+  const b = e.target.closest("[data-claim]"); if (!b) return;
+  const a = accounts[+b.dataset.claim], who = a.passkeys.map(k => k.label || "Passkey").join(", ") || a.id.slice(0, 8);
+  if (!confirm(`Move the showcase season into the account with ${who} (${a.trips} trip${a.trips === 1 ? "" : "s"} now)? Its trips and notes become that angler's own and sync to their phones.`)) return;
+  b.disabled = true; $("acctMsg").textContent = "Moving…";
+  const r = await api("/api/admin/claim-sample", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: a.id }) }).catch(() => null), d = r && await r.json().catch(() => null);
+  b.disabled = false;
+  $("acctMsg").textContent = r && r.ok ? `Done: ${d.added} trip${d.added === 1 ? "" : "s"} added${d.already ? ` (${d.already} already there)` : ""}${d.notes ? `, ${d.notes} notes` : ""}. ${d.total} trips in the account now. Open fishr on the phone to sync them.` : d?.error || "Couldn't move it.";
+  loadAccounts();
 };
 let alertDevices = 0;
 $("previewAlert").onclick = async () => {

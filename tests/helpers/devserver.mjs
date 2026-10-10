@@ -23,8 +23,10 @@ globalThis.fetch = async (url, init) => {
 const ask = await import(F + "api/ai/ask.js"), ident = await import(F + "api/ai/identify.js");
 const auth = await import(F + "api/auth/[action].js"), syncFn = await import(F + "api/sync.js"), photo = await import(F + "api/photo/[id].js"), account = await import(F + "api/account.js");
 const usage = await import(F + "api/usage.js"), errorsFn = await import(F + "api/errors.js"), pushFn = await import(F + "api/push/[action].js");
+const adminFn = await import(F + "api/admin/[action].js");
 const routes = [
   [/^\/api\/push\/([\w-]+)$/, m => ({ fn: pushFn.onRequest, params: { action: m[1] } })],
+  [/^\/api\/admin\/([\w-]+)$/, m => ({ fn: adminFn.onRequest, params: { action: m[1] } })],
   [/^\/api\/usage$/, () => ({ fn: ctx => ctx.request.method === "GET" ? usage.onRequestGet(ctx) : usage.onRequestPost(ctx) })],
   [/^\/api\/errors$/, () => ({ fn: ctx => ctx.request.method === "GET" ? errorsFn.onRequestGet(ctx) : errorsFn.onRequestPost(ctx) })],
   [/^\/api\/auth\/([\w-]+)$/, m => ({ fn: auth.onRequest, params: { action: m[1] } })],
