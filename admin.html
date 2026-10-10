@@ -155,7 +155,7 @@ $("testAlert").onclick = async () => {
 };
 let alertDevices = 0;
 $("previewAlert").onclick = async () => {
-  if (!confirm(`Send a sample "Bite Index™ 88 projected: Saturday evening" alert to ${alertDevices} device${alertDevices === 1 ? "" : "s"}? It reads exactly like a real one.`)) return;
+  if (!confirm(`Send a sample "Bite Index™ 88 · Sat evening" alert to ${alertDevices} device${alertDevices === 1 ? "" : "s"}? It reads exactly like a real one.`)) return;
   $("previewMsg").textContent = "Sending…";
   const r = await api("/api/push/preview", { method: "POST" }).catch(() => null), d = r && r.ok ? await r.json() : null;
   $("previewMsg").textContent = d ? `Sent to ${d.sent} of ${d.devices}.` : "Couldn't send.";

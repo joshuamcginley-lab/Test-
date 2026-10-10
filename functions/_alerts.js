@@ -102,18 +102,18 @@ export function decide(sub, windows, nowMs) {
   return { send, slotKey, weekendKey, weekKey };
 }
 
-// The notification text: the projected Bite Index™ up front, then when, where, the top reasons and the sun time.
-// "Projected": it's scored from the forecast, so the live score on the day can land a few points either way.
+// The notification text, sized for a lock screen: the projected Bite Index™ and the window in a short title
+// ("Bite Index™ 88 · Sat evening"), then one tight line of why and the sun time. "Projected": it's scored from the
+// forecast, so the live score on the day can land a few points either way.
+const SHORT = { "Evening golden hour": "golden hour", "Morning golden hour": "golden hour", "Prime air temp": "prime temps", "Light chop": "light chop", "Pressure dropping fast": "pressure dropping fast" };
 export function message({ kind, window: w }, sub, nowMs) {
-  const L = localParts(nowMs, sub.tz), dayName = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, weekday: "long" }).format(new Date(w.sun));
-  const when = w.date === L.date ? (w.part === "am" ? "this morning" : "this evening") : `${dayName} ${w.part === "am" ? "morning" : "evening"}`;
-  const reasons = w.drivers.filter(d => d.v > 0).slice(0, 3).map(d => d.label.toLowerCase());
-  const list = reasons.length > 1 ? `${reasons.slice(0, -1).join(", ")} and ${reasons[reasons.length - 1]}` : reasons[0] || "conditions lining up";
-  const sunTime = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, hour: "numeric", minute: "2-digit" }).format(new Date(w.sun));
-  const where = sub.place ? ` near ${sub.place}` : "";
+  const L = localParts(nowMs, sub.tz), day = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, weekday: "short" }).format(new Date(w.sun));
   const part = w.part === "am" ? "morning" : "evening";
-  const title = `Bite Index™ ${w.score} projected: ${when.charAt(0).toUpperCase() + when.slice(1)}`;
-  const rated = kind === "weekend" ? `one of your best ${part}s of the month${where}` : `the best window of your week${where}`;
-  const body = `Bite Intelligence™ rates it ${rated}. ${list.charAt(0).toUpperCase() + list.slice(1)}. ${w.part === "am" ? "Sunrise" : "Sunset"} ${sunTime}.`;
-  return { title, body };
+  const when = w.date === L.date ? `This ${part}` : `${day} ${part}`;
+  const reasons = w.drivers.filter(d => d.v > 0).slice(0, 3).map(d => SHORT[d.label] || d.label.toLowerCase());
+  const why = reasons.length ? reasons.join(", ") : "conditions lining up";
+  const sunTime = new Intl.DateTimeFormat("en-US", { timeZone: sub.tz, hour: "numeric", minute: "2-digit" }).format(new Date(w.sun)).replace(/\s?[AP]M$/, "");
+  const where = sub.place ? ` near ${sub.place}` : "";
+  const lead = kind === "weekend" ? `Top ${part} of your month${where}.` : `Best window of your week${where}.`;
+  return { title: `Bite Index™ ${w.score} · ${when}`, body: `${lead} ${why.charAt(0).toUpperCase() + why.slice(1)}. ${w.part === "am" ? "Sunrise" : "Sunset"} ${sunTime}.` };
 }
