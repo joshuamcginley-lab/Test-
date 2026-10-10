@@ -68,6 +68,21 @@
   };
   // Is this fish found around lat/lon? With no location, every fish counts.
   const foundNear = (sp, lat, lon) => lat == null || lon == null || !RANGE[sp] || RANGE[sp](lat, lon);
+
+  // "Best bet": the Bite Index scores each fish an angler goes after and leads with whichever is biting best now.
+  // Their fish are the ones they've caught 3 or more of (up to 4, most-caught first). Someone without a log gets the
+  // most commonly fished species found around them, from North American angler surveys (bass, trout and walleye lead).
+  const POPULAR = ["Smallmouth", "Brook trout", "Walleye", "Largemouth", "Rainbow trout", "Pike", "Perch", "Salmon", "Panfish", "Catfish",
+    "Striped bass", "Pickerel", "Brown trout", "Lake trout", "Muskie", "White perch", "Chub", "Carp", "Whitefish", "Arctic char"];
+  function yourFish(log) {
+    const n = {};
+    for (const s of log || []) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); }
+    return Object.entries(n).filter(([, k]) => k >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+  }
+  function betCandidates(log, lat, lon) {
+    const own = yourFish(log);
+    return own.length ? own : POPULAR.filter(n => foundNear(n, lat, lon)).slice(0, 3);
+  }
   const speciesInfo = name => { const f = SPECIES.find(x => x.re.test(name || "")); return f ? { ...f } : null; };
   const profileOf = sp => sp ? SPECIES.find(f => f.name === sp) || null : null;
   // The fish an angler catches most, if it's a real share of the catch (at least 40%, and 3 or more fish): the
@@ -283,6 +298,6 @@
     return { water: top.water, spot: bestSpot(simTop), lure: bestOf(simTop, c => c.lure), est: top.est, k, neff: top.neff };
   }
 
-  G.BiteCore = { SPECIES, SPECIES_TEMPS, speciesInfo, profileOf, topSpecies, foundNear, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront,
+  G.BiteCore = { SPECIES, SPECIES_TEMPS, speciesInfo, profileOf, topSpecies, foundNear, yourFish, betCandidates, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront,
     avgT, dayOfYear, similarity, rankWaters, bestOf, bestSpot, bestRanking, bestCall };
 })(typeof globalThis !== "undefined" ? globalThis : self);

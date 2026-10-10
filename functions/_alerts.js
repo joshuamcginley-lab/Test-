@@ -50,7 +50,8 @@ export async function fetchSpotWeather(lat, lon, tz) {
 export function scoreWindows(W, opts = {}) {
   const h = W.hourly, off = (W.utc_offset_seconds || 0) * 1000;
   const H = h.time.map((t, i) => ({ time: new Date(t * 1000), temp: h.temperature_2m[i], p: h.pressure_msl[i], wind: h.wind_speed_10m[i], code: h.weather_code[i] }));
-  const memo = new Map(), log = opts.log || [], sp = Core.topSpecies(log); // scored for their fish, as in the app
+  // Best bet, as in the app: each hour scores the angler's fish (or the common local ones) and keeps the best.
+  const memo = new Map(), log = opts.log || [], cands = Core.betCandidates(log, W.latitude, W.longitude);
   const hourScore = (i, rise, set) => {
     if (i < 3 || H[i].temp == null) return null;
     const t = +H[i].time, localHour = new Date(t + off).getUTCHours();
@@ -59,7 +60,9 @@ export function scoreWindows(W, opts = {}) {
     const light = { ...Core.lightAt(t, rise, set), midday: localHour >= 11 && localHour < 15 };
     // The last 48 hours' average temperature: water follows it, and each fish has its range.
     const back = H.slice(Math.max(0, i - 48), i).filter(x => x.temp != null), recentTemp = back.length ? back.reduce((a, x) => a + x.temp, 0) / back.length : null;
-    return { ...Core.score({ c, light, flow: null, model: null, sp, recentTemp, front: Core.coldFront(H, new Date(t + 1)) }, { log, memo }), c, hour: localHour };
+    const ctx = { c, light, flow: null, model: null, recentTemp, front: Core.coldFront(H, new Date(t + 1)) };
+    const best = (cands.length ? cands : [null]).map(sp => ({ ...Core.score({ ...ctx, sp }, { log, memo }), sp })).reduce((a, b) => b.score > a.score ? b : a);
+    return { ...best, c, hour: localHour };
   };
   const out = [];
   W.daily.time.forEach((day, d) => {

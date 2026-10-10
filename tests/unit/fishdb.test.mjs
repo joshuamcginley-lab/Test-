@@ -29,5 +29,20 @@ ok(/^Walleye: light-shy/.test(why) && /that rule gives \+8/.test(why), "a fish's
 const T = (sp, n) => ({ date: "2026-06-01", water: "W", catches: [{ species: sp, count: n }] });
 ok(C.topSpecies([T("Smallmouth bass", 6), T("Brook trout", 2)]) === "Smallmouth" && C.topSpecies([T("Perch", 1), T("Pike", 1)]) === null && C.topSpecies([]) === null, "top species: a real share of the catch, or none");
 
+// Best bet: an angler's fish (3+ caught, most first), or the common fish found around someone without a log.
+const log2 = [T("Smallmouth bass", 9), T("Brook trout", 5), T("Perch", 1)];
+ok(C.betCandidates(log2, 45.96, -66.64).join() === "Smallmouth,Brook trout", "their fish: 3+ caught, most first " + C.betCandidates(log2, 45.96, -66.64));
+ok(C.betCandidates([], 45.96, -66.64).join() === "Smallmouth,Brook trout,Rainbow trout" && C.betCandidates([], 43.65, -79.38).join() === "Smallmouth,Brook trout,Walleye", "no log: the common local fish (no walleye in NB, walleye in Ontario) " + C.betCandidates([], 45.96, -66.64) + " / " + C.betCandidates([], 43.65, -79.38));
+// The lead switches with the conditions: cold water favours trout, warm water bass.
+const lead = t => ["Smallmouth", "Brook trout"].map(sp => [sp, at(sp, { t, light: { dark: false, golden: true, goldenLabel: "Evening golden hour" } }).score]).sort((a, b) => b[1] - a[1])[0][0];
+ok(lead(6) === "Brook trout" && lead(22) === "Smallmouth", `6°C → ${lead(6)}, 22°C → ${lead(22)}`);
+// Bite alerts use the best of the angler's fish for each hour.
+const A = await import("../../functions/_alerts.js");
+const hours = 24 * 5, t0 = Date.parse("2026-10-14T00:00:00Z") / 1000;
+const W = { latitude: 45.96, longitude: -66.64, utc_offset_seconds: -3 * 3600, hourly: { time: Array.from({ length: hours }, (_, i) => t0 + i * 3600), temperature_2m: Array(hours).fill(7), weather_code: Array(hours).fill(3), pressure_msl: Array(hours).fill(1013), wind_speed_10m: Array(hours).fill(10) },
+  daily: { time: [0, 1, 2, 3, 4].map(d => t0 + d * 86400), sunrise: [0, 1, 2, 3, 4].map(d => t0 + d * 86400 + 10.5 * 3600), sunset: [0, 1, 2, 3, 4].map(d => t0 + d * 86400 + 21.5 * 3600) } };
+const wins = A.scoreWindows(W, { log: log2 }), solo = A.scoreWindows(W, { log: [T("Smallmouth bass", 9)] });
+ok(wins.length && wins.every((w, i) => w.score >= solo[i].score) && wins.some((w, i) => w.score > solo[i].score), "alerts: a bass-and-trout angler's cold-water windows score as trout, above bass-only " + wins.slice(0, 2).map(w => w.score) + " vs " + solo.slice(0, 2).map(w => w.score));
+
 console.log(`${pass} passed, ${failN} failed`);
 if (failN) process.exit(1);

@@ -92,21 +92,11 @@ function spOptions(choices, sp) {
   const rest = BiteCore.SPECIES.map(f => f.name).filter(n => !choices.includes(n) && (n === sp || BiteCore.foundNear(n, wx?.lat, wx?.lon)));
   return choices.length ? `<optgroup label="Your fish">${choices.map(opt).join("")}</optgroup><optgroup label="Other fish">${rest.map(opt).join("")}</optgroup>` : rest.map(opt).join("");
 }
-function biteChoices() {
-  if (demo) return [];
-  const n = {};
-  for (const s of state.sessions) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); }
-  return Object.entries(n).filter(([, k]) => k >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
-}
-// Which one the score is for: their pick (any fish fishr knows, so a new angler can choose what they're after), or
-// by default the fish they catch most (if it's a real share of the catch).
-function biteSpecies(choices) {
+function biteChoices() { return demo ? [] : BiteCore.yourFish(state.sessions); }
+// A fish the angler pinned in the picker (any fish fishr knows); otherwise the Bite Index runs as "Best bet".
+function pinnedSpecies() {
   const set = state.settings.biteSpecies;
-  if (demo || set === "all") return null;
-  if (set && BiteCore.SPECIES.some(f => f.name === set)) return set;
-  if (!choices.length) return null;
-  const total = state.sessions.reduce((a, s) => a + fishOf(s), 0), top = state.sessions.reduce((a, s) => a + fishFor(s, choices[0]), 0);
-  return total && top / total >= 0.4 ? choices[0] : null;
+  return !demo && set && BiteCore.SPECIES.some(f => f.name === set) ? set : null;
 }
 
 
@@ -166,11 +156,18 @@ function renderLive(status, quiet) {
     const { res, rows } = bestRanking(q);
     if (rows[0] && res.globalRate) model = { delta: (rows[0].est / res.globalRate - 1) * 25, label: `Your log: ${rows[0].water}`, top: rows[0] };
   }
-  const choices = biteChoices(), sp = biteSpecies(choices);
+  const choices = biteChoices(), pinned = pinnedSpecies();
   const past = wx.hourly.filter(h => h.time <= now && h.time >= now - 48 * 36e5 && h.temp != null);
   const recentTemp = past.length ? past.reduce((a, h) => a + h.temp, 0) / past.length : null;
   const front = coldFront(H, now);
-  const bi = biteIndex({ c, light, flow: wx.flow, model, sp, recentTemp, front });
+  const ctx = { c, light, flow: wx.flow, model, recentTemp, front };
+  // Best bet: score each of their fish (or the common local ones) and lead with the one biting best right now.
+  let sp = pinned, bi, also = [];
+  if (demo || pinned) bi = biteIndex({ ...ctx, sp: pinned });
+  else {
+    const ranked = BiteCore.betCandidates(state.sessions, wx.lat, wx.lon).map(s => ({ sp: s, bi: biteIndex({ ...ctx, sp: s }) })).sort((a, b) => b.bi.score - a.bi.score);
+    sp = ranked[0]?.sp ?? null; bi = ranked[0]?.bi ?? biteIndex({ ...ctx, sp: null }); also = ranked.slice(1);
+  }
   // Phones show three chips: keep the strongest one learned from your log among them.
   const mi = bi.drivers.findIndex(x => x.mine);
   const chips = (mi > 2 ? [...bi.drivers.slice(0, 2), bi.drivers[mi], ...bi.drivers.filter((x, i) => i >= 2 && i !== mi)] : bi.drivers).slice(0, 5);
@@ -195,8 +192,9 @@ function renderLive(status, quiet) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(sp || "All fish")}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${spOptions(choices, sp)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(pinned || (sp ? `Best bet · ${sp}` : "Best bet"))}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="best"${pinned ? "" : " selected"}>Best bet</option>${spOptions(choices, pinned)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
+        ${also.length ? `<span class="bite-also">${also.map(a => `<span>${esc(a.sp)} ${a.bi.score}</span>`).join(" · ")}</span>` : ""}
         <div class="drivers">${chips.map(x => x.why
           ? `<button type="button" class="drv ${x.v > 0 ? "up" : "down"}${x.mine ? " mine" : ""}" data-why="${esc(x.why)}" aria-expanded="false">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</button>`
           : `<span class="drv ${x.v > 0 ? "up" : "down"}">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</span>`).join("")}</div>
