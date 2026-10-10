@@ -50,14 +50,16 @@ export async function fetchSpotWeather(lat, lon, tz) {
 export function scoreWindows(W, opts = {}) {
   const h = W.hourly, off = (W.utc_offset_seconds || 0) * 1000;
   const H = h.time.map((t, i) => ({ time: new Date(t * 1000), temp: h.temperature_2m[i], p: h.pressure_msl[i], wind: h.wind_speed_10m[i], code: h.weather_code[i] }));
-  const memo = new Map(), log = opts.log || [];
+  const memo = new Map(), log = opts.log || [], sp = Core.topSpecies(log); // scored for their fish, as in the app
   const hourScore = (i, rise, set) => {
     if (i < 3 || H[i].temp == null) return null;
     const t = +H[i].time, localHour = new Date(t + off).getUTCHours();
     const dp3 = H[i].p != null && H[i - 3].p != null ? Math.round((H[i].p - H[i - 3].p) * 10) / 10 : null;
     const c = { temp: H[i].temp, sky: skyFromCode(H[i].code), press: dp3 == null ? null : dp3 >= 1 ? "Rising" : dp3 <= -1 ? "Falling" : "Steady", dp3, wind: H[i].wind };
     const light = { ...Core.lightAt(t, rise, set), midday: localHour >= 11 && localHour < 15 };
-    return { ...Core.score({ c, light, flow: null, model: null, sp: null, recentTemp: null, front: Core.coldFront(H, new Date(t + 1)) }, { log, memo }), c, hour: localHour };
+    // The last 48 hours' average temperature: water follows it, and each fish has its range.
+    const back = H.slice(Math.max(0, i - 48), i).filter(x => x.temp != null), recentTemp = back.length ? back.reduce((a, x) => a + x.temp, 0) / back.length : null;
+    return { ...Core.score({ c, light, flow: null, model: null, sp, recentTemp, front: Core.coldFront(H, new Date(t + 1)) }, { log, memo }), c, hour: localHour };
   };
   const out = [];
   W.daily.time.forEach((day, d) => {

@@ -86,17 +86,25 @@ const windWord = k => k == null ? "" : k < 6 ? "Calm" : k < 20 ? "Light" : k < 3
 const { SPECIES_TEMPS, speciesInfo, fishFor, coldFront } = BiteCore;
 
 // The species someone could score for: ones they've caught at least 3 of (up to 4), most-caught first.
+// The picker: the angler's own fish first, then the other fish fishr has rules for that live around here.
+function spOptions(choices, sp) {
+  const opt = n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`;
+  const rest = BiteCore.SPECIES.map(f => f.name).filter(n => !choices.includes(n) && (n === sp || BiteCore.foundNear(n, wx?.lat, wx?.lon)));
+  return choices.length ? `<optgroup label="Your fish">${choices.map(opt).join("")}</optgroup><optgroup label="Other fish">${rest.map(opt).join("")}</optgroup>` : rest.map(opt).join("");
+}
 function biteChoices() {
   if (demo) return [];
   const n = {};
   for (const s of state.sessions) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); }
   return Object.entries(n).filter(([, k]) => k >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
 }
-// Which one the score is for: their pick, or by default the fish they catch most (if it's a real share of the catch).
+// Which one the score is for: their pick (any fish fishr knows, so a new angler can choose what they're after), or
+// by default the fish they catch most (if it's a real share of the catch).
 function biteSpecies(choices) {
   const set = state.settings.biteSpecies;
-  if (!choices.length || set === "all") return null;
-  if (set && choices.includes(set)) return set;
+  if (demo || set === "all") return null;
+  if (set && BiteCore.SPECIES.some(f => f.name === set)) return set;
+  if (!choices.length) return null;
   const total = state.sessions.reduce((a, s) => a + fishOf(s), 0), top = state.sessions.reduce((a, s) => a + fishFor(s, choices[0]), 0);
   return total && top / total >= 0.4 ? choices[0] : null;
 }
@@ -187,7 +195,7 @@ function renderLive(status, quiet) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ ${choices.length ? `<label class="bite-sp"><span aria-hidden="true">${esc(sp || "All fish")}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${choices.map(n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>` : ""}<span class="model-tag${choices.length ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(sp || "All fish")}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="all">All fish</option>${spOptions(choices, sp)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
         <div class="drivers">${chips.map(x => x.why
           ? `<button type="button" class="drv ${x.v > 0 ? "up" : "down"}${x.mine ? " mine" : ""}" data-why="${esc(x.why)}" aria-expanded="false">${x.v > 0 ? "+" : "−"}${Math.abs(x.v)} ${esc(x.label)}</button>`

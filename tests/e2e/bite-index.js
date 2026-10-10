@@ -29,7 +29,9 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   }
   const card = p => p.evaluate(() => ({
     score: +document.querySelector('.bite-num b')?.dataset.count,
-    pill: document.querySelector('#biteSp') ? { value: $('biteSp').value, options: [...$('biteSp').options].map(o => o.textContent) } : null,
+    pill: document.querySelector('#biteSp') ? { value: $('biteSp').value, options: [...$('biteSp').options].map(o => o.textContent),
+      yours: [...document.querySelectorAll('#biteSp optgroup[label="Your fish"] option')].map(o => o.textContent),
+      others: [...$('biteSp').options].filter(o => !o.closest('optgroup[label="Your fish"]') && o.value !== 'all').map(o => o.textContent) } : null,
     chips: [...document.querySelectorAll('.drivers .drv')].map(d => ({ t: d.textContent, mine: d.classList.contains('mine'), why: d.dataset.why || '' })),
     overflow: document.documentElement.scrollWidth > innerWidth,
   }));
@@ -40,11 +42,12 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   let { p, ctx } = await open('iPhone 13', { log: ownLog });
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
   let r = await card(p);
-  ok(r.pill && r.pill.options[0] === 'All fish' && r.pill.options.length >= 2 && r.pill.options.length <= 5, 'own log: species pill lists their fish ' + JSON.stringify(r.pill));
+  ok(r.pill && r.pill.options[0] === 'All fish' && r.pill.yours.length >= 1 && r.pill.yours.length <= 4, 'own log: species pill lists their fish first ' + JSON.stringify(r.pill.yours));
+  ok(r.pill.others.includes('Salmon') && r.pill.others.includes('Muskie') && !['Walleye', 'Pike', 'Carp'].some(n => r.pill.others.includes(n)), 'other fish: only ones found around Fredericton (no walleye, pike or carp) ' + JSON.stringify(r.pill.others));
   const counts = await p.evaluate(() => { const n = {}; for (const s of state.sessions) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); } return n; });
   const total = Object.values(counts).reduce((a, x) => a + x, 0), top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   ok(r.pill?.value === (top[1] / total >= 0.4 ? top[0] : 'all'), `defaults to the fish they catch most (${top[0]} ${top[1]}/${total}) → ${r.pill?.value}`);
-  ok(r.pill.options.slice(1).every(n => counts[n] >= 3), 'only species with 3+ fish are offered');
+  ok(r.pill.yours.every(n => counts[n] >= 3), 'only species with 3+ fish are listed as theirs');
 
   // Personal chips: try each pressure trend; at least one should be backed by their log, with a reason.
   let mineChip = null;
@@ -56,7 +59,7 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
     if (r.chips.some(c => c.mine)) ok(vis.length <= 3 && vis.includes(true), `${press}: a learned chip is visible on a phone (${vis.length} shown)`);
     ok(new Set(r.chips.map(c => c.t)).size === r.chips.length, `${press}: no chip shown twice`);
   }
-  ok(mineChip && /^Your log: [\d.]+ .+ per trip on .+, vs [\d.]+ across your trips \(\d+ trips\)\. (The general rule gives [+−±]\d+; your log makes it [+−±]\d+|So it counts [+−±]\d+)\.$/.test(mineChip.why), 'a chip learned from their log explains itself ' + JSON.stringify(mineChip));
+  ok(mineChip && /^Your log: [\d.]+ .+ per trip on .+, vs [\d.]+ across your trips \(\d+ trips\)\. (The (general rule|rule for [a-z ]+) gives [+−±]\d+; your log makes it [+−±]\d+|So it counts [+−±]\d+)\.$/.test(mineChip.why), 'a chip learned from their log explains itself ' + JSON.stringify(mineChip));
   // Tapping it shows the reason under the chips; tapping again hides it.
   const sel = `.drv.mine`;
   if (await p.$(sel)) {
@@ -73,8 +76,8 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   if (await p.evaluate(() => $('biteSp')?.value) !== 'Smallmouth') ok(false, 'Smallmouth not offered in pill');
   await setWx(p, { temp: 22, current: { press: 'Steady', dp3: 0 } }); const warm = await card(p);
   await setWx(p, { temp: 4 }); const cold = await card(p);
-  ok(warm.chips.some(c => c.t === '+10 Good temps for smallmouth' && /Smallmouth feed best around 18°C–26°C/.test(c.why)), 'smallmouth: good temps chip ' + JSON.stringify(warm.chips.map(c => c.t)));
-  ok(cold.chips.some(c => c.t === '−12 Too cold for smallmouth'), 'smallmouth: too cold chip ' + JSON.stringify(cold.chips.map(c => c.t)));
+  ok(warm.chips.some(c => c.t === '+10 Good temps for smallmouth' && /Smallmouth feed best in 18–26°C water and slow right down below 10°C/.test(c.why)), 'smallmouth: good temps chip ' + JSON.stringify(warm.chips.map(c => c.t)));
+  ok(cold.chips.some(c => c.t === '−15 Too cold for smallmouth'), 'smallmouth: too cold chip ' + JSON.stringify(cold.chips.map(c => c.t)));
   ok(warm.score > cold.score, `warm water scores higher for smallmouth (${warm.score} vs ${cold.score})`);
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('firetiger.v1')).settings.biteSpecies) === 'Smallmouth', 'species choice is saved');
   // Personal chips count only that species' fish.
@@ -119,7 +122,11 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   ({ p, ctx } = await open('iPhone 13', { log: [] }));
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
   r = await card(p);
-  ok(r.score && !r.pill && !r.chips.some(c => c.mine), 'new user: no species pill and no learned chips');
+  ok(r.score && r.pill?.value === 'all' && !r.pill.yours.length && r.pill.others.includes('Brook trout') && !r.chips.some(c => c.mine), 'new user: can pick the fish they\'re after (found locally), no learned chips ' + JSON.stringify(r.pill));
+  // A new angler after brook trout gets the trout's own rules, explained.
+  await p.$eval('#biteSp', e => { e.value = 'Brook trout'; e.dispatchEvent(new Event('change')); }); await p.waitForTimeout(300);
+  r = await card(p);
+  ok(r.pill.value === 'Brook trout' && r.chips.some(c => /for brook trout$/.test(c.t)) && r.chips.some(c => /^Brook trout: cold-water fish/.test(c.why)), 'new user picks brook trout: the score uses trout rules, and says so ' + JSON.stringify(r.chips.map(c => [c.t, c.why.slice(0, 40)])));
   // A few trips isn't enough to learn from: defaults stay.
   await p.evaluate(log => { state.sessions = log.slice(0, 5); renderLive(); }, ownLog); r = await card(p);
   ok(!r.chips.some(c => c.mine), '5 trips: too few to learn from, no learned chips');

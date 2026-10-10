@@ -9,14 +9,75 @@
    coldFront(H, t):  a cold front just passed or coming, from hourly pressure and temperature */
 (function (G) {
   // Feeding comfort ranges in water °C, from published fisheries guidance. Matched by name.
-  const SPECIES_TEMPS = [
-    [/smallmouth/i, "Smallmouth", 18, 26], [/largemouth/i, "Largemouth", 20, 28], [/brook trout|speckled/i, "Brook trout", 10, 18],
-    [/rainbow|steelhead/i, "Rainbow trout", 10, 20], [/brown trout/i, "Brown trout", 12, 19], [/lake trout|splake/i, "Lake trout", 8, 13],
-    [/salmon/i, "Salmon", 12, 18], [/char\b/i, "Arctic char", 8, 14], [/pike|muskie/i, "Pike", 12, 22], [/pickerel/i, "Pickerel", 15, 24],
-    [/walleye|sauger/i, "Walleye", 15, 22], [/perch/i, "Perch", 15, 24], [/crappie|bluegill|pumpkinseed|sunfish|rock bass/i, "Panfish", 18, 27],
-    [/catfish|bullhead/i, "Catfish", 21, 29], [/carp/i, "Carp", 18, 28], [/chub|fallfish/i, "Chub", 12, 24], [/striped bass|white bass/i, "Striped bass", 15, 24],
+  // What each fish likes, from fisheries research and long angling experience. The Bite Index starts from these
+  // rules for the chosen fish; the angler's own log takes over factor by factor as it builds evidence.
+  //   lo–hi: water temperature where they feed best (°C); act: the range they stay active in (sluggish outside it).
+  //   light: score for golden hour / near dawn or dusk / daylight / after dark.
+  //   cloud: overcast vs clear skies; chop: light wind on the water; note: one line on their habits.
+  // Temperatures follow published thermal preferences (e.g. Coker, Portt & Minns 2001, Fisheries and Oceans Canada).
+  const SPECIES = [
+    { re: /smallmouth/i, name: "Smallmouth", lo: 18, hi: 26, act: [10, 29], light: [12, 6, 0, -4], cloud: 4, chop: 5, note: "feed hardest at dawn and dusk, and on windy, overcast days" },
+    { re: /largemouth/i, name: "Largemouth", lo: 20, hi: 28, act: [12, 32], light: [14, 6, -2, 0], cloud: 4, chop: 3, note: "ambush in cover; dawn, dusk and warm nights are best" },
+    { re: /brook trout|speckled/i, name: "Brook trout", lo: 10, hi: 17, act: [4, 21], light: [14, 8, -2, -6], cloud: 6, chop: 3, note: "cold-water fish; low light and overcast days, and they slow down above 20°C" },
+    { re: /rainbow|steelhead/i, name: "Rainbow trout", lo: 12, hi: 18, act: [6, 21], light: [12, 6, 0, -6], cloud: 5, chop: 3, note: "cool water; morning and evening, and they stay active on cloudy days" },
+    { re: /brown trout/i, name: "Brown trout", lo: 12, hi: 19, act: [6, 23], light: [14, 8, -4, 2], cloud: 6, chop: 3, note: "wary and light-shy; the big ones feed at dusk and after dark" },
+    { re: /lake trout|splake/i, name: "Lake trout", lo: 8, hi: 12, act: [4, 15], light: [4, 2, 2, -8], cloud: 2, chop: 2, note: "deep, cold water; light matters less than temperature" },
+    { re: /salmon/i, name: "Salmon", lo: 12, hi: 18, act: [7, 22], light: [10, 6, -2, -10], cloud: 6, chop: 4, note: "take best in cool water at low light, on a dropping or steady river" },
+    { re: /char\b/i, name: "Arctic char", lo: 8, hi: 14, act: [3, 16], light: [8, 4, 0, -8], cloud: 4, chop: 2, note: "very cold water; active through the day in the north" },
+    { re: /muskie|muskellunge/i, name: "Muskie", lo: 18, hi: 25, act: [10, 28], light: [8, 4, 4, -12], cloud: 3, chop: 4, note: "daytime ambush hunters; fall is their big feeding season" },
+    { re: /pike/i, name: "Pike", lo: 12, hi: 21, act: [4, 25], light: [6, 4, 4, -14], cloud: 0, chop: 4, note: "daylight hunters that stay active in cold water" },
+    { re: /pickerel/i, name: "Pickerel", lo: 15, hi: 24, act: [5, 28], light: [6, 4, 4, -14], cloud: 0, chop: 2, note: "daylight ambushers in weedy shallows, active even in cold water" },
+    { re: /walleye|sauger/i, name: "Walleye", lo: 15, hi: 22, act: [6, 26], light: [16, 10, -6, 8], cloud: 8, chop: 8, note: "light-shy; dusk, night, overcast and a 'walleye chop' are their time" },
+    { re: /white perch/i, name: "White perch", lo: 18, hi: 24, act: [10, 28], light: [10, 6, 0, -4], cloud: 2, chop: 2, note: "school up and feed most at dawn and dusk" },
+    { re: /perch/i, name: "Perch", lo: 15, hi: 24, act: [6, 27], light: [4, 2, 6, -14], cloud: 2, chop: 2, note: "daytime schoolers; they stop feeding after dark" },
+    { re: /crappie|bluegill|pumpkinseed|sunfish|rock bass/i, name: "Panfish", lo: 18, hi: 27, act: [12, 31], light: [6, 4, 4, -10], cloud: -2, chop: -2, note: "warm, sunny shallows through the day" },
+    { re: /catfish|bullhead/i, name: "Catfish", lo: 21, hi: 29, act: [16, 32], light: [6, 6, -6, 12], cloud: 2, chop: 0, note: "feed by smell, mostly at night" },
+    { re: /carp/i, name: "Carp", lo: 18, hi: 28, act: [12, 32], light: [4, 2, 2, 0], cloud: 0, chop: 0, note: "warm water; steady feeders whatever the light" },
+    { re: /chub|fallfish/i, name: "Chub", lo: 12, hi: 24, act: [8, 27], light: [6, 4, 2, -8], cloud: 2, chop: 0, note: "daytime river fish, active over a wide range of temperatures" },
+    { re: /striped bass|white bass/i, name: "Striped bass", lo: 15, hi: 22, act: [8, 25], light: [14, 8, -4, 6], cloud: 5, chop: 4, note: "low light and moving water; dawn, dusk and night" },
+    { re: /whitefish/i, name: "Whitefish", lo: 10, hi: 14, act: [4, 18], light: [6, 4, 2, -8], cloud: 3, chop: 2, note: "cold, deep water; steady through the day" },
   ];
-  const speciesInfo = name => { const m = SPECIES_TEMPS.find(([re]) => re.test(name || "")); return m ? { name: m[1], lo: m[2], hi: m[3] } : null; };
+  const SPECIES_TEMPS = SPECIES.map(f => [f.re, f.name, f.lo, f.hi]); // the older shape, kept for callers that use it
+
+  // Roughly where each fish lives (native or well established) in North America, so a fish that isn't found near the
+  // angler isn't offered (no walleye in New Brunswick). Approximate on purpose: an angler's own catches always count.
+  const MARITIMES = (la, lo) => la > 43.3 && la < 48.1 && lo > -69.1 && lo < -59.7; // NB, NS, PEI
+  const NFLD = (la, lo) => la > 46.5 && la < 52 && lo > -59.7 && lo < -52;
+  const EAST = lo => lo > -100;
+  const RANGE = {
+    "Smallmouth": (la, lo) => la > 25 && la < 50 && !NFLD(la, lo),
+    "Largemouth": (la, lo) => la > 24 && la < 48 && !MARITIMES(la, lo) && !NFLD(la, lo),
+    "Brook trout": la => la > 34,
+    "Rainbow trout": la => la > 30,
+    "Brown trout": la => la > 30 && la < 56,
+    "Lake trout": (la, lo) => la > 41 && !NFLD(la, lo),
+    "Salmon": (la, lo) => la > 40 && (lo > -93 || lo < -114),
+    "Arctic char": (la, lo) => la > 52 || NFLD(la, lo),
+    "Muskie": (la, lo) => la > 36 && la < 50 && lo > -97 && lo < -66.5,
+    "Pike": (la, lo) => la > 38 && !MARITIMES(la, lo) && !NFLD(la, lo),
+    "Pickerel": (la, lo) => la > 25 && la < 48 && EAST(lo) && lo > -92 && !NFLD(la, lo),
+    "Walleye": (la, lo) => la > 30 && !MARITIMES(la, lo) && !NFLD(la, lo),
+    "White perch": (la, lo) => la > 33 && la < 48 && lo > -90 && !NFLD(la, lo),
+    "Perch": (la, lo) => la > 34 && !NFLD(la, lo),
+    "Panfish": (la, lo) => la < 52 && !NFLD(la, lo),
+    "Catfish": (la, lo) => la < 50 && !NFLD(la, lo),
+    "Carp": (la, lo) => la < 50 && !MARITIMES(la, lo) && !NFLD(la, lo),
+    "Chub": (la, lo) => la < 55 && EAST(lo) && !NFLD(la, lo),
+    "Striped bass": (la, lo) => (lo > -77.5 && la < 48.3 && !NFLD(la, lo)) || la < 38, // Atlantic coast and its rivers; southern reservoirs
+    "Whitefish": (la, lo) => la > 40 && !NFLD(la, lo),
+  };
+  // Is this fish found around lat/lon? With no location, every fish counts.
+  const foundNear = (sp, lat, lon) => lat == null || lon == null || !RANGE[sp] || RANGE[sp](lat, lon);
+  const speciesInfo = name => { const f = SPECIES.find(x => x.re.test(name || "")); return f ? { ...f } : null; };
+  const profileOf = sp => sp ? SPECIES.find(f => f.name === sp) || null : null;
+  // The fish an angler catches most, if it's a real share of the catch (at least 40%, and 3 or more fish): the
+  // fish the Bite Index scores for by default, in the app and in bite alerts.
+  function topSpecies(log) {
+    const n = {}; let total = 0;
+    for (const s of log || []) for (const c of s.catches || []) { const k = +c.count || 0; total += k; const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + k; }
+    const [name, k] = Object.entries(n).sort((a, b) => b[1] - a[1])[0] || [];
+    return name && k >= 3 && k / total >= 0.4 ? name : null;
+  }
   const fishOf = s => (s.catches || []).reduce((a, c) => a + (+c.count || 0), 0);
   const fishFor = (s, sp) => sp ? (s.catches || []).filter(c => speciesInfo(c.species)?.name === sp).reduce((a, c) => a + (+c.count || 0), 0) : fishOf(s);
   const r = (x, d = 0) => Math.round(x * 10 ** d) / 10 ** d;
@@ -53,32 +114,41 @@
     const { c, light, flow, model, sp, recentTemp, front } = ctx, d = [], log = opts.log || [], fmtT = opts.fmtT || (t => `${r(t)}°C`);
     const unit = sp ? sp.toLowerCase() : "fish", memo = opts.memo || new Map();
     // A factor: a general default, blended with the angler's log once it has evidence for the same conditions.
-    const factor = (def, label, bucket, current, what) => {
+    const prof = profileOf(sp);
+    const factor = (def, label, bucket, current, what, own = false) => { // own: the default came from the fish's profile
       const key = `${bucket}|${current}|${sp || ""}`;
       if (!memo.has(key)) memo.set(key, personalEffect(log, BUCKETS[bucket], current, sp));
       const e = memo.get(key);
       const v = e ? Math.round(def * (1 - e.w) + e.p * e.w) : def;
       const mine = !!e && e.w >= 0.4;
-      // Say where the number comes from: the general rule, and how far this angler's log moved it.
+      // Say where the number comes from: the general rule (the fish's own, if one is chosen), and how far this
+      // angler's log moved it.
       const sgn = x => (x > 0 ? "+" : x < 0 ? "−" : "±") + Math.abs(x);
-      const why = `Your log: ${e?.mine.toFixed(1)} ${unit} per trip on ${what}, vs ${e?.all.toFixed(1)} across your trips (${e?.n} trips). ${def ? `The general rule gives ${sgn(def)}; your log makes it ${sgn(v)}.` : `So it counts ${sgn(v)}.`}`;
-      d.push({ v, label, mine, why: mine ? why : null });
+      const rule = prof && own ? `The rule for ${sp.toLowerCase()}` : "The general rule";
+      const why = mine ? `Your log: ${e.mine.toFixed(1)} ${unit} per trip on ${what}, vs ${e.all.toFixed(1)} across your trips (${e.n} trips). ${def ? `${rule} gives ${sgn(def)}; your log makes it ${sgn(v)}.` : `So it counts ${sgn(v)}.`}`
+        : prof && own && v ? `${sp}: ${prof.note}. Until your log has enough ${what} to go on, that rule gives ${sgn(v)}.` : null;
+      d.push({ v, label, mine, why });
     };
     const lightNow = light.golden || light.nearHrs <= 3 ? "low" : light.dark ? "dark" : "day"; // within 3 h of sunrise or sunset counts as low light, even after dark
-    if (light.golden) factor(14, light.goldenLabel, "light", "low", "dawn and dusk trips");
-    else if (lightNow === "low") factor(6, "Near dawn or dusk", "light", "low", "dawn and dusk trips");
-    else if (lightNow === "dark") factor(-6, "After dark", "light", "dark", "night trips");
-    else factor(0, "Daylight", "light", "day", "daytime trips");
+    // Light: golden hour / near dawn or dusk / daylight / after dark. Each fish has its own (walleye love the dark,
+    // pike and perch hunt by day); without a fish, the general rule.
+    const L = prof ? prof.light : [14, 6, 0, -6];
+    if (light.golden) factor(L[0], light.goldenLabel, "light", "low", "dawn and dusk trips", true);
+    else if (lightNow === "low") factor(L[1], "Near dawn or dusk", "light", "low", "dawn and dusk trips", true);
+    else if (lightNow === "dark") factor(L[3], "After dark", "light", "dark", "night trips", true);
+    else factor(L[2], "Daylight", "light", "day", "daytime trips", true);
     if (c.dp3 != null && c.dp3 <= -3) factor(12, "Pressure dropping fast", "press", "Falling", "falling-pressure trips");
     else if (c.press === "Falling") factor(9, "Falling pressure", "press", "Falling", "falling-pressure trips");
     else if (c.press === "Steady") factor(4, "Stable pressure", "press", "Steady", "steady-pressure trips");
     else if (c.press === "Rising") factor(-6, "Rising pressure", "press", "Rising", "rising-pressure trips");
     // Temperature: for a chosen species, its comfort range (using the recent average, which water follows); otherwise air temp.
-    const info = sp ? SPECIES_TEMPS.map(([, n, lo, hi]) => ({ n, lo, hi })).find(x => x.n === sp) : null;
-    if (info && recentTemp != null) {
-      const t = recentTemp, off = t < info.lo ? info.lo - t : t > info.hi ? t - info.hi : 0, side = t < info.lo ? "cool" : "warm";
-      const why = `Temperatures here have averaged ${fmtT(r(t, 0))} lately, and water follows that. ${sp} feed best around ${fmtT(info.lo)}–${fmtT(info.hi)} water.`;
-      d.push(off === 0 ? { v: 10, label: `Good temps for ${unit}`, why } : off <= 4 ? { v: -3, label: `A bit ${side} for ${unit}`, why } : { v: -12, label: `Too ${side === "cool" ? "cold" : "warm"} for ${unit}`, why });
+    if (prof && recentTemp != null) {
+      // Their feeding range, then the wider range they stay active in; past that they're sluggish.
+      const t = recentTemp, side = t < prof.lo ? "cool" : "warm", [a0, a1] = prof.act;
+      const why = `Temperatures here have averaged ${fmtT(r(t, 0))} lately, and water follows that. ${sp} feed best in ${fmtT(prof.lo).replace(/°.*$/, "")}–${fmtT(prof.hi)} water and slow right down below ${fmtT(a0)} or above ${fmtT(a1)}.`;
+      d.push(t >= prof.lo && t <= prof.hi ? { v: 10, label: `Good temps for ${unit}`, why }
+        : t >= a0 && t <= a1 ? { v: -4, label: `A bit ${side} for ${unit}`, why }
+        : { v: -15, label: `Too ${side === "cool" ? "cold" : "warm"} for ${unit}`, why });
     } else if (c.temp != null) {
       if (c.temp >= 15 && c.temp <= 25) d.push({ v: 8, label: "Prime air temp" }); else if (c.temp < 8 || c.temp > 30) d.push({ v: -12, label: c.temp < 8 ? "Cold" : "Heat" });
     }
@@ -89,11 +159,13 @@
       else factor(5, "Normal river level", "level", "Normal", "normal-water trips");
     }
     const w = windOf(c.wind);
-    if (w === "light") factor(4, "Light chop", "wind", "light", "light-wind trips");
+    if (w === "light") factor(prof ? prof.chop : 4, "Light chop", "wind", "light", "light-wind trips", true);
     else if (w === "strong") factor(-10, "Strong wind", "wind", "strong", "strong-wind trips");
     else if (w) factor(0, w === "calm" ? "Calm" : "Breezy", "wind", w, w === "calm" ? "calm trips" : "breezy trips");
-    if (c.sky === "Overcast" || c.sky === "Rain") factor(5, "Cloud cover", "sky", "cloud", "overcast trips");
-    else if (c.sky) factor(0, "Clear skies", "sky", "clear", "clear-sky trips");
+    // Cloud: a fish that likes it dim gets the bonus under cloud and loses a little in bright sun; sun-lovers the reverse.
+    const cl = prof ? prof.cloud : 5;
+    if (c.sky === "Overcast" || c.sky === "Rain") factor(cl, "Cloud cover", "sky", "cloud", "overcast trips", true);
+    else if (c.sky) factor(prof && cl >= 5 ? -2 : prof && cl < 0 ? 2 : 0, "Clear skies", "sky", "clear", "clear-sky trips", true);
     if (front) d.push(front.passed ? { v: front.hrs <= 24 ? -10 : -5, label: front.hrs <= 24 ? "Just after a cold front" : "Day after a cold front", front }
       : { v: 5, label: front.hrs <= 6 ? "Cold front due today" : "Cold front coming", front });
     if (model) d.push({ v: Math.max(-15, Math.min(15, Math.round(model.delta))), label: model.label });
@@ -211,6 +283,6 @@
     return { water: top.water, spot: bestSpot(simTop), lure: bestOf(simTop, c => c.lure), est: top.est, k, neff: top.neff };
   }
 
-  G.BiteCore = { SPECIES_TEMPS, speciesInfo, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront,
+  G.BiteCore = { SPECIES, SPECIES_TEMPS, speciesInfo, profileOf, topSpecies, foundNear, fishFor, windOf, lightOf, tripHour, BUCKETS, personalEffect, score, lightAt, coldFront,
     avgT, dayOfYear, similarity, rankWaters, bestOf, bestSpot, bestRanking, bestCall };
 })(typeof globalThis !== "undefined" ? globalThis : self);
