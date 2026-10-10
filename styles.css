@@ -851,3 +851,20 @@ button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 /* "Type your town" fits the card on small phones (the grid track and input could otherwise force the card wider) */
 .live-empty > div{grid-template-columns:minmax(0,1fr);min-width:0}
 .town-form input{width:0}
+
+/* Stats: time on the water; Insights: best combinations */
+.hours-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 12px}
+.hours-top > div{display:grid;gap:2px;background:var(--glass-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.hours-top .v{font:600 22px/1.1 var(--f-display, inherit);letter-spacing:-.01em}
+.hours-top .v small{font-size:13px;margin-left:2px;color:var(--muted)}
+.hours-top .k{font-size:12px;color:var(--muted)}
+.hours-empty{margin:0 0 8px;color:var(--muted);line-height:1.45}
+.combos{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.combos li{display:grid;gap:3px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--glass-2)}
+.combos li.go{border-left:3px solid var(--good)}
+.combos li.no{border-left:3px solid var(--bad)}
+.combos li b{font-weight:600;line-height:1.3}
+.combos li span{font-size:13px;color:var(--muted)}
+.hours-tbl td:first-child{white-space:normal}
+.hours-tbl th:not(:first-child),.hours-tbl td:not(:first-child){padding-left:6px;padding-right:0}
+@media (max-width:380px){.hours-top{gap:6px}.hours-top > div{padding:8px 9px}.hours-top .v{font-size:18px;white-space:nowrap}.hours-top .k{font-size:11px}}

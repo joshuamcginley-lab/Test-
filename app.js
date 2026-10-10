@@ -220,7 +220,86 @@ function render() {
   hydratePhotos($("bigFish"));
   $("notesList").innerHTML = state.notes.length ? state.notes.map(t => `<li>${esc(t)}</li>`).join("") : `<li style="display:block;color:var(--muted)">Write down the patterns you've confirmed on the water. They show up here, next to the numbers.</li>`;
 
-  renderPatterns(list); renderLog(); fillLists();
+  renderHours(list); renderPatterns(list); renderLog(); fillLists();
+}
+
+/* ---------- Stats: time on the water ---------- */
+// Hours from a trip's start and end times (past midnight counts). Trips without both, or longer than 16 hours
+// (a typo, most likely), are left out.
+const clockH = t => { const [a, b] = String(t).split(":").map(Number); return a + (b || 0) / 60; };
+function tripHours(s) {
+  if (!s.start || !s.end) return null;
+  let h = clockH(s.end) - clockH(s.start); if (h <= 0) h += 24;
+  return h > 0 && h <= 16 ? h : null;
+}
+const fmtHours = h => h >= 10 ? `${Math.round(h)}` : h.toFixed(1).replace(/\.0$/, "");
+function renderHours(list) {
+  const timed = list.map(s => ({ s, h: tripHours(s) })).filter(x => x.h);
+  if (timed.length < 3) {
+    $("hoursBox").innerHTML = `<p class="hours-empty">Add a start and end time to your trips (under <b>More details</b> when you log one) and fishr shows your hours on the water and how many fish you catch an hour.</p>
+      <p class="label">${timed.length} of ${list.length} trip${list.length === 1 ? "" : "s"} have both times so far.</p>`;
+    return;
+  }
+  const hours = timed.reduce((a, x) => a + x.h, 0), fish = timed.reduce((a, x) => a + fishOf(x.s), 0);
+  const avg = hours / timed.length, avgTxt = `${Math.floor(avg)}h ${String(Math.round((avg % 1) * 60)).padStart(2, "0")}m`;
+  const byWater = new Map();
+  for (const x of timed) { const w = byWater.get(x.s.water) || { k: x.s.water, h: 0, fish: 0, n: 0 }; w.h += x.h; w.fish += fishOf(x.s); w.n++; byWater.set(x.s.water, w); }
+  const rows = [...byWater.values()].filter(w => w.n >= 2).sort((a, b) => b.fish / b.h - a.fish / a.h);
+  $("hoursBox").innerHTML = `<div class="hours-top">
+      <div><span class="v">${fmtHours(hours)}<small>h</small></span><span class="k">on the water</span></div>
+      <div><span class="v">${(fish / hours).toFixed(1)}</span><span class="k">fish an hour</span></div>
+      <div><span class="v">${avgTxt}</span><span class="k">average trip</span></div>
+    </div>
+    ${rows.length ? `<div class="tbl-wrap"><table class="hours-tbl"><tr><th>Water</th><th class="r">Hrs</th><th class="r">Fish</th><th class="r">Per hr</th></tr>${rows.map(w => `<tr><td>${esc(w.k)}</td><td class="r">${fmtHours(w.h)}</td><td class="r">${w.fish}</td><td class="r">${(w.fish / w.h).toFixed(1)}</td></tr>`).join("")}</table></div>` : ""}
+    <p class="label">From the ${timed.length} of ${list.length} trips with a start and end time.</p>`;
+}
+
+/* ---------- Insights: best combinations ---------- */
+// Conditions that stack up on good days. Every pair and triple of a trip's conditions (water, time of day,
+// pressure, sky, wind, river level, temperature) is scored by fish per trip, pulled toward the angler's
+// average when there are few trips behind it, so two lucky trips can't top the list.
+const COMBO_MIN = 4, COMBO_PULL = 4;
+function tripTraits(s) {
+  const t = [], c = s.conditions || [];
+  if (s.water) t.push(["water", s.water]);
+  const p = isPeriod(s); if (p) t.push(["time", p.toLowerCase()]);
+  if (s.wx?.trend) t.push(["press", `${s.wx.trend.toLowerCase()} pressure`]);
+  const sky = s.wx?.sky || (c.includes("Rain") ? "Rain" : c.includes("Overcast") ? "Overcast" : c.includes("Sunny") ? "Sunny" : null);
+  if (sky) t.push(["sky", sky === "Rain" ? "rain" : sky === "Overcast" ? "overcast" : "clear skies"]);
+  const wind = s.wx?.wind != null ? (s.wx.wind < 6 ? "calm" : s.wx.wind <= 20 ? "light wind" : "windy") : c.includes("Windy") ? "windy" : c.includes("Calm") ? "calm" : null;
+  if (wind) t.push(["wind", wind]);
+  const lvl = waterLevelOf(s); if (lvl) t.push(["level", `${lvl.toLowerCase()} water`]);
+  const band = tempBand(avgT(s)); if (band != null && band >= 0) t.push(["temp", bandLabel(band)]);
+  return t;
+}
+function bestCombos(list) {
+  const all = list.reduce((a, s) => a + fishOf(s), 0) / (list.length || 1), m = new Map();
+  for (const s of list) {
+    const t = tripTraits(s), f = fishOf(s), add = parts => {
+      const key = parts.map(x => x[1]).join(" + "), g = m.get(key) || { key, parts, n: 0, fish: 0, skunk: 0, ids: [] };
+      g.n++; g.fish += f; if (!f) g.skunk++; g.ids.push(s.id); m.set(key, g);
+    };
+    for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) {
+      add([t[i], t[j]]);
+      for (let k = j + 1; k < t.length; k++) add([t[i], t[j], t[k]]);
+    }
+  }
+  const scored = [...m.values()].filter(g => g.n >= COMBO_MIN).map(g => ({ ...g, rate: g.fish / g.n, score: (g.fish + COMBO_PULL * all) / (g.n + COMBO_PULL) }));
+  // Pick the top ones that say something different: skip a combo whose trips are mostly the same as one already picked.
+  const pick = (cands, keep) => { const out = []; for (const g of cands) { if (!keep(g)) continue; if (out.some(o => g.ids.filter(id => o.ids.includes(id)).length >= Math.min(g.n, o.n) * 0.75)) continue; out.push(g); if (out.length === 3) break; } return out; };
+  const best = pick([...scored].sort((a, b) => b.score - a.score || b.n - a.n), g => g.rate >= all * 1.25);
+  const worst = pick([...scored].sort((a, b) => a.score - b.score || b.n - a.n), g => g.rate <= all * 0.6).slice(0, 1);
+  return { all, best, worst };
+}
+function renderCombos(list) {
+  const { all, best, worst } = bestCombos(list);
+  const who = demo ? "This angler averages" : "You average";
+  const line = (g, cls) => `<li class="${cls}"><b>${esc(g.key.charAt(0).toUpperCase() + g.key.slice(1))}</b><span>${g.rate.toFixed(1)} fish per trip · ${g.n} trips · ${g.skunk} skunked</span></li>`;
+  $("comboBox").innerHTML = best.length
+    ? `<ol class="combos">${best.map(g => line(g, "go")).join("")}</ol>
+       ${worst.length ? `<p class="label">Toughest</p><ul class="combos">${line(worst[0], "no")}</ul>` : ""}
+       <p class="label">${who} ${all.toFixed(1)} fish per trip. Each combo needs at least ${COMBO_MIN} trips; the fewer trips behind it, the more it's treated as a lead, not a rule.</p>`
+    : `<p class="hours-empty">Combos show once at least ${COMBO_MIN} trips share the same conditions and do clearly better than average. Log trips with auto-filled weather and they appear here.</p>`;
 }
 
 function tableHTML(rows, head) {
@@ -232,6 +311,7 @@ function tableHTML(rows, head) {
 }
 
 function renderPatterns(list) {
+  renderCombos(list);
   const water = group(list, s => s.water).sort((a, b) => b.n - a.n || b.fish - a.fish);
   const period = group(list, isPeriod).sort((a, b) => PERIODS.indexOf(a.k) - PERIODS.indexOf(b.k));
   const temp = group(list, s => tempBand(avgT(s))).sort((a, b) => a.k - b.k).map(g => ({ ...g, label: bandLabel(g.k) }));
@@ -732,7 +812,7 @@ function oneAtATime(seg, cards, key, first) {
   let v = null; try { v = sessionStorage.getItem(key); } catch (e) {}
   show(v || first);
 }
-oneAtATime("insSeg", "insCards", "ft-ins", "water");
+oneAtATime("insSeg", "insCards", "ft-ins", "combo");
 oneAtATime("statSeg", "statCards", "ft-stat", "species");
 
 // Long tables show their top rows, with a button for the rest.

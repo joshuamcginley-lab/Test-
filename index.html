@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=62">
-<script src="report.js?v=62"></script>
+<link rel="stylesheet" href="styles.css?v=63">
+<script src="report.js?v=63"></script>
 </head>
 <body>
 <!-- Shown when a friend's shared catch link is opened -->
@@ -137,10 +137,11 @@
 
     <div id="panel-season" role="tabpanel">
       <div class="board" id="gauges"></div>
-      <div class="seg ins-seg" id="statSeg" role="group" aria-label="Show stats for"><button type="button" data-v="species" aria-pressed="true">Species</button><button type="button" data-v="months" aria-pressed="false">Months</button><button type="button" data-v="big" aria-pressed="false">Biggest fish</button><button type="button" data-v="notes" aria-pressed="false">Field notes</button></div>
+      <div class="seg ins-seg" id="statSeg" role="group" aria-label="Show stats for"><button type="button" data-v="species" aria-pressed="true">Species</button><button type="button" data-v="months" aria-pressed="false">Months</button><button type="button" data-v="big" aria-pressed="false">Biggest fish</button><button type="button" data-v="hours" aria-pressed="false">Time</button><button type="button" data-v="notes" aria-pressed="false">Field notes</button></div>
       <div class="grid2 ins-one" id="statCards">
         <section class="card" data-ins="species"><h2>By species</h2><div class="bars" id="speciesBars"></div></section>
         <section class="card" data-ins="months"><h2>Fish per trip by month</h2><div id="monthChart"></div></section>
+        <section class="card" data-ins="hours"><h2>Time on the water</h2><div id="hoursBox"></div></section>
         <section class="card" data-ins="big"><h2>Biggest fish</h2><div class="tbl-wrap"><table id="bigFish"></table></div></section>
         <section class="card" data-ins="notes">
           <h2>Field notes <button class="linkbtn" id="editNotes" type="button">Edit</button></h2>
@@ -155,8 +156,9 @@
 
     <div id="panel-patterns" role="tabpanel" hidden>
       <div class="callouts" id="callouts"></div>
-      <div class="seg ins-seg" id="insSeg" role="group" aria-label="Show insights by"><button type="button" data-v="water" aria-pressed="true">Water</button><button type="button" data-v="time" aria-pressed="false">Time</button><button type="button" data-v="temp" aria-pressed="false">Temp</button><button type="button" data-v="lure" aria-pressed="false">Lure</button><button type="button" data-v="press" aria-pressed="false">Pressure</button><button type="button" data-v="river" aria-pressed="false">River</button></div>
+      <div class="seg ins-seg" id="insSeg" role="group" aria-label="Show insights by"><button type="button" data-v="combo" aria-pressed="true">Combos</button><button type="button" data-v="water" aria-pressed="false">Water</button><button type="button" data-v="time" aria-pressed="false">Time</button><button type="button" data-v="temp" aria-pressed="false">Temp</button><button type="button" data-v="lure" aria-pressed="false">Lure</button><button type="button" data-v="press" aria-pressed="false">Pressure</button><button type="button" data-v="river" aria-pressed="false">River</button></div>
       <div class="grid2 ins-one" id="insCards">
+        <section class="card" data-ins="combo"><h2>Best combinations</h2><div id="comboBox"></div></section>
         <section class="card" data-ins="water"><h2>By water</h2><div class="tbl-wrap"><table id="tWater"></table></div></section>
         <section class="card" data-ins="time"><h2>By time of day</h2><div class="tbl-wrap"><table id="tPeriod"></table></div></section>
         <section class="card" data-ins="temp"><h2>By water temp</h2><div class="tbl-wrap"><table id="tTemp"></table></div></section>
@@ -381,16 +383,16 @@
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="celebrate" id="celebrate" hidden aria-live="polite"><canvas id="confetti"></canvas><div class="cel-card"><svg class="cel-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28"/><path d="M20 33l8 8 16-17"/></svg><b id="celTitle">Trip logged</b><span id="celSub"></span></div></div>
 <div class="splash" id="splash" aria-hidden="true"><img src="icons/mark-512.png" alt="" width="120" height="120"><span>fishr<span class="tld">.ai</span></span></div>
-<script src="app.js?v=62"></script>
-<script src="forecast.js?v=62"></script>
-<script src="conditions.js?v=62"></script>
-<script src="live.js?v=62"></script>
-<script src="map.js?v=62"></script>
-<script src="pro.js?v=62"></script>
-<script src="cloud.js?v=62"></script>
-<script src="polish.js?v=62"></script>
-<script src="guide.js?v=62"></script>
-<script src="ai.js?v=62"></script>
-<script src="share.js?v=62"></script>
+<script src="app.js?v=63"></script>
+<script src="forecast.js?v=63"></script>
+<script src="conditions.js?v=63"></script>
+<script src="live.js?v=63"></script>
+<script src="map.js?v=63"></script>
+<script src="pro.js?v=63"></script>
+<script src="cloud.js?v=63"></script>
+<script src="polish.js?v=63"></script>
+<script src="guide.js?v=63"></script>
+<script src="ai.js?v=63"></script>
+<script src="share.js?v=63"></script>
 </body>
 </html>
