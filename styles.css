@@ -59,7 +59,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .pill{display:inline-flex;align-items:center;gap:6px;font:500 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--muted);background:var(--glass)}
 .pill.beta{color:var(--c);border-color:color-mix(in srgb,var(--c) 40%,transparent)}
 .pill.live{position:relative;border:1px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,var(--grad) border-box;color:var(--ink)}
-.pill.live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--m);box-shadow:0 0 10px var(--m)}
+.pill.live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}
+/* "Live" dot: green, with a soft ring that pulses out every couple of seconds */
+@media (prefers-reduced-motion:no-preference){.pill.live::before{animation:livePulse 2.2s ease-out infinite}}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .top-actions{display:flex;gap:8px;align-items:center}
 .band-top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
 .hero{display:grid;gap:10px;max-width:640px}
