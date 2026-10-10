@@ -714,7 +714,8 @@ function showSampleView(where) {
 }
 function exitSample() {
   if (!demo) return;
-  if (history.state?.fishrSample && !history.state?.fishrSheet) history.back(); // take the sample's Back step off
+  // The sample's Back step is spent: mark it as an ordinary entry (in place, so it can't race a sheet opening next).
+  if (history.state?.fishrSample) { const { fishrSample, ...rest } = history.state; history.replaceState(Object.keys(rest).length ? rest : null, ""); }
   state.sessions = demo.sessions; state.notes = demo.notes; state.settings.season = demo.season; demo = null;
   if (typeof resetAdviceInputs === "function") resetAdviceInputs();
   render(); window.scrollTo(0, 0);
