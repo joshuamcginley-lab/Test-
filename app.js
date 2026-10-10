@@ -406,13 +406,16 @@ let editingId = null, pinned = null;
 function catchRow(c = {}) {
   const d = document.createElement("div"); d.className = "catch-row";
   d.innerHTML = `<div class="field sp"><span class="label">Species</span><div class="combo"><input class="c-sp" autocomplete="off" autocapitalize="words" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(c.species || "")}" placeholder="Type or pick a fish" aria-label="Species"><button type="button" class="combo-btn" aria-label="Show fish list" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="combo-list" role="listbox" hidden></div></div></div>
-  <label class="field"><span class="label">Count</span><input class="c-n" type="number" min="1" inputmode="numeric" value="${esc(c.count || 1)}"></label>
+  <div class="field cnt"><span class="label">Count</span><div class="stepper"><button type="button" class="step" data-d="-1" aria-label="One fewer">−</button><input class="c-n" type="number" min="1" inputmode="numeric" value="${esc(c.count || 1)}" aria-label="Count"><button type="button" class="step" data-d="1" aria-label="One more">+</button></div></div>
   <label class="field"><span class="label">${wU()} each</span><input class="c-lb" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(wtOut(c.lb) ?? "")}"></label>
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
   <label class="field lu"><span class="label">Lure</span><input class="c-lu" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
   <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" class="vh-file"><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
+  // − / + for the count: big targets, no keyboard needed (typing still works).
+  const cn = d.querySelector(".c-n");
+  for (const b of d.querySelectorAll(".step")) b.onclick = () => { cn.value = Math.max(1, (parseInt(cn.value) || 1) + +b.dataset.d); cn.dispatchEvent(new Event("input", { bubbles: true })); };
   speciesPicker(d.querySelector(".combo"));
   const thumb = d.querySelector(".c-photo .thumb"), tImg = thumb.querySelector("img"), btnTxt = d.querySelector(".photo-btn span"), rm = d.querySelector(".rm-photo"), msg = d.querySelector(".photo-msg");
   const idBtn = d.querySelector(".id-photo");
