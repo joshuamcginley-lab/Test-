@@ -437,7 +437,7 @@ $("homeLink").addEventListener("click", e => {
   if (demo) exitSample(); else if (state.sessions.length) showTab("advice");
   window.scrollTo(0, 0);
 });
-function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; $("fidSheet").hidden = true; editingId = null; }
+function closeSheets() { $("scrim").hidden = true; $("sheet").hidden = true; $("settings").hidden = true; $("shareSheet").hidden = true; $("proSheet").hidden = true; $("fidSheet").hidden = true; $("gaugeSheet").hidden = true; editingId = null; }
 function startNewTrip() { if (demo) exitSample(); openSheet(null); }
 $("openNew").onclick = startNewTrip;
 $("dockLog").onclick = startNewTrip;

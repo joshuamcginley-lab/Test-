@@ -86,4 +86,24 @@ ok(r.status === 404 && /No real-time river gauge/.test(r.d.error), "middle of th
 r = await ask("x", 1);
 ok(r.status === 400, "bad coordinates: 400");
 
+// Choosing a gauge: ?list=1 gives the nearby ones from both countries, closest first; ?station= uses that one.
+world = { eccc: [DETROIT_CA, { id: "02GH011", name: "LITTLE RIVER AT WINDSOR", lat: 42.30, lon: -82.93 }], usgs: [DETROIT_US, { id: "04166500", name: "RIVER ROUGE AT DETROIT, MI", lat: 42.37, lon: -83.25 }] };
+r = await ask(42.32, -83.05);
+const lr = await onRequestGet({ request: new Request("https://fishr.monster/api/water?lat=42.32&lon=-83.05&list=1") }), list = await lr.json();
+ok(lr.status === 200 && list.gauges.length === 4 && list.gauges.map(g => g.source).sort().join() === "ECCC,ECCC,USGS,USGS", "list: gauges from both countries " + JSON.stringify(list.gauges?.map(g => g.id)));
+ok(list.gauges.every((g, i, a) => !i || a[i - 1].distKm <= g.distKm) && list.gauges.every(g => g.name && g.id && Number.isFinite(g.distKm)), "list: closest first, with names and distances");
+const pickOne = async st => { const x = await onRequestGet({ request: new Request(`https://fishr.monster/api/water?lat=42.32&lon=-83.05&station=${st}`) }); return { status: x.status, d: await x.json() }; };
+r = await pickOne("USGS:04166500");
+ok(r.status === 200 && r.d.station.id === "04166500" && r.d.station.name === "River Rouge at Detroit, MI" && r.d.picked === true && r.d.station.distKm > 10, "station=: uses the picked gauge even though it isn't closest " + JSON.stringify(r.d.station));
+r = await pickOne("ECCC:02GH011");
+ok(r.status === 200 && r.d.source === "ECCC" && r.d.station.id === "02GH011" && r.d.picked, "station=: Canadian pick");
+r = await pickOne("ECCC:99ZZ999");
+ok(r.status === 404 && /isn't reporting/.test(r.d.error), "picked gauge not reporting: 404 so the app can fall back");
+for (const bad of ["USGS:abc", "NOAA:01646500", "ECCC:../x", "USGS:01646500;drop"]) { r = await pickOne(encodeURIComponent(bad)); ok(r.status === 400, "bad station rejected: " + bad); }
+r = await ask(42.32, -83.05);
+ok(r.d.picked === false && r.d.station.id === "02GH003", "without station= it's still the closest (Windsor, 2 km)");
+world = { eccc: [{ id: "01AK006", name: "MIDDLE BRANCH NASHWAAKSIS STREAM AT SANDWITH'S FARM", lat: 46.0, lon: -66.7 }], usgs: [] };
+r = await ask(46.0, -66.7);
+ok(r.d.station?.name === "Middle Branch Nashwaaksis Stream at Sandwith's Farm", "apostrophes keep lowercase: " + r.d.station?.name);
+
 console.log(`${pass} passed, ${failN} failed`);

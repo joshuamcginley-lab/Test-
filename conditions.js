@@ -33,14 +33,28 @@ async function fetchWeather(lat, lon, date, hour) {
 }
 
 // Nearest river gauge and how today's flow compares with the last two weeks.
+// A gauge the angler picked for an area applies within this distance of where they picked it.
+const PICK_KM = 15;
+const distKm = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon);
+  return 2 * R * Math.asin(Math.sqrt(Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon / 2) ** 2)); };
+const gaugePicks = () => Array.isArray(state.settings.gauges) ? state.settings.gauges.filter(g => g && Number.isFinite(g.lat) && Number.isFinite(g.lon) && /^(ECCC|USGS):[0-9A-Z]{7,15}$/.test(g.station)) : [];
+const gaugePickFor = (lat, lon) => gaugePicks().map(g => ({ g, d: distKm(g, { lat, lon }) })).filter(x => x.d <= PICK_KM).sort((a, b) => a.d - b.d)[0]?.g || null;
+// Remember a gauge for the area around lat/lon (null = back to the closest). Replaces any pick for the same area.
+function setGaugePick(lat, lon, station, name) {
+  const rest = gaugePicks().filter(g => distKm(g, { lat, lon }) > PICK_KM);
+  state.settings.gauges = station ? [...rest, { lat: r(lat, 3), lon: r(lon, 3), station, name: String(name || "").slice(0, 80) }].slice(-20) : rest;
+  save();
+}
 async function fetchWater(lat, lon) {
   if (location.protocol === "file:") return null;
-  const res = await fetch(`/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`);
+  const pick = gaugePickFor(lat, lon), base = `/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`;
+  let res = await fetch(pick ? `${base}&station=${pick.station}` : base);
+  if (!res.ok && pick) res = await fetch(base); // the picked gauge is offline: fall back to the closest
   if (!res.ok) return null;
   const d = await res.json();
   if (!d || !d.station || !["High", "Normal", "Low"].includes(d.status)) return null;
   const series = Array.isArray(d.series) ? d.series.filter(x => Array.isArray(x) && Number.isFinite(x[0]) && Number.isFinite(x[1])).slice(-120) : [];
-  return { source: d.source === "USGS" ? "USGS" : "ECCC", station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time, min: d.min, max: d.max, series };
+  return { source: d.source === "USGS" ? "USGS" : "ECCC", picked: !!d.picked, station: String(d.station.name).slice(0, 80), stationId: String(d.station.id).slice(0, 20), distKm: d.station.distKm, status: d.status, trend: d.trend, pct: d.pct14, value: d.value, unit: d.unit, measure: d.measure, at: d.time, min: d.min, max: d.max, series };
 }
 
 /* ---------- where to look up conditions ---------- */

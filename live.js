@@ -303,7 +303,7 @@ function renderLive(status) {
     <div class="tile river${f ? "" : " muted"}">
       <span class="label">River gauge</span>
       ${f ? `<div class="big"><b>${f.value != null ? (f.value >= 100 ? Math.round(f.value) : f.value.toFixed(f.value >= 10 ? 1 : 2)) : "—"}</b><small>${esc(f.unit || "")}</small><span class="gauge-status s-${f.status.toLowerCase()}">${f.status} · ${esc(f.trend)}</span></div>
-      <span class="sub">${esc(f.station)} · ${f.distKm} km away</span>
+      <span class="sub">${esc(f.station)} · ${f.distKm} km away${f.picked ? " · your pick" : ""} · <button type="button" class="text-link" id="gaugeChange">Change</button></span>
       <div class="pct"><span style="left:${Math.round((f.pct ?? .5) * 100)}%"></span></div><span class="axis"><span>14-day low</span><span>${Math.round((f.pct ?? .5) * 100)}th percentile</span><span>high</span></span>
       ${f.series?.length > 3 ? spark(f.series.map(x => x[1]), { warn: f.status === "High", nowAt: f.series.length - 1 }) + `<span class="axis"><span>−14d</span><span></span><span>now</span></span>` : ""}`
       : `<span class="sub">No real-time gauge nearby, or the gauge service didn't answer.</span>`}
@@ -339,8 +339,37 @@ function renderLive(status) {
   };
   const spSel = $("biteSp"); if (spSel) spSel.onchange = () => { state.settings.biteSpecies = spSel.value; save(); renderLive(); };
   const ch = $("liveChange"); if (ch) ch.onclick = () => { renderLive("town"); $("townIn").focus(); };
+  const gc = $("gaugeChange"); if (gc) gc.onclick = openGaugePicker;
   countUp(box);
 }
+/* ---------- choose the river gauge ---------- */
+// The closest reporting gauge is used by default. If that's not the angler's water, they pick another one nearby;
+// the pick applies to this area (see gaugePickFor in conditions.js), for live conditions and new trips alike.
+async function openGaugePicker() {
+  if (!wx) return;
+  const { lat, lon } = wx, list = $("gaList");
+  closeSheets(); $("scrim").hidden = false; $("gaugeSheet").hidden = false;
+  list.innerHTML = `<p class="ga-msg">Finding gauges near you…</p>`;
+  let gauges = null;
+  try { const res = await fetch(`/api/water?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}&list=1`); if (res.ok) gauges = (await res.json()).gauges; } catch (e) {}
+  if ($("gaugeSheet").hidden) return;
+  if (!Array.isArray(gauges) || !gauges.length) { list.innerHTML = `<p class="ga-msg">Couldn't load the gauges near you. Try again in a minute.</p>`; return; }
+  const pick = gaugePickFor(lat, lon);
+  list.innerHTML = `<button type="button" class="ga-opt${pick ? "" : " on"}" data-st="" role="listitem"><b>Closest (automatic)</b><span>The nearest gauge that's reporting</span></button>`
+    + gauges.map(g => { const st = `${g.source}:${g.id}`; return `<button type="button" class="ga-opt${pick?.station === st ? " on" : ""}" role="listitem" data-st="${esc(st)}" data-name="${esc(g.name)}"><b>${esc(g.name)}</b><span>${g.distKm} km · ${g.source === "USGS" ? "U.S. Geological Survey" : "Environment Canada"}</span></button>`; }).join("");
+}
+$("gaList").onclick = async e => {
+  const b = e.target.closest(".ga-opt"); if (!b || !wx) return;
+  const st = b.dataset.st || null, name = b.dataset.name || "";
+  setGaugePick(wx.lat, wx.lon, st, name);
+  closeSheets();
+  wx.flow = await fetchWater(wx.lat, wx.lon).catch(() => null);
+  if (!demo) segSet($("aFlow"), wx.flow ? [wx.flow.status] : []);
+  renderAdvice(); renderLive();
+  toast(st ? (wx.flow?.picked ? `Using ${name}` : `${name} isn't reporting right now, so fishr is using the closest gauge.`) : "Using the closest gauge");
+};
+$("gaClose").onclick = closeSheets;
+
 const compassName = deg => deg == null ? "" : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((deg % 360) + 360) % 360 / 45) % 8];
 function countUp(root) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
