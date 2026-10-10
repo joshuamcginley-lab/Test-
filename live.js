@@ -146,7 +146,8 @@ function renderLive(status, quiet) {
   };
   const dawn = sun ? (dark && now > sun.set ? (nextSun || sun).rise : sun.rise) : null;
   const lightLine = dark ? (dawn ? `Night · dawn bite window ${fmtClock(new Date(dawn - 30 * 60e3))}–${fmtClock(new Date(+dawn + 60 * 60e3))}` : "Night")
-    : goldenEve ? `Golden hour now · sunset ${fmtClock(sun.set)}` : toSet > 0 ? `Golden hour in ${fmtDur(toSet - 60 * 60e3)}` : "";
+    : goldenEve ? `Golden hour now · sunset ${fmtClock(sun.set)}` : goldenMorn ? `Golden hour now · sunrise ${fmtClock(sun.rise)}`
+    : toSet > 0 ? `Golden hour in ${fmtDur(toSet - 75 * 60e3)}` : ""; // same 75 minutes as the Bite Index's golden hour
   const mn = moon(now);
 
   // model blend, once the log is big enough

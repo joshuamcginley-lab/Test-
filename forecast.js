@@ -7,7 +7,7 @@ const MIN_TRIPS = 10;            // trips with a temperature before advice unloc
 const PERIOD_HOUR = { Morning: 8, Midday: 13, Afternoon: 16.5, Evening: 19.5 };
 const hourOf = t => { const [a, b] = t.split(":").map(Number); return a + b / 60; };
 function tripHour(s) {
-  if (s.start) return s.end ? (hourOf(s.start) + hourOf(s.end)) / 2 : hourOf(s.start);
+  if (s.start) { if (!s.end) return hourOf(s.start); let e = hourOf(s.end); const a = hourOf(s.start); if (e < a) e += 24; return ((a + e) / 2) % 24; } // past midnight: centred on the night
   const p = isPeriod(s); return p ? PERIOD_HOUR[p] : null;
 }
 const dayOfYear = iso => { const d = new Date(iso + "T12:00:00"); return Math.round((d - new Date(d.getFullYear(), 0, 1)) / 864e5); };
@@ -42,17 +42,19 @@ async function loadWeather(useGps) {
   if (!where) { msg.textContent = "Allow location, or type your town, to pull the weather. You can also type the temperature."; return why || "noloc"; }
   msg.textContent = "Syncing live conditions…";
   try {
-    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,pressure_msl,wind_speed_10m,precipitation,precipitation_probability&daily=sunrise,sunset&past_days=2&forecast_days=2&timezone=auto`;
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${where.lat.toFixed(3)}&longitude=${where.lon.toFixed(3)}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,weather_code,pressure_msl,wind_speed_10m,precipitation,precipitation_probability&daily=sunrise,sunset&past_days=2&forecast_days=2&timezone=auto&timeformat=unixtime`;
     const [d, flow] = await Promise.all([(await fetch(u)).json(), typeof fetchWater === "function" ? fetchWater(where.lat, where.lon).catch(() => null) : null]);
-    const nowIdx = d.hourly.time.findIndex(t => new Date(t) > new Date()) - 1;
+    // Times come as absolute seconds, so a town in another time zone lines up with this phone's clock.
+    const T = t => new Date(typeof t === "number" ? t * 1000 : t);
+    const nowIdx = d.hourly.time.findIndex(t => T(t) > new Date()) - 1;
     const p0 = d.current.pressure_msl, p3 = nowIdx >= 3 ? d.hourly.pressure_msl[nowIdx - 3] : null;
     const press = p0 != null && p3 != null ? (p0 - p3 >= 1 ? "Rising" : p0 - p3 <= -1 ? "Falling" : "Steady") : null;
     wx = {
       ...where, current: { temp: d.current.temperature_2m, sky: skyFromCode(d.current.weather_code), p: p0 == null ? null : Math.round(p0), press,
         dp3: p0 != null && p3 != null ? r(p0 - p3, 1) : null, feels: d.current.apparent_temperature, hum: d.current.relative_humidity_2m, cloud: d.current.cloud_cover,
         wind: d.current.wind_speed_10m, gust: d.current.wind_gusts_10m, dir: d.current.wind_direction_10m, code: d.current.weather_code }, flow,
-      hourly: d.hourly.time.map((t, i) => ({ time: new Date(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]), p: d.hourly.pressure_msl?.[i], wind: d.hourly.wind_speed_10m?.[i], rain: d.hourly.precipitation?.[i], pop: d.hourly.precipitation_probability?.[i] })),
-      sun: (d.daily?.sunrise || []).map((s, i) => ({ rise: new Date(s), set: new Date(d.daily.sunset[i]) })),
+      hourly: d.hourly.time.map((t, i) => ({ time: T(t), temp: d.hourly.temperature_2m[i], sky: skyFromCode(d.hourly.weather_code[i]), p: d.hourly.pressure_msl?.[i], wind: d.hourly.wind_speed_10m?.[i], rain: d.hourly.precipitation?.[i], pop: d.hourly.precipitation_probability?.[i] })),
+      sun: (d.daily?.sunrise || []).map((s, i) => ({ rise: T(s), set: T(d.daily.sunset[i]) })),
       updated: new Date(),
       via, why, place: via === "town" ? state.settings.home.name || null : null,
     };
@@ -76,7 +78,7 @@ const isoDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, 
 // Best window in the next ~30 hours of daylight-ish fishing hours, from the hourly forecast.
 function bestWindow() {
   if (!wx) return null;
-  const now = Date.now(), hrs = wx.hourly.filter(h => h.time.getTime() >= now - 36e5 && h.time.getTime() <= now + 30 * 36e5 && h.time.getHours() >= 5 && h.time.getHours() <= 21);
+  const now = Date.now(), hrs = wx.hourly.filter(h => h.time.getTime() >= now - 36e5 && h.time.getTime() <= now + 30 * 36e5 && h.time.getHours() >= 5 && h.time.getHours() <= 21 && h.temp != null);
   if (!hrs.length) return null;
   const scored = hrs.map(h => { const q = { temp: h.temp, hour: h.time.getHours() + 0.5, doy: dayOfYear(isoDate(h.time)), sky: h.sky }; const top = bestRanking(q, 1.5).rows[0]; return { h, top }; }).filter(x => x.top);
   if (!scored.length) return null;
@@ -86,7 +88,8 @@ function bestWindow() {
   while (ok(scored[lo - 1]) && scored[lo].h.time - scored[lo - 1].h.time === 36e5) lo--;
   while (ok(scored[hi + 1]) && scored[hi + 1].h.time - scored[hi].h.time === 36e5) hi++;
   const a = scored[lo].h, b = scored[hi].h, temps = scored.slice(lo, hi + 1).map(x => x.h.temp);
-  const day = a.time.toDateString() === new Date().toDateString() ? "Today" : "Tomorrow";
+  const ahead = Math.round((new Date(a.time).setHours(12, 0, 0, 0) - new Date(now).setHours(12, 0, 0, 0)) / 864e5);
+  const day = ahead <= 0 ? "Today" : ahead === 1 ? "Tomorrow" : a.time.toLocaleDateString("en-US", { weekday: "long" });
   return { day, from: a.time.getHours(), to: b.time.getHours() + 1, water: peak.top.water, est: peak.top.est, tLo: Math.min(...temps), tHi: Math.max(...temps) };
 }
 

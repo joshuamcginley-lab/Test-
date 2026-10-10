@@ -24,7 +24,9 @@
   // Buckets a past trip falls into, to compare like with like.
   const PERIOD_HOUR = { Morning: 8, Midday: 13, Afternoon: 16.5, Evening: 19.5 };
   const clock = t => { const [a, b] = String(t).split(":").map(Number); return a + (b || 0) / 60; };
-  const tripHour = s => s.start ? (s.end ? (clock(s.start) + clock(s.end)) / 2 : clock(s.start)) : PERIOD_HOUR[s.period] ?? null;
+  // The middle of the trip; a trip past midnight (22:00–02:00) is centred at midnight, not noon.
+  const midHour = (a, b) => { if (b < a) b += 24; return ((a + b) / 2) % 24; };
+  const tripHour = s => s.start ? (s.end ? midHour(clock(s.start), clock(s.end)) : clock(s.start)) : PERIOD_HOUR[s.period] ?? null;
   const lightOf = h => h == null ? null : h < 5 || h >= 21 ? "dark" : h < 9 || h >= 18 ? "low" : "day";
   const conds = s => s.conditions || [];
   const BUCKETS = {
@@ -164,13 +166,17 @@
     const byWater = new Map();
     for (const x of scored) { if (!byWater.has(x.s.water)) byWater.set(x.s.water, []); byWater.get(x.s.water).push(x); }
     const K = 2; // pulls thin evidence toward the angler's overall average
+    // That average only counts waters that can make the list: one big day on a water fished once mustn't lift a
+    // water that skunked every time above one that keeps producing.
+    const minTrips = (q.k || 1) > 1 ? 1 : 2, eligible = scored.filter(x => byWater.get(x.s.water).length >= minTrips);
+    const eW = eligible.reduce((a, x) => a + x.w, 0), prior = eW ? eligible.reduce((a, x) => a + x.w * x.f, 0) / eW : globalRate;
     const rows = [...byWater].map(([water, xs]) => {
       const W = xs.reduce((a, x) => a + x.w, 0), W2 = xs.reduce((a, x) => a + x.w * x.w, 0);
       const fishW = xs.reduce((a, x) => a + x.w * x.f, 0), skunkW = xs.reduce((a, x) => a + x.w * (x.f ? 0 : 1), 0);
       const neff = W2 ? W * W / W2 : 0;
       const similar = xs.filter(x => x.w >= 0.2).sort((a, b) => b.w - a.w);
-      return { water, est: (fishW + K * globalRate) / (W + K), raw: W ? fishW / W : 0, skunk: W ? skunkW / W : 0, neff, W, trips: xs.length, similar, xs };
-    }).filter(r => r.trips >= ((q.k || 1) > 1 ? 1 : 2));
+      return { water, est: (fishW + K * prior) / (W + K), raw: W ? fishW / W : 0, skunk: W ? skunkW / W : 0, neff, W, trips: xs.length, similar, xs };
+    }).filter(r => r.trips >= minTrips);
     rows.sort((a, b) => b.est - a.est);
     const sim = scored.filter(x => x.w >= 0.2);
     return { rows, globalRate, nSimilar: sim.length, skunkSimilar: sim.length ? sim.filter(x => !x.f).length / sim.length : 0, anySeason: scored.some(x => { let dd = Math.abs(dayOfYear(x.s.date) - q.doy); return Math.min(dd, 365 - dd) <= 30; }) };

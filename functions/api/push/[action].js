@@ -80,7 +80,7 @@ const actions = {
       await DB.prepare("UPDATE push_subs SET slot = ?, weekend = ?, weekly = ?, fails = ? WHERE id = ?").bind(
         slotKey,
         ok && result.send.kind === "weekend" ? result.weekendKey : sub.weekend,
-        ok && (result.send.kind === "weekly" || result.send.alsoWeekly) ? result.weekKey : sub.weekly,
+        ok && result.send.weekKey ? result.send.weekKey : sub.weekly,
         result.send && !ok ? (sub.fails || 0) + 1 : 0, sub.id).run();
       if (result.send && !ok && (sub.fails || 0) + 1 >= 5) await DB.prepare("DELETE FROM push_subs WHERE id = ?").bind(sub.id).run();
     }

@@ -179,8 +179,10 @@ export async function onRequestGet({ request, env = {} }) {
       const series = obs.map(o => ({ t: o.t, v: useQ ? o.q : o.h })).filter(o => o.v != null);
       const last = series[series.length - 1];
       const sorted = series.map(o => o.v).sort((a, b) => a - b);
-      const below = sorted.filter(v => v < last.v).length;
-      const pct = sorted.length > 1 ? below / (sorted.length - 1) : 0.5;
+      // Where the latest reading sits in the last 14 days. Ties take the middle of their run, so a flat river reads
+      // Normal (not Low), and a reading tied with the 14-day high still reads high.
+      const below = sorted.filter(v => v < last.v).length, same = sorted.filter(v => v === last.v).length;
+      const pct = sorted.length > 1 ? (below + (same - 1) / 2) / (sorted.length - 1) : 0.5;
       const dayAgo = series.reduce((best, o) => Math.abs(o.t - (last.t - DAY)) < Math.abs(best.t - (last.t - DAY)) ? o : best, series[0]);
       const change = dayAgo.v ? (last.v - dayAgo.v) / Math.abs(dayAgo.v) : 0;
       const latest = obs[obs.length - 1];

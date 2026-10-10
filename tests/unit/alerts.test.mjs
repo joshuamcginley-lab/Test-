@@ -69,7 +69,8 @@ ok(plan(2, 18).weekend.length === 0 && plan(2, 18).weekly.length === 2, "weekday
 ok(plan(5, 19) && plan(6, 9) && !plan(5, 20) && !plan(3, 8) && !plan(6, 12), "an hour's grace for a late timer; nothing at other times");
 ok(A.localParts(Date.parse("2026-10-16T21:07:00Z"), "America/Moncton").hour === 18 && A.localParts(Date.parse("2026-10-17T01:07:00Z"), "America/Los_Angeles").hour === 18, "local time per subscriber's time zone");
 const K = A.decideKeys(Date.parse("2026-10-18T15:00:00Z"), "America/Moncton");
-ok(K.weekendKey === "2026-10-17" && K.weekKey === "2026-W42", "Sunday belongs to Saturday's weekend " + JSON.stringify(K));
+ok(K.weekendKey === "2026-10-17" && K.weekKey === "2026-W43", "Sunday belongs to Saturday's weekend; its weekly check looks into next week (tomorrow) " + JSON.stringify(K));
+ok(["2027-01-04", "2027-01-10", "2027-06-15", "2027-12-29", "2026-12-31", "2021-01-04"].map(A.isoWeek).join() === "2027-W01,2027-W01,2027-W24,2027-W52,2026-W53,2021-W01", "ISO weeks right in years starting on a Friday " + ["2027-01-04", "2027-01-10", "2027-06-15", "2027-12-29", "2026-12-31", "2021-01-04"].map(A.isoWeek));
 
 // 4. Thresholds, with made-up windows: 56 past windows scoring 50–77, and candidates for this weekend.
 {
@@ -107,6 +108,22 @@ ok(K.weekendKey === "2026-10-17" && K.weekKey === "2026-W42", "Sunday belongs to
   ok(r.send?.kind === "weekly" && r.send.title === "Bite Intelligence™: 91 Wednesday" && /^Peak .* AM\. Best of your week\./.test(r.send.body), "weekday: tomorrow morning at 91 → weekly alert " + r.send?.title);
   r = A.decide({ ...sub, weekly: "2026-W42" }, [...past, win(1, "pm", 84)], now);
   ok(!r.send, "weekly already used and weekend below the bar: nothing");
+  // One "best of your week" per week of the fishing: Sunday evening's alert is about Monday (next week), so Monday
+  // evening (about Tuesday, same week) can't send another.
+  const sunNow = Date.parse("2026-10-18T21:07:00Z"), monNow = Date.parse("2026-10-19T21:07:00Z");
+  const at = (date, part, score) => ({ date, part, sun: Date.parse(`${date}T${part === "am" ? "10" : "22"}:30:00Z`), score, drivers: [] });
+  r = A.decide(sub, [...past, at("2026-10-19", "am", 92)], sunNow);
+  const wk = r.send?.weekKey;
+  ok(r.send?.kind === "weekly" && wk === "2026-W43" && r.send.title === "Bite Intelligence™: 92 Monday", "Sunday 6 pm: Monday's 92 sent, counted against Monday's week " + wk);
+  r = A.decide({ ...sub, weekly: wk }, [...past, at("2026-10-20", "am", 93)], monNow);
+  ok(!r.send, "Monday 6 pm: the week's alert is used, so Tuesday's 93 isn't a second one");
+  // Ties: 86 isn't "top 10%" when 16 of the month's 56 windows also reached 86.
+  const tied = past.map((w, i) => i < 16 ? { ...w, score: 86 } : w);
+  r = A.decide(sub, [...tied, win(1, "pm", 86)], now);
+  ok(!r.send, "a score tied with 29% of the month isn't sent as top 10%");
+  // Names are clipped by character, never through the middle of an emoji.
+  const emo = A.message({ kind: "weekend", window: wc }, sub, now, { past, log: log.map(t => ({ ...t, water: "Keswick River near Burt 🎣🎣" })) });
+  ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(emo.body) && /Burt 🎣🎣/.test(emo.body), "emoji in a water name stay whole: " + emo.body);
 }
 
 // 5. A full run: subscribe, Friday 6 pm, made-up weather where Saturday evening is excellent.

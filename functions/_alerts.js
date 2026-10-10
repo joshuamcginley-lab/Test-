@@ -24,7 +24,8 @@ export function localParts(ms, tz) {
 }
 export const tzOk = tz => { try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return typeof tz === "string" && tz.length < 64; } catch (e) { return false; } };
 const isoWeek = date => { const t = new Date(date + "T12:00:00Z"), d = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - d);
-  const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${String(Math.ceil(((t - y) / DAY + 1) / 7)).padStart(2, "0")}`; };
+  const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${String(Math.floor((t - y) / DAY / 7) + 1).padStart(2, "0")}`; };
+export { isoWeek };
 
 // What this run should look at, for a subscriber at local weekday/hour. Windows are named by days ahead + part.
 export function slotPlan(dow, hour) {
@@ -76,11 +77,12 @@ export function cutoff(past, top) {
   return s.length ? s[Math.max(0, Math.ceil(s.length * top) - 1)] : Infinity;
 }
 
-// This weekend (named by its Saturday) and this week, in the subscriber's time zone.
+// This weekend (named by its Saturday), and the week the weekly check looks into (it looks at tomorrow, so on a
+// Sunday that's next week). The weekly allowance belongs to the week of the fishing, not of the send.
 export function decideKeys(nowMs, tz) {
   const L = localParts(nowMs, tz);
   const sat = new Date(Date.parse(L.date + "T12:00:00Z") + ((6 - L.dow + 7) % 7 - (L.dow === 0 ? 7 : 0)) * DAY).toISOString().slice(0, 10);
-  return { weekendKey: sat, weekKey: isoWeek(L.date) };
+  return { weekendKey: sat, weekKey: isoWeek(new Date(Date.parse(L.date + "T12:00:00Z") + DAY).toISOString().slice(0, 10)) };
 }
 // Decide for one subscriber now. Returns { send: {kind, window, title, body} | null, slotKey, weekendKey, weekKey }.
 export function decide(sub, windows, nowMs, opts = {}) {
@@ -89,15 +91,18 @@ export function decide(sub, windows, nowMs, opts = {}) {
   const slotKey = `${L.date}-${plan.slot}`, { weekendKey, weekKey } = decideKeys(nowMs, sub.tz);
   const today = L.date, past = windows.filter(w => w.date < today);
   const find = ([ahead, part]) => windows.find(w => w.part === part && w.date === new Date(Date.parse(today + "T12:00:00Z") + ahead * DAY).toISOString().slice(0, 10) && w.sun > nowMs);
+  // Good enough for a rule: over its minimum, and in the top share of the month. Ties count too: a score that a fifth
+  // of the month also reached isn't "top 10%", whatever the cutoff says.
+  const meets = (w, rule) => w.score >= Math.max(rule.min, cutoff(past, rule.top)) && past.filter(p => p.score >= w.score).length <= past.length * rule.top;
   const pick = (list, rule) => {
-    const bar = Math.max(rule.min, cutoff(past, rule.top));
-    return list.map(find).filter(w => w && w.score >= bar).sort((a, b) => b.score - a.score)[0] || null;
+    return list.map(find).filter(w => w && meets(w, rule)).sort((a, b) => b.score - a.score)[0] || null;
   };
   let send = null;
   if (plan.weekend.length && sub.weekend !== weekendKey) { const w = pick(plan.weekend, RULES.weekend); if (w) send = { kind: "weekend", window: w }; }
   if (!send && plan.weekly.length && sub.weekly !== weekKey) { const w = pick(plan.weekly, RULES.weekly); if (w) send = { kind: "weekly", window: w }; }
   // A weekend window good enough to be the week's best uses up the weekly alert too, so it isn't sent twice.
-  if (send?.kind === "weekend" && send.window.score >= Math.max(RULES.weekly.min, cutoff(past, RULES.weekly.top))) send.alsoWeekly = true;
+  if (send?.kind === "weekend" && sub.weekly !== isoWeek(send.window.date) && meets(send.window, RULES.weekly)) send.alsoWeekly = true;
+  if (send && (send.kind === "weekly" || send.alsoWeekly)) send.weekKey = isoWeek(send.window.date);
   if (send) Object.assign(send, message(send, sub, nowMs, { past, log: opts.log }));
   return { send, slotKey, weekendKey, weekKey };
 }
@@ -108,7 +113,7 @@ export function decide(sub, windows, nowMs, opts = {}) {
 // Water, spot and lure come from the angler's own log (fishr Cloud), the same way the Guide makes its call; without
 // a log, the top reasons stand in. The score is projected from the forecast, so the live one can land a few points off.
 const SHORT = { "Evening golden hour": "golden hour", "Morning golden hour": "golden hour", "Prime air temp": "prime temps", "Light chop": "light chop", "Pressure dropping fast": "pressure dropping fast" };
-const clip = (t, n) => { t = String(t || "").trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t; };
+const clip = (t, n) => { t = String(t || "").trim(); const a = [...t]; return a.length > n ? a.slice(0, n - 1).join("").trimEnd() + "…" : t; }; // by character, so an emoji is never cut in half
 // "5:30–6:30 PM": the hours within 2 points of the window's best, half an hour either side of them.
 function peakSpan(w, tz) {
   const good = (w.hours?.length ? w.hours : [{ at: w.at ?? w.sun, score: w.score }]).filter(h => h.score >= w.score - 2 && Number.isFinite(h.at)).map(h => h.at);

@@ -130,8 +130,9 @@ const avgT = s => s.tempLow == null ? null : (s.tempLow + (s.tempHigh ?? s.tempL
 function periodOf(start, end) {
   if (!start) return null;
   const h = t => { const [a, b] = t.split(":").map(Number); return a + b / 60; };
-  const m = end ? (h(start) + h(end)) / 2 : h(start);
-  return m < 11 ? "Morning" : m < 15 ? "Midday" : m < 18 ? "Afternoon" : "Evening";
+  let e = end ? h(end) : h(start); if (e < h(start)) e += 24; // a trip past midnight is a night trip, not midday
+  const m = ((h(start) + e) / 2) % 24;
+  return m < 4 ? "Evening" : m < 11 ? "Morning" : m < 15 ? "Midday" : m < 18 ? "Afternoon" : "Evening";
 }
 const BAND_C = [[-99, 10], [10, 15], [15, 20], [20, 25], [25, 99]];
 function bandLabel(i) {
