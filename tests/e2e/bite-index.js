@@ -119,7 +119,12 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   ({ p, ctx } = await open('iPhone 13'));
   await p.evaluate(() => loadSample('advice')); await p.waitForTimeout(1200); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);
   r = await card(p);
-  ok(r.score && !r.pill && !r.chips.some(c => c.mine || /Your log/.test(c.why + c.t)), 'showcase: no species pill and no "your log" chips ' + JSON.stringify(r.chips.map(c => c.t)));
+  const showFish = await p.evaluate(() => [...document.querySelectorAll('#biteSp optgroup[label="Showcase fish"] option')].map(o => o.textContent));
+  ok(r.score && /^Best bite · (Smallmouth|Brook trout|Pickerel)$/.test(r.pill?.shown) && showFish.includes('Smallmouth') && !showFish.includes('Chub') === false && !r.chips.some(c => c.mine || /Your log/.test(c.why + c.t)),
+    'showcase: Best bite across the season\'s fish, fish rules only (no "your log" chips) ' + JSON.stringify({ shown: r.pill?.shown, showFish, chips: r.chips.map(c => c.t) }));
+  const before = await p.evaluate(() => state.settings.biteSpecies ?? null);
+  await p.selectOption('#biteSp', 'Brook trout'); r = await card(p);
+  ok(r.pill.shown === 'Brook trout' && await p.evaluate(() => (state.settings.biteSpecies ?? null)) === before, 'showcase: trying a fish works for the visit but isn\'t saved to their settings');
   await ctx.close();
   ({ p, ctx } = await open('iPhone 13', { log: [] }));
   await p.evaluate(() => showTab('advice')); await p.evaluate(() => goLive(true)); await p.waitForTimeout(1500);

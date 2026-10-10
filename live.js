@@ -90,13 +90,16 @@ const { SPECIES_TEMPS, speciesInfo, fishFor, coldFront } = BiteCore;
 function spOptions(choices, sp) {
   const opt = n => `<option${n === sp ? " selected" : ""}>${esc(n)}</option>`;
   const rest = BiteCore.SPECIES.map(f => f.name).filter(n => !choices.includes(n) && (n === sp || BiteCore.foundNear(n, wx?.lat, wx?.lon)));
-  return choices.length ? `<optgroup label="Your fish">${choices.map(opt).join("")}</optgroup><optgroup label="Other fish">${rest.map(opt).join("")}</optgroup>` : rest.map(opt).join("");
+  return choices.length ? `<optgroup label="${demo ? "Showcase fish" : "Your fish"}">${choices.map(opt).join("")}</optgroup><optgroup label="Other fish">${rest.map(opt).join("")}</optgroup>` : rest.map(opt).join("");
 }
-function biteChoices() { return demo ? [] : BiteCore.yourFish(state.sessions); }
+// In the showcase these are the season's fish (its log only names them: no "your log" factors, see biteIndex).
+function biteChoices() { return BiteCore.yourFish(state.sessions); }
 // A fish the angler pinned in the picker (any fish fishr knows); otherwise the Bite Index runs as "Best bite".
+// A pick made while looking at the showcase lasts for that visit and isn't saved into their own settings.
+let demoPin = null;
 function pinnedSpecies() {
-  const set = state.settings.biteSpecies;
-  return !demo && set && BiteCore.SPECIES.some(f => f.name === set) ? set : null;
+  const set = demo ? demoPin : state.settings.biteSpecies;
+  return set && BiteCore.SPECIES.some(f => f.name === set) ? set : null;
 }
 
 
@@ -163,7 +166,7 @@ function renderLive(status, quiet) {
   const ctx = { c, light, flow: wx.flow, model, recentTemp, front };
   // Best bite: score each of their fish (or the common local ones) and lead with the one biting best right now.
   let sp = pinned, bi, also = [];
-  if (demo || pinned) bi = biteIndex({ ...ctx, sp: pinned });
+  if (pinned) bi = biteIndex({ ...ctx, sp: pinned });
   else {
     const ranked = BiteCore.betCandidates(state.sessions, wx.lat, wx.lon).map(s => ({ sp: s, bi: biteIndex({ ...ctx, sp: s }) })).sort((a, b) => b.bi.score - a.bi.score);
     sp = ranked[0]?.sp ?? null; bi = ranked[0]?.bi ?? biteIndex({ ...ctx, sp: null }); also = ranked.slice(1);
@@ -192,7 +195,7 @@ function renderLive(status, quiet) {
     <div class="tile bite">
       <div class="bite-ring">${ring(bi.score)}<div class="bite-num"><b data-count="${bi.score}">${bi.score}</b><span>/100</span></div></div>
       <div class="bite-txt">
-        <span class="label">fishr Bite Index™ ${!demo ? `<label class="bite-sp"><span aria-hidden="true">${esc(pinned || (sp ? `Best bite · ${sp}` : "Best bite"))}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="best"${pinned ? "" : " selected"}>Best bite</option>${spOptions(choices, pinned)}</select></label>` : ""}<span class="model-tag${!demo ? " has-sp" : ""}">bite-engine v0.3 · k-NN</span></span>
+        <span class="label">fishr Bite Index™ <label class="bite-sp"><span aria-hidden="true">${esc(pinned || (sp ? `Best bite · ${sp}` : "Best bite"))}</span><select id="biteSp" aria-label="Score the Bite Index for"><option value="best"${pinned ? "" : " selected"}>Best bite</option>${spOptions(choices, pinned)}</select></label><span class="model-tag has-sp">bite-engine v0.3 · k-NN</span></span>
         <strong class="grad-text">${bi.label}</strong>
         ${also.length ? `<span class="bite-also">${also.map(a => `<span>${esc(a.sp)} ${a.bi.score}</span>`).join(" · ")}</span>` : ""}
         <div class="drivers">${chips.map(x => x.why
@@ -251,7 +254,7 @@ function renderLive(status, quiet) {
     box.querySelectorAll(".drv[data-why]").forEach(x => x.setAttribute("aria-expanded", "false"));
     why.hidden = open; why.textContent = open ? "" : b.dataset.why; if (!open) b.setAttribute("aria-expanded", "true");
   };
-  const spSel = $("biteSp"); if (spSel) spSel.onchange = () => { state.settings.biteSpecies = spSel.value; save(); renderLive(); };
+  const spSel = $("biteSp"); if (spSel) spSel.onchange = () => { if (demo) demoPin = spSel.value; else { state.settings.biteSpecies = spSel.value; save(); } renderLive(); };
   const ch = $("liveChange"); if (ch) ch.onclick = () => { renderLive("town"); $("townIn").focus(); };
   const gc = $("gaugeChange"); if (gc) gc.onclick = openGaugePicker;
   if (!quiet) countUp(box);
