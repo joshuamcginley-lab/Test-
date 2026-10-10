@@ -3,3 +3,53 @@
 
 /manifest.webmanifest
   Content-Type: application/manifest+json
+
+# The app's scripts and styles: phones check for a newer copy each time (a quick "not modified" when nothing
+# changed), so a copy fetched while a new version was going out can't be kept for hours under the new version's name.
+/ai.js
+  Cache-Control: no-cache
+
+/alerts.js
+  Cache-Control: no-cache
+
+/app.js
+  Cache-Control: no-cache
+
+/bite-core.js
+  Cache-Control: no-cache
+
+/cloud.js
+  Cache-Control: no-cache
+
+/conditions.js
+  Cache-Control: no-cache
+
+/forecast.js
+  Cache-Control: no-cache
+
+/guide.js
+  Cache-Control: no-cache
+
+/live.js
+  Cache-Control: no-cache
+
+/map.js
+  Cache-Control: no-cache
+
+/polish.js
+  Cache-Control: no-cache
+
+/pro.js
+  Cache-Control: no-cache
+
+/report.js
+  Cache-Control: no-cache
+
+/share.js
+  Cache-Control: no-cache
+
+/styles.css
+  Cache-Control: no-cache
+
+/usage.js
+  Cache-Control: no-cache
