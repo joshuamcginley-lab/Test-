@@ -3,7 +3,11 @@ import http from "node:http"; import fs from "node:fs"; import path from "node:p
 import { d1, r2 } from "./cfmock.mjs";
 import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."), F = ROOT + "/functions/", PORT = +process.argv[2] || 8790;
-const env = { DB: d1(), CATCHES: r2(), ADMIN_KEY: "test-admin", CLOUD_PRO_ONLY: process.env.PRO_ONLY || "", ANTHROPIC_API_KEY: process.env.NO_AI ? "" : "sk-test", AI_DAILY_ID_GUEST: process.env.ID_GUEST || "", AI_DAILY_SAMPLE: process.env.SAMPLE_Q || "", AI_DAILY_GUEST_TOTAL: process.env.GUEST_TOTAL || "", ASSETS: { fetch: async u => new Response(fs.readFileSync(ROOT + new URL(u).pathname)) } };
+// Push keys for bite alerts, made fresh for each test server; pushes go to this server's /__push (see below).
+const vapid = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+const b64u = buf => Buffer.from(buf).toString("base64url");
+const env = { DB: d1(), CATCHES: r2(), ADMIN_KEY: "test-admin", VAPID_PUBLIC: b64u(await crypto.subtle.exportKey("raw", vapid.publicKey)), VAPID_PRIVATE: (await crypto.subtle.exportKey("jwk", vapid.privateKey)).d,
+  PUSH_CRON_KEY: "test-cron", PUSH_TEST: "1", PUSH_TEST_HOST: `localhost:${PORT}`, CLOUD_PRO_ONLY: process.env.PRO_ONLY || "", ANTHROPIC_API_KEY: process.env.NO_AI ? "" : "sk-test", AI_DAILY_ID_GUEST: process.env.ID_GUEST || "", AI_DAILY_SAMPLE: process.env.SAMPLE_Q || "", AI_DAILY_GUEST_TOTAL: process.env.GUEST_TOTAL || "", ASSETS: { fetch: async u => new Response(fs.readFileSync(ROOT + new URL(u).pathname)) } };
 // Fake Claude API so tests never spend money: answers depend on what was asked.
 const realFetch = globalThis.fetch; globalThis.aiCalls = [];
 globalThis.fetch = async (url, init) => {
@@ -18,8 +22,9 @@ globalThis.fetch = async (url, init) => {
 };
 const ask = await import(F + "api/ai/ask.js"), ident = await import(F + "api/ai/identify.js");
 const auth = await import(F + "api/auth/[action].js"), syncFn = await import(F + "api/sync.js"), photo = await import(F + "api/photo/[id].js"), account = await import(F + "api/account.js");
-const usage = await import(F + "api/usage.js"), errorsFn = await import(F + "api/errors.js");
+const usage = await import(F + "api/usage.js"), errorsFn = await import(F + "api/errors.js"), pushFn = await import(F + "api/push/[action].js");
 const routes = [
+  [/^\/api\/push\/([\w-]+)$/, m => ({ fn: pushFn.onRequest, params: { action: m[1] } })],
   [/^\/api\/usage$/, () => ({ fn: ctx => ctx.request.method === "GET" ? usage.onRequestGet(ctx) : usage.onRequestPost(ctx) })],
   [/^\/api\/errors$/, () => ({ fn: ctx => ctx.request.method === "GET" ? errorsFn.onRequestGet(ctx) : errorsFn.onRequestPost(ctx) })],
   [/^\/api\/auth\/([\w-]+)$/, m => ({ fn: auth.onRequest, params: { action: m[1] } })],
@@ -34,6 +39,10 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   if (url.pathname === "/__trips") { const { db } = await import(F + "_auth.js"); await db(env); res.end(JSON.stringify(env.DB._sql.prepare("SELECT id, json_extract(data, '$.water') AS water, deleted, updated FROM trips ORDER BY id").all())); return; }
   if (url.pathname === "/__ai") { res.end(JSON.stringify(globalThis.aiCalls)); return; }
+  // A stand-in push service: records what fishr sends (encrypted; the unit tests decrypt and check it).
+  globalThis.pushed ||= [];
+  if (url.pathname.startsWith("/__push/") && req.method === "POST") { const chunks = []; for await (const c of req) chunks.push(c); globalThis.pushed.push({ path: url.pathname, bytes: Buffer.concat(chunks).length, auth: req.headers.authorization || "", enc: req.headers["content-encoding"] }); res.writeHead(201); res.end(); return; }
+  if (url.pathname === "/__pushed") { res.end(JSON.stringify(globalThis.pushed)); return; }
   if (url.pathname === "/__stats") { const { db } = await import(F + "_auth.js"); await db(env); res.end(JSON.stringify({ trips: env.DB._sql.prepare("SELECT COUNT(*) n FROM trips WHERE deleted=0").get().n, users: env.DB._sql.prepare("SELECT COUNT(*) n FROM users").get().n, photos: env.CATCHES._m.size })); return; }
   for (const [re, mk] of routes) {
     const m = url.pathname.match(re); if (!m) continue;

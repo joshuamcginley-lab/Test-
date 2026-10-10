@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=65">
-<script src="report.js?v=65"></script>
+<link rel="stylesheet" href="styles.css?v=66">
+<script src="report.js?v=66"></script>
 </head>
 <body>
 <!-- Shown when a friend's shared catch link is opened -->
@@ -119,7 +119,7 @@
         <div class="ask-gate" id="askGate" hidden><p><b>Ask fishr reads your log from fishr Cloud.</b> Turn on Cloud (free during the beta) and ask anything: where to go, when, what to throw.</p><button type="button" class="btn primary" id="askCloud">Turn on Cloud</button></div>
         <p class="ask-foot" id="askFoot"></p>
       </section>
-      <button type="button" class="pro-banner" id="copilotPro" hidden><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> Bite alerts, plus more Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
+      <button type="button" class="pro-banner" id="copilotPro" hidden><span class="pill live">Coming soon</span><span><b>fishr Pro:</b> More Ask fishr questions and fishr IDs a day.</span><span class="pro-go">Join the waitlist →</span></button>
       <details class="more inputs-box" id="inputsBox">
       <summary><span>What if?</span><span class="more-hint">plan a different day, time or weather</span></summary>
       <div class="more-in">
@@ -276,6 +276,12 @@
       </div>
       <p id="cloudMsg" class="cloud-msg" role="status" hidden></p>
     </div>
+    <div class="set-group" id="alertsGroup">
+      <h3>Bite alerts <span class="pill beta">Beta</span></h3>
+      <label class="check"><input type="checkbox" id="sAlerts"> Tell me when a weekend window looks prime</label>
+      <p class="fine">fishr checks the forecast where you fish on Friday at 6 pm, Saturday morning and Saturday at 6 pm, and lets you know when a coming morning or evening looks like one of the best of the past month. At most one weekend alert, plus one “best window of the week”. <a href="privacy.html#alerts">What it stores</a></p>
+      <p class="cloud-msg" id="alertsMsg" role="status" hidden></p>
+    </div>
     <div class="set-group">
       <h3>Usage counts</h3>
       <label class="check"><input type="checkbox" id="sUsage" checked> Send anonymous usage counts</label>
@@ -288,7 +294,7 @@
     </div>
     <div class="set-group">
       <h3>fishr Pro</h3>
-      <p>Ask fishr, fishr ID and Cloud sync are in beta now, free. Bite alerts are in development.</p>
+      <p>Ask fishr, fishr ID, Cloud sync and bite alerts are in beta now, free.</p>
       <div class="btn-row"><button class="btn" id="settingsPro" type="button">Join the Pro waitlist</button></div>
     </div>
     <div class="set-group" id="installGroup">
@@ -341,7 +347,7 @@
     <ul class="pro-feats">
       <li><span class="pf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg></span><span><b>Ask fishr <span class="pill beta">In beta, free</span></b>Chat with an AI guide that knows your log and today's conditions.</span></li>
       <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg></span><span><b>fishr ID <span class="pill beta">In beta, free</span></b>Snap a fish and the species fills itself in.</span></li>
-      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span><b>Bite alerts</b>Get a ping when the Bite Index spikes at your spots.</span></li>
+      <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><span><b>Bite alerts <span class="pill beta">In beta, free</span></b>A heads-up when a weekend morning or evening looks like one of the best of the month where you fish.</span></li>
       <li><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z"/></svg></span><span><b>Cloud sync <span class="pill beta">In beta, free</span></b>Your trips, photos and spots backed up and on every device. Turn it on in Settings.</span></li>
     </ul>
     <div class="wl-count" id="wlCount"></div>
@@ -388,17 +394,19 @@
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="celebrate" id="celebrate" hidden aria-live="polite"><canvas id="confetti"></canvas><div class="cel-card"><svg class="cel-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28"/><path d="M20 33l8 8 16-17"/></svg><b id="celTitle">Trip logged</b><span id="celSub"></span></div></div>
 <div class="splash" id="splash" aria-hidden="true"><img src="icons/mark-512.png" alt="" width="120" height="120"><span>fishr<span class="tld">.ai</span></span></div>
-<script src="app.js?v=65"></script>
-<script src="forecast.js?v=65"></script>
-<script src="conditions.js?v=65"></script>
-<script src="live.js?v=65"></script>
-<script src="map.js?v=65"></script>
-<script src="pro.js?v=65"></script>
-<script src="cloud.js?v=65"></script>
-<script src="polish.js?v=65"></script>
-<script src="guide.js?v=65"></script>
-<script src="ai.js?v=65"></script>
-<script src="share.js?v=65"></script>
-<script src="usage.js?v=65"></script>
+<script src="app.js?v=66"></script>
+<script src="forecast.js?v=66"></script>
+<script src="conditions.js?v=66"></script>
+<script src="bite-core.js?v=66"></script>
+<script src="live.js?v=66"></script>
+<script src="map.js?v=66"></script>
+<script src="pro.js?v=66"></script>
+<script src="cloud.js?v=66"></script>
+<script src="polish.js?v=66"></script>
+<script src="guide.js?v=66"></script>
+<script src="ai.js?v=66"></script>
+<script src="share.js?v=66"></script>
+<script src="usage.js?v=66"></script>
+<script src="alerts.js?v=66"></script>
 </body>
 </html>

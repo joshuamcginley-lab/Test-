@@ -1,6 +1,6 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "fishr-v65";
-const APP = ["./", "index.html", "styles.css?v=65", "app.js?v=65", "forecast.js?v=65", "conditions.js?v=65", "live.js?v=65", "map.js?v=65", "pro.js?v=65", "cloud.js?v=65", "polish.js?v=65", "guide.js?v=65", "ai.js?v=65", "report.js?v=65", "privacy.html", "share.js?v=65", "usage.js?v=65", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
+const VERSION = "fishr-v66";
+const APP = ["./", "index.html", "styles.css?v=66", "app.js?v=66", "forecast.js?v=66", "conditions.js?v=66", "bite-core.js?v=66", "live.js?v=66", "map.js?v=66", "pro.js?v=66", "cloud.js?v=66", "polish.js?v=66", "guide.js?v=66", "ai.js?v=66", "report.js?v=66", "privacy.html", "share.js?v=66", "usage.js?v=66", "alerts.js?v=66", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
@@ -33,4 +33,21 @@ self.addEventListener("fetch", e => {
       const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res;
     })));
   }
+});
+
+// Bite alerts: show the notification the server sent, and open the Guide when it's tapped.
+self.addEventListener("push", e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
+  e.waitUntil(self.registration.showNotification(d.title || "fishr", {
+    body: d.body || "", icon: "icons/icon-192.png", badge: "icons/favicon-64.png", tag: d.tag || "fishr", data: { url: d.url || "./" },
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || "./", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    const open = list.find(c => c.url.startsWith(self.registration.scope));
+    if (open) return open.focus().then(c => c.navigate ? c.navigate(url) : c);
+    return self.clients.openWindow(url);
+  }));
 });

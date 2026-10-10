@@ -33,6 +33,9 @@ td.r,th.r{text-align:right;font-family:"Geist Mono",monospace}
 .bar{height:8px;border-radius:99px;background:var(--v);min-width:2px}
 .weeks{display:flex;align-items:flex-end;gap:4px;height:90px;border-bottom:1px solid var(--line)}
 .weeks div{flex:1;background:var(--v);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.keybox{display:grid;gap:6px}
+.keybox input{font:12px "Geist Mono",monospace;flex:1 1 260px}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px}
 .weeks span{position:absolute;top:-17px;left:0;right:0;text-align:center;font:500 10px "Geist Mono",monospace;color:var(--muted)}
 </style>
 </head>
@@ -51,6 +54,22 @@ td.r,th.r{text-align:right;font-family:"Geist Mono",monospace}
       <span class="k">Phones that logged a trip, by week</span>
       <div class="weeks" id="weeks"></div>
       <p class="muted" style="margin:0;font-size:13px">Approximate: someone on two phones counts twice, and clearing a browser's data counts as a new phone. Existing users count all their milestones on the first day this went live.</p>
+    </div>
+    <div class="card">
+      <span class="k">Bite alerts</span>
+      <div id="alertsStatus" class="muted">Loading…</div>
+      <div class="row"><button class="ghost" id="testAlert">Send a test alert to this device</button><span class="muted" id="testMsg"></span></div>
+      <details><summary class="muted" style="cursor:pointer">Set up or replace the keys</summary>
+        <div style="display:grid;gap:10px;margin-top:10px">
+          <p class="muted" style="margin:0">Keys are made here in your browser and never sent anywhere. Copy each into the place listed, then push any change (or redeploy) so Cloudflare picks them up. <b>Making new push keys turns alerts off for everyone who has them on</b>; they'd need to switch them on again.</p>
+          <div class="row"><button class="ghost" id="mkPush">Make push keys</button><button class="ghost" id="mkCron">Make timer key</button></div>
+          <div class="keybox" id="keyOut"></div>
+          <ol class="steps">
+            <li>Cloudflare → Workers &amp; Pages → <b>firetiger-fishing-log</b> → Settings → Variables and Secrets: add secrets <code>VAPID_PUBLIC</code>, <code>VAPID_PRIVATE</code> and <code>PUSH_CRON_KEY</code>.</li>
+            <li>GitHub → the repository → Settings → Secrets and variables → Actions: add a repository secret <code>PUSH_CRON_KEY</code> with the same timer key.</li>
+          </ol>
+        </div>
+      </details>
     </div>
     <div class="card">
       <span class="k">fishr Pro waitlist</span>
@@ -76,7 +95,7 @@ async function unlock() {
   try { localStorage.setItem("fishr-admin", key); } catch (e) {}
   $("panels").hidden = false;
   showErrors(await r.json());
-  loadUsage();
+  loadUsage(); loadAlerts();
   const c = await (await fetch("/api/waitlist")).json().catch(() => ({}));
   $("wlCount").textContent = (c.count ?? 0).toLocaleString();
 }
@@ -117,6 +136,32 @@ function showUsage() {
   const wmax = Math.max(1, ...weeks.map(w => wk[w] || 0));
   $("weeks").innerHTML = weeks.map(w => `<div style="height:${(wk[w] || 0) / wmax * 100}%" title="Week of ${w}: ${wk[w] || 0}"><span>${wk[w] || ""}</span></div>`).join("");
 }
+// Bite alerts: status, a test send to this browser, and making keys locally.
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function loadAlerts() {
+  const r = await api("/api/push/stats").catch(() => null), d = r && r.ok ? await r.json() : null;
+  $("alertsStatus").innerHTML = !d ? "Couldn't load." : `${d.ready ? "Push keys set" : "<b>Push keys not set yet</b>"} · ${d.cron ? "timer key set" : "<b>timer key not set yet</b>"} · <b>${d.subscribers}</b> device${d.subscribers === 1 ? "" : "s"} with alerts on${d.cloud ? ` (${d.cloud} with fishr Cloud)` : ""}`;
+}
+$("testAlert").onclick = async () => {
+  $("testMsg").textContent = "Sending…";
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration("/"), sub = reg && await reg.pushManager.getSubscription();
+    if (!sub) { $("testMsg").textContent = "Turn on bite alerts in the app's Settings on this device first."; return; }
+    const r = await api("/api/push/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }), d = await r.json();
+    $("testMsg").textContent = d.status >= 200 && d.status < 300 ? "Sent. It should arrive in a few seconds." : d.error || `The push service said ${d.status}.`;
+  } catch (e) { $("testMsg").textContent = "Couldn't send."; }
+};
+const keyRow = (label, value) => `<span class="k">${label}</span><div class="row"><input readonly value="${esc(value)}"><button class="ghost" type="button" data-copy="${esc(value)}">Copy</button></div>`;
+$("keyOut").onclick = e => { const b = e.target.closest("[data-copy]"); if (b) navigator.clipboard.writeText(b.dataset.copy).then(() => { b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); }); };
+const made = {}; // shown keys, by name
+const showKeys = () => { $("keyOut").innerHTML = Object.entries(made).map(([k, v]) => keyRow(k, v)).join(""); };
+$("mkPush").onclick = async () => {
+  const k = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  made.VAPID_PUBLIC = b64u(await crypto.subtle.exportKey("raw", k.publicKey));
+  made["VAPID_PRIVATE (secret)"] = (await crypto.subtle.exportKey("jwk", k.privateKey)).d;
+  showKeys();
+};
+$("mkCron").onclick = () => { made["PUSH_CRON_KEY (secret: same value in Cloudflare and GitHub)"] = b64u(crypto.getRandomValues(new Uint8Array(32))); showKeys(); };
 $("u30").onclick = () => { usageView = "last30"; if (usageData) showUsage(); };
 $("uAll").onclick = () => { usageView = "totals"; if (usageData) showUsage(); };
 if (key) unlock();

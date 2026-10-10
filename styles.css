@@ -871,3 +871,4 @@ button.drv{cursor:pointer;font:500 11px/1 var(--f-mono)}
 .hours-tbl td:first-child{white-space:normal}
 .hours-tbl th:not(:first-child),.hours-tbl td:not(:first-child){padding-left:6px;padding-right:0}
 @media (max-width:380px){.hours-top{gap:6px}.hours-top > div{padding:8px 9px}.hours-top .v{font-size:18px;white-space:nowrap}.hours-top .k{font-size:11px}}
+.sheet h2[tabindex="-1"]:focus{outline:none} /* focus moves to the heading when a sheet opens, for screen readers; no ring needed */

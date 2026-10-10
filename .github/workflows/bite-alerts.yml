@@ -1,0 +1,26 @@
+# Bite alerts timer: every hour, ask fishr to check subscribers whose local time is a send time (Friday 6 pm,
+# Saturday 8 am and 6 pm, plus 6 pm daily for the weekly alert). Each call handles a few subscribers; this loops
+# until the server says it's done. Needs the PUSH_CRON_KEY repository secret (the same value as in Cloudflare).
+name: Bite alerts
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check subscribers who are due
+        env:
+          KEY: ${{ secrets.PUSH_CRON_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "PUSH_CRON_KEY isn't set yet; nothing to do."; exit 0; fi
+          cursor=""
+          for i in $(seq 1 300); do
+            out=$(curl -fsS --max-time 60 -X POST -H "x-cron-key: $KEY" "https://fishr.monster/api/push/run?cursor=$cursor") || exit 1
+            echo "$out"
+            [ "$(echo "$out" | jq -r .done)" = "true" ] && break
+            cursor=$(echo "$out" | jq -r .cursor)
+          done

@@ -21,6 +21,8 @@ export function db(env) {
     "CREATE TABLE IF NOT EXISTS meta (user_id TEXT PRIMARY KEY, data TEXT NOT NULL, updated TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS ai_usage (user_id TEXT NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, day, kind))",
     "CREATE TABLE IF NOT EXISTS usage_counts (day TEXT NOT NULL, event TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, event))",
+    "CREATE TABLE IF NOT EXISTS push_subs (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, tz TEXT NOT NULL, place TEXT, user_id TEXT, created TEXT NOT NULL, updated TEXT NOT NULL, slot TEXT, weekend TEXT, weekly TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+    "CREATE INDEX IF NOT EXISTS push_subs_tz ON push_subs (tz, id)",
   ].map(sql => env.DB.prepare(sql))).catch(e => { ready.delete(env.DB); throw e; }));
   return ready.get(env.DB).then(() => env.DB);
 }

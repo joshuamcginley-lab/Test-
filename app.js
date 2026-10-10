@@ -837,6 +837,8 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 load();
 render();
 { let t = null; try { t = sessionStorage.getItem("ft-tab"); } catch (e) {} showTab(t || "advice"); }
+// Opened from a bite alert (/?go=advice): straight to the Guide, then tidy the address.
+if (new URLSearchParams(location.search).get("go") === "advice") { showTab("advice"); history.replaceState(history.state, "", location.pathname); }
 window.addEventListener("storage", e => {
   if (e.key !== KEY) return;
   if (demo) {
