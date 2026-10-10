@@ -6,7 +6,7 @@
 // GET  /api/push/stats       (x-admin-key)  -> { subscribers }
 // POST /api/push/test        (x-admin-key) {endpoint} -> { status }  sends a test alert to that device
 // POST /api/push/selftest    {endpoint}    -> { status }  the device's own "Send a test alert" (a few a day)
-// POST /api/push/preview     (x-admin-key) -> { sent, devices }  a sample "Prime window: Saturday evening" to every device
+// POST /api/push/preview     (x-admin-key) -> { sent, devices }  a sample Saturday-evening alert (projected 88) to every device
 import { json, isAdmin } from "../../_lib.js";
 import { db, isJson, currentUser } from "../../_auth.js";
 import { underLimit } from "../../_limits.js";

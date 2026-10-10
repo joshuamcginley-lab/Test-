@@ -80,7 +80,7 @@ ok(K.weekendKey === "2026-10-17" && K.weekKey === "2026-W42", "Sunday belongs to
   const sub = { tz, place: "Fredericton" };
   let r = A.decide(sub, [...past, win(1, "am", 80), win(1, "pm", 86), win(2, "am", 84)], now);
   ok(r.send?.kind === "weekend" && r.send.window.part === "pm" && r.send.window.date === day(1) && !r.send.alsoWeekly, "Friday: Saturday evening at 86 (top 10%, 85+) is sent; not good enough to use up the weekly one");
-  ok(r.send.title === "Prime window: Saturday evening" && /^One of the best evenings near Fredericton in the past month\. Evening golden hour, falling pressure and cloud cover\. Sunset \d+:\d\d PM\.$/.test(r.send.body), "message: when, where, why, sunset time — " + r.send.body);
+  ok(r.send.title === "Bite Index™ 86 projected: Saturday evening" && /^Bite Intelligence™ rates it one of your best evenings of the month near Fredericton\. Evening golden hour, falling pressure and cloud cover\. Sunset \d+:\d\d PM\.$/.test(r.send.body), "message: projected score, when, where, why, sunset — " + r.send.title + " / " + r.send.body);
   r = A.decide(sub, [...past, win(1, "am", 84), win(1, "pm", 83), win(2, "am", 82)], now);
   ok(!r.send, "nothing at 85+: no alert");
   r = A.decide({ ...sub, weekend: "2026-10-17" }, [...past, win(1, "pm", 88)], now);
@@ -92,7 +92,7 @@ ok(K.weekendKey === "2026-10-17" && K.weekKey === "2026-W42", "Sunday belongs to
   ok(!r.send, "88 isn't special after a month like this (not top 10%)");
   const tue = Date.parse("2026-10-13T21:07:00Z");
   r = A.decide(sub, [...past.map(w => ({ ...w, sun: w.sun - 3 * 864e5, date: new Date(Date.parse(w.date) - 3 * 864e5).toISOString().slice(0, 10) })), { ...win(-2, "am", 91), sun: tue + 12 * 36e5 }], tue);
-  ok(r.send?.kind === "weekly" && r.send.title === "Best window this week: Wednesday morning", "weekday: tomorrow morning at 91 → weekly alert " + r.send?.title);
+  ok(r.send?.kind === "weekly" && r.send.title === "Bite Index™ 91 projected: Wednesday morning" && /rates it the best window of your week near Fredericton\./.test(r.send.body), "weekday: tomorrow morning at 91 → weekly alert " + r.send?.title);
   r = A.decide({ ...sub, weekly: "2026-W42" }, [...past, win(1, "pm", 84)], now);
   ok(!r.send, "weekly already used and weekend below the bar: nothing");
 }
@@ -128,8 +128,8 @@ pushed.length = 0; weatherCalls = 0;
 r = await call("run", { headers: { "x-cron-key": "cron-secret" }, q: "?now=2026-10-16T21:07:00Z" });
 let d = await r.json();
 const got = pushed.length ? await receive(pushed[0], ph) : null;
-ok(d.sent === 1 && got?.payload.title === "Prime window: Saturday evening", "Friday 6 pm: alert for Saturday evening " + JSON.stringify(d) + " " + got?.payload.title);
-ok(/near Frederictonscript in the past month\. .*Sunset 6:30 PM\.$/.test(got?.payload.body || ""), "body names the place and sunset: " + got?.payload.body);
+ok(d.sent === 1 && /^Bite Index™ \d+ projected: Saturday evening$/.test(got?.payload.title || ""), "Friday 6 pm: alert for Saturday evening " + JSON.stringify(d) + " " + got?.payload.title);
+ok(/^Bite Intelligence™ rates it one of your best evenings of the month near Frederictonscript\. .*Sunset 6:30 PM\.$/.test(got?.payload.body || ""), "body names the place and sunset: " + got?.payload.body);
 ok(got?.payload.url === "/?go=advice", "tapping opens the Guide");
 pushed.length = 0;
 r = await call("run", { headers: { "x-cron-key": "cron-secret" }, q: "?now=2026-10-16T21:40:00Z" }); d = await r.json();
@@ -152,7 +152,7 @@ pushed.length = 0;
 const before = env.DB._sql.prepare("SELECT weekend, weekly FROM push_subs").get();
 r = await call("preview", { headers: { "x-admin-key": "adm" } }); d = await r.json();
 const pv = pushed.length ? await receive(pushed[0], ph) : null;
-ok(d.sent === 1 && d.devices === 1 && pv?.payload.title === "Prime window: Saturday evening" && /^One of the best evenings near Frederictonscript in the past month\. Evening golden hour, falling pressure and cloud cover\. Sunset \d+:\d\d PM\.$/.test(pv.payload.body), "admin sample: a real-looking Saturday evening alert to every device — " + pv?.payload.body);
+ok(d.sent === 1 && d.devices === 1 && pv?.payload.title === "Bite Index™ 88 projected: Saturday evening" && /^Bite Intelligence™ rates it one of your best evenings of the month near Frederictonscript\. Evening golden hour, falling pressure and cloud cover\. Sunset \d+:\d\d PM\.$/.test(pv.payload.body), "admin sample: a real-looking Saturday evening alert to every device — " + pv?.payload.title + " / " + pv?.payload.body);
 ok(JSON.stringify(env.DB._sql.prepare("SELECT weekend, weekly FROM push_subs").get()) === JSON.stringify(before), "the sample doesn't touch anyone's weekend or weekly allowance");
 r = await call("preview", {}); ok(r.status === 403, "sample needs the admin key");
 pushed.length = 0;
