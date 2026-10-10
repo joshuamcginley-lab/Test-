@@ -14,6 +14,7 @@
   //   lo–hi: water temperature where they feed best (°C); act: the range they stay active in (sluggish outside it).
   //   light: score for golden hour / near dawn or dusk / daylight / after dark.
   //   cloud: overcast vs clear skies; chop: light wind on the water; note: one line on their habits.
+  //   bycatch: caught while fishing for something else, rarely the goal, so it never leads "Best bet" (it can be pinned).
   // Temperatures follow published thermal preferences (e.g. Coker, Portt & Minns 2001, Fisheries and Oceans Canada).
   const SPECIES = [
     { re: /smallmouth/i, name: "Smallmouth", lo: 18, hi: 26, act: [10, 29], light: [12, 6, 0, -4], cloud: 4, chop: 5, note: "feed hardest at dawn and dusk, and on windy, overcast days" },
@@ -33,7 +34,7 @@
     { re: /crappie|bluegill|pumpkinseed|sunfish|rock bass/i, name: "Panfish", lo: 18, hi: 27, act: [12, 31], light: [6, 4, 4, -10], cloud: -2, chop: -2, note: "warm, sunny shallows through the day" },
     { re: /catfish|bullhead/i, name: "Catfish", lo: 21, hi: 29, act: [16, 32], light: [6, 6, -6, 12], cloud: 2, chop: 0, note: "feed by smell, mostly at night" },
     { re: /carp/i, name: "Carp", lo: 18, hi: 28, act: [12, 32], light: [4, 2, 2, 0], cloud: 0, chop: 0, note: "warm water; steady feeders whatever the light" },
-    { re: /chub|fallfish/i, name: "Chub", lo: 12, hi: 24, act: [8, 27], light: [6, 4, 2, -8], cloud: 2, chop: 0, note: "daytime river fish, active over a wide range of temperatures" },
+    { re: /chub|fallfish/i, name: "Chub", lo: 12, hi: 24, act: [8, 27], light: [6, 4, 2, -8], cloud: 2, chop: 0, bycatch: true, note: "daytime river fish, active over a wide range of temperatures" },
     { re: /striped bass|white bass/i, name: "Striped bass", lo: 15, hi: 22, act: [8, 25], light: [14, 8, -4, 6], cloud: 5, chop: 4, note: "low light and moving water; dawn, dusk and night" },
     { re: /whitefish/i, name: "Whitefish", lo: 10, hi: 14, act: [4, 18], light: [6, 4, 2, -8], cloud: 3, chop: 2, note: "cold, deep water; steady through the day" },
   ];
@@ -73,14 +74,14 @@
   // Their fish are the ones they've caught 3 or more of (up to 4, most-caught first). Someone without a log gets the
   // most commonly fished species found around them, from North American angler surveys (bass, trout and walleye lead).
   const POPULAR = ["Smallmouth", "Brook trout", "Walleye", "Largemouth", "Rainbow trout", "Pike", "Perch", "Salmon", "Panfish", "Catfish",
-    "Striped bass", "Pickerel", "Brown trout", "Lake trout", "Muskie", "White perch", "Chub", "Carp", "Whitefish", "Arctic char"];
+    "Striped bass", "Pickerel", "Brown trout", "Lake trout", "Muskie", "White perch", "Carp", "Whitefish", "Arctic char"];
   function yourFish(log) {
     const n = {};
     for (const s of log || []) for (const c of s.catches || []) { const i = speciesInfo(c.species); if (i) n[i.name] = (n[i.name] || 0) + (+c.count || 0); }
     return Object.entries(n).filter(([, k]) => k >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
   }
   function betCandidates(log, lat, lon) {
-    const own = yourFish(log);
+    const own = yourFish(log).filter(n => !profileOf(n)?.bycatch); // fish they go after, not what came along
     return own.length ? own : POPULAR.filter(n => foundNear(n, lat, lon)).slice(0, 3);
   }
   const speciesInfo = name => { const f = SPECIES.find(x => x.re.test(name || "")); return f ? { ...f } : null; };

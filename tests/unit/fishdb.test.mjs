@@ -30,8 +30,8 @@ const T = (sp, n) => ({ date: "2026-06-01", water: "W", catches: [{ species: sp,
 ok(C.topSpecies([T("Smallmouth bass", 6), T("Brook trout", 2)]) === "Smallmouth" && C.topSpecies([T("Perch", 1), T("Pike", 1)]) === null && C.topSpecies([]) === null, "top species: a real share of the catch, or none");
 
 // Best bet: an angler's fish (3+ caught, most first), or the common fish found around someone without a log.
-const log2 = [T("Smallmouth bass", 9), T("Brook trout", 5), T("Perch", 1)];
-ok(C.betCandidates(log2, 45.96, -66.64).join() === "Smallmouth,Brook trout", "their fish: 3+ caught, most first " + C.betCandidates(log2, 45.96, -66.64));
+const log2 = [T("Smallmouth bass", 9), T("Brook trout", 5), T("Perch", 1), T("Fallfish", 6)];
+ok(C.betCandidates(log2, 45.96, -66.64).join() === "Smallmouth,Brook trout", "their fish: 3+ caught, most first, by-catch (fallfish/chub) left out " + C.betCandidates(log2, 45.96, -66.64));
 ok(C.betCandidates([], 45.96, -66.64).join() === "Smallmouth,Brook trout,Rainbow trout" && C.betCandidates([], 43.65, -79.38).join() === "Smallmouth,Brook trout,Walleye", "no log: the common local fish (no walleye in NB, walleye in Ontario) " + C.betCandidates([], 45.96, -66.64) + " / " + C.betCandidates([], 43.65, -79.38));
 // The lead switches with the conditions: cold water favours trout, warm water bass.
 const lead = t => ["Smallmouth", "Brook trout"].map(sp => [sp, at(sp, { t, light: { dark: false, golden: true, goldenLabel: "Evening golden hour" } }).score]).sort((a, b) => b[1] - a[1])[0][0];
@@ -44,5 +44,6 @@ const W = { latitude: 45.96, longitude: -66.64, utc_offset_seconds: -3 * 3600, h
 const wins = A.scoreWindows(W, { log: log2 }), solo = A.scoreWindows(W, { log: [T("Smallmouth bass", 9)] });
 ok(wins.length && wins.every((w, i) => w.score >= solo[i].score) && wins.some((w, i) => w.score > solo[i].score), "alerts: a bass-and-trout angler's cold-water windows score as trout, above bass-only " + wins.slice(0, 2).map(w => w.score) + " vs " + solo.slice(0, 2).map(w => w.score));
 
+ok(C.yourFish(log2).includes("Chub") && C.betCandidates([T("Creek chub", 8)], 45.96, -66.64)[0] === "Smallmouth", "chub stays in their list to pin, but a chub-only log falls back to the local favourites");
 console.log(`${pass} passed, ${failN} failed`);
 if (failN) process.exit(1);

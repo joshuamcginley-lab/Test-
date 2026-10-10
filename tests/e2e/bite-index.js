@@ -48,7 +48,7 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   const total = Object.values(counts).reduce((a, x) => a + x, 0), top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   // Best bet by default: each of their fish is scored and the best leads; the others show with their scores.
   const others = r.pill.also.split(' · ').filter(Boolean);
-  ok(r.pill.value === 'best' && /^Best bet · /.test(r.pill.shown) && others.length === r.pill.yours.length - 1 && others.every(o => /^[A-Za-z ]+ \d+$/.test(o)) && others.every(o => +o.split(' ').pop() <= r.score), `Best bet leads with the best of their fish (${r.pill.shown} ${r.score}; others ${r.pill.also})`);
+  ok(r.pill.value === 'best' && /^Best bet · /.test(r.pill.shown) && others.length === r.pill.yours.filter(n => n !== 'Chub').length - 1 && !/Chub/.test(r.pill.shown + r.pill.also) && others.every(o => /^[A-Za-z ]+ \d+$/.test(o)) && others.every(o => +o.split(' ').pop() <= r.score), `Best bet leads with the best of the fish they go after, never by-catch like chub (${r.pill.shown} ${r.score}; others ${r.pill.also})`);
   ok(r.pill.yours.every(n => counts[n] >= 3), 'only species with 3+ fish are listed as theirs');
 
   // Personal chips: try each pressure trend; at least one should be backed by their log, with a reason.
