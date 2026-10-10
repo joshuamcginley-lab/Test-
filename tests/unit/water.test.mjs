@@ -54,6 +54,9 @@ ok(r.d.unit === "ft³/s" && r.d.measure === "discharge" && r.d.status === "High"
 world = { eccc: [], usgs: [GALLATIN] };
 r = await ask(45.68, -111.04);
 ok(r.d.station?.name === "East Gallatin River above Water Reclamation Fa near Bozeman, MT", "abbreviations expanded: " + r.d.station?.name);
+world = { eccc: [], usgs: [{ id: "05288500", name: "MISSISSIPPI RIVER AB 37TH AVE. NE IN FRIDLEY, MN", lat: 45.0, lon: -93.28 }] };
+r = await ask(44.98, -93.26);
+ok(r.d.station?.name === "Mississippi River above 37th Ave. NE in Fridley, MN", "street directions and \"in\": " + r.d.station?.name);
 
 // Canada: unchanged, Environment Canada in metric.
 world = { eccc: [SJR], usgs: [] };

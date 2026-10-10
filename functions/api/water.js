@@ -72,6 +72,8 @@ function usgsName(raw) {
     if (i === 0 && DIRS[up]) return DIRS[up];
     if (words[i - 1] === "," && STATES.has(up)) return up; // "WASH, DC LITTLE FALLS"
     if (ABBR[up]) return i ? ABBR[up] : ABBR[up].charAt(0).toUpperCase() + ABBR[up].slice(1);
+    if (i && /^(NE|NW|SE|SW)$/.test(up)) return up; // "37TH AVE. NE"
+    if (i && up === "IN") return "in";
     return w === "," ? "," : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   }).join(" ").replace(/ ,/g, ",").replace(/\b(At|Near|Above|Below|Of|The|And)\b/g, (m, x, i) => i ? m.toLowerCase() : m);
   return (state ? `${out}, ${state}` : out).replace(/,\s*,/g, ",");
