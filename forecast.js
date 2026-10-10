@@ -80,7 +80,13 @@ function bestWindow() {
   if (!wx) return null;
   const now = Date.now(), hrs = wx.hourly.filter(h => h.time.getTime() >= now - 36e5 && h.time.getTime() <= now + 30 * 36e5 && h.time.getHours() >= 5 && h.time.getHours() <= 21 && h.temp != null);
   if (!hrs.length) return null;
-  const scored = hrs.map(h => { const q = { temp: h.temp, hour: h.time.getHours() + 0.5, doy: dayOfYear(isoDate(h.time)), sky: h.sky }; const top = bestRanking(q, 1.5).rows[0]; return { h, top }; }).filter(x => x.top);
+  // Only hours whose temperature the log has seen (within 3°): a 0°C morning can't be called from a summer of
+  // 9–33°C trips. If none qualify, say so instead of guessing.
+  const logT = state.sessions.map(avgT).filter(t => t != null);
+  if (!logT.length) return null;
+  const minT = Math.min(...logT), maxT = Math.max(...logT), inRange = hrs.filter(h => h.temp >= minT - 3 && h.temp <= maxT + 3);
+  if (!inRange.length) { const t = hrs.map(h => h.temp); return { outside: true, cold: Math.max(...t) < minT, tLo: Math.min(...t), tHi: Math.max(...t), minT, maxT }; }
+  const scored = inRange.map(h => { const q = { temp: h.temp, hour: h.time.getHours() + 0.5, doy: dayOfYear(isoDate(h.time)), sky: h.sky }; const br = bestRanking(q, 1.5); return { h, top: br.rows[0], k: br.k }; }).filter(x => x.top);
   if (!scored.length) return null;
   const peak = scored.reduce((a, b) => b.top.est > a.top.est ? b : a);
   const i = scored.indexOf(peak); let lo = i, hi = i;
@@ -90,7 +96,8 @@ function bestWindow() {
   const a = scored[lo].h, b = scored[hi].h, temps = scored.slice(lo, hi + 1).map(x => x.h.temp);
   const ahead = Math.round((new Date(a.time).setHours(12, 0, 0, 0) - new Date(now).setHours(12, 0, 0, 0)) / 864e5);
   const day = ahead <= 0 ? "Today" : ahead === 1 ? "Tomorrow" : a.time.toLocaleDateString("en-US", { weekday: "long" });
-  return { day, from: a.time.getHours(), to: b.time.getHours() + 1, water: peak.top.water, est: peak.top.est, tLo: Math.min(...temps), tHi: Math.max(...temps) };
+  // rough: the log had to be searched widely to find anything like these hours, so no fish count is given.
+  return { day, from: a.time.getHours(), to: b.time.getHours() + 1, water: peak.top.water, est: peak.top.est, rough: peak.k > 2.5, tLo: Math.min(...temps), tHi: Math.max(...temps) };
 }
 
 /* ---------- render ---------- */
@@ -145,7 +152,9 @@ function renderAdvice() {
     </div>`;
     if (demo) html += `<p class="v-note showcase-pick">This is the showcase angler's pick from their New Brunswick waters. Log your own trips and your guide picks from yours.</p>`;
     const win = demo ? null : bestWindow(); // the forecast is yours, the sample's waters aren't
-    if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${win.tLo === win.tHi ? fmtT(r(win.tLo, 0)) : `${tOut(r(win.tLo, 0))}–${fmtT(r(win.tHi, 0))}`} forecast. Expect about ${win.est.toFixed(1)} fish.</span></div>`;
+    const range = w => w.tLo === w.tHi ? fmtT(r(w.tLo, 0)) : `${tOut(r(w.tLo, 0))}–${fmtT(r(w.tHi, 0))}`;
+    if (win?.outside) html += `<div class="window"><span class="chip info">Best window</span><span>The next day's forecast (${range(win)}) is ${win.cold ? "colder" : "warmer"} than any trip in your log (${win.cold ? "coldest" : "warmest"}: ${fmtT(r(win.cold ? win.minT : win.maxT, 0))}), so there's no window to call yet. Log a trip in this weather and fishr will learn it.</span></div>`;
+    else if (win) html += `<div class="window"><span class="chip go">Best window</span><span><b>${win.day} ${clock(win.from)}–${clock(win.to)}</b> at ${esc(win.water)}, ${range(win)} forecast. ${win.rough ? "Few trips in your log are like this, so treat it as a rough pick." : `Expect about ${win.est.toFixed(1)} fish.`}</span></div>`;
     // The tables behind the call fold away, so Guide fits on one screen.
     html += `<details class="more math" id="mathBox"${mathOpen ? " open" : ""}><summary><span>See the math</span><span class="more-hint">other waters and your most similar trips</span></summary><div class="more-in">`;
     if (rows.length > 2) html += `<section class="card"><h2>Other predictions</h2><div class="tbl-wrap"><table><tr><th>Water</th><th class="r">Expect</th><th class="r">Skunk risk</th><th class="r">Similar trips</th></tr>${rows.slice(2, 7).map(x => `<tr><td>${esc(x.water)}</td><td class="r">${x.est.toFixed(1)}</td><td class="r${x.skunk >= .5 ? " skunkpct hi" : ""}">${Math.round(x.skunk * 100)}%</td><td class="r">${x.similar.length}</td></tr>`).join("")}</table></div></section>`;
