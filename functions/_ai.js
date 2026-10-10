@@ -59,8 +59,8 @@ export async function takeOne(env, who, kind, limit) {
   const mine = await bump(who, kind);
   if (mine.n > limit) {
     await Promise.all([drop("*", "all"), drop(who, kind), guest && drop("*", "guest")]);
-    fail(kind === "idguest" ? `That's today's ${limit} free fishr IDs. Turn on fishr Cloud (free) for more.`
-      : kind === "photo" ? `That's all ${limit} fishr IDs for today. More tomorrow.` : `That's all ${limit} questions for today. More tomorrow.`, 429);
+    fail(kind === "idguest" ? `That's today's ${limit} free Fish IDs. Turn on fishr Cloud (free) for more.`
+      : kind === "photo" ? `That's all ${limit} Fish IDs for today. More tomorrow.` : `That's all ${limit} questions for today. More tomorrow.`, 429);
   }
   let released = false;
   return { left: limit - mine.n, release: () => released ? null : (released = true, Promise.all([drop("*", "all"), drop(who, kind), guest && drop("*", "guest")])) };

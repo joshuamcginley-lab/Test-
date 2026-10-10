@@ -69,7 +69,7 @@ const ownLog = JSON.parse(fs.readFileSync(S + '/enriched.json', 'utf8')).map(({ 
   t = await hours(p);
   ok(/9h on the water/.test(t) && /0\.7 fish an hour/.test(t) && /3h 00m average trip/.test(t), '22:00–02:00 counts as 4 hours: 9 h, 6 fish → 0.7/h, 3h average ' + t.slice(0, 80));
   t = await combos(p);
-  ok(/Combos show once at least 4 trips share the same conditions/.test(t), 'too few trips: Combos explains what it needs');
+  ok(/Best combos show once at least 4 trips share the same conditions/.test(t), 'too few trips: Combos explains what it needs');
   await ctx.close();
 
   ok(!errs.length, 'no page errors ' + errs.join(' | '));

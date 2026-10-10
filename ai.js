@@ -1,8 +1,8 @@
 "use strict";
-/* fishr AI in the app: Ask fishr on the Guide tab, and fishr ID (name the fish in a photo) from the Guide tab, the welcome
+/* fishr AI in the app: Ask fishr on the Guide tab, and Fish ID (name the fish in a photo) from the Guide tab, the welcome
    screen or the log form. Both go through our /api/ai endpoints,
    which call Claude. Free during the beta: fishr Cloud accounts get a few a day, and anyone can ask about the
-   showcase season or try a few fishr IDs without an account. Uses globals from app.js, forecast.js and cloud.js. */
+   showcase season or try a few Fish IDs without an account. Uses globals from app.js, forecast.js and cloud.js. */
 
 const ASK_CHIPS = {
   own: ["Where should I fish today?", "What's my best lure right now?", "When do I catch the most fish?"],
@@ -95,7 +95,7 @@ $("askCloud").onclick = () => {
 { const _renderForAsk = render; render = function () { _renderForAsk(); renderAsk(); }; }
 renderAsk();
 
-/* ---------- fishr ID ---------- */
+/* ---------- Fish ID ---------- */
 const blobToB64 = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
 const identify = async blob => {
   const d = await api("/api/ai/identify", { image: await blobToB64(blob), type: blob.type || "image/jpeg" }, undefined, 100000);
@@ -103,17 +103,17 @@ const identify = async blob => {
   return d;
 };
 const fidLeft = d => d.left == null ? "" : cloudOn()
-  ? `${d.left} fishr ID${d.left === 1 ? "" : "s"} left today · Powered by Claude`
-  : `${d.left} free fishr ID${d.left === 1 ? "" : "s"} left today. fishr Cloud (free) gets you more. · Powered by Claude`;
+  ? `${d.left} Fish ID${d.left === 1 ? "" : "s"} left today · Powered by Claude`
+  : `${d.left} free Fish ID${d.left === 1 ? "" : "s"} left today. fishr Cloud (free) gets you more. · Powered by Claude`;
 
-// The fishr ID sheet: pick or take a photo from anywhere, see the species, then log it as a catch.
+// The Fish ID sheet: pick or take a photo from anywhere, see the species, then log it as a catch.
 let fid = null; // { blob, species, isFish }
 function showFid(html) { $("fidResult").innerHTML = html; }
 // Each "Identify a fish" button holds its own file input (the pattern iOS Safari handles reliably).
 document.addEventListener("change", e => {
   if (!e.target.matches?.(".fid-file")) return;
   const f = e.target.files && e.target.files[0]; e.target.value = "";
-  if (f) runFishrId(f).catch(err => { console.error(err); toast("fishr ID hit a snag. Try again."); });
+  if (f) runFishrId(f).catch(err => { console.error(err); toast("Fish ID hit a snag. Try again."); });
 });
 let fidRun = 0; // only the newest photo's result is shown, even if an older one answers later
 async function runFishrId(f) {
@@ -155,10 +155,10 @@ $("fidLog").onclick = () => {
   closeSheets(); startNewTrip();
   const row = catchRow({ species }); $("catchRows").append(row); catchLabel();
   row.querySelector(".c-sp").value = species; row.setPhoto(blob);
-  row.querySelector(".photo-msg").innerHTML = `<span class="id-hit">Identified by fishr ID: <b>${esc(species)}</b></span>`;
+  row.querySelector(".photo-msg").innerHTML = `<span class="id-hit">Identified by Fish ID: <b>${esc(species)}</b></span>`;
 };
 
-/* ---------- fishr ID on each catch in the log form ---------- */
+/* ---------- Fish ID on each catch in the log form ---------- */
 async function identifyFish(row, auto) {
   const msg = row.querySelector(".photo-msg"), btn = row.querySelector(".id-photo");
   if (auto && !cloudOn()) return; // without Cloud, it only runs when tapped (it counts toward the free tries)
@@ -171,7 +171,7 @@ async function identifyFish(row, auto) {
     // Run on its own after adding a photo: if the angler typed a species meanwhile, theirs stays; this is a suggestion.
     const sp = row.querySelector(".c-sp"), typed = auto && sp.value.trim() && sp.value.trim() !== d.species;
     if (!typed) sp.value = d.species;
-    msg.innerHTML = `<span class="id-hit">${typed ? `fishr ID thinks <button type="button" class="text-link id-alt">${esc(d.species)}</button>` : `<b>${esc(d.species)}</b>`} · ${esc(d.confidence)} confidence${d.alternatives.length ? `. Or: ${d.alternatives.map(a => `<button type="button" class="text-link id-alt">${esc(a)}</button>`).join(", ")}` : ""}</span>${d.reason ? `<span class="id-why">${esc(d.reason)}</span>` : ""}`;
+    msg.innerHTML = `<span class="id-hit">${typed ? `Fish ID thinks <button type="button" class="text-link id-alt">${esc(d.species)}</button>` : `<b>${esc(d.species)}</b>`} · ${esc(d.confidence)} confidence${d.alternatives.length ? `. Or: ${d.alternatives.map(a => `<button type="button" class="text-link id-alt">${esc(a)}</button>`).join(", ")}` : ""}</span>${d.reason ? `<span class="id-why">${esc(d.reason)}</span>` : ""}`;
   } catch (e) {
     if (e.status === 401) onSyncError(e);
     msg.textContent = e.message || "Couldn't identify that photo.";

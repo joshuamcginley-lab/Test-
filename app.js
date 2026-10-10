@@ -193,7 +193,7 @@ function render() {
   $("seasonSel").innerHTML = ys.map(y => `<option value="${y}">${y}</option>`).join("") + `<option value="all">All time</option>`;
   $("seasonSel").value = state.settings.season;
   $("wsLine").textContent = state.sessions.length === 0 ? "" : demo ? "Sample season" : state.settings.name ? `${state.settings.name}'s workspace` : "";
-  document.title = state.settings.name ? `${state.settings.name}'s workspace · fishr.ai` : "fishr.ai · Know where they're biting";
+  document.title = state.settings.name ? `${state.settings.name}'s workspace · fishr AI` : "fishr AI · Know where they're biting";
 
   const empty = state.sessions.length === 0;
   $("welcome").hidden = !empty; $("main").hidden = empty; $("seasonSel").parentElement.hidden = empty;
@@ -315,7 +315,7 @@ function renderCombos(list) {
     ? `<ol class="combos">${best.map(g => line(g, "go")).join("")}</ol>
        ${worst.length ? `<p class="label">Toughest</p><ul class="combos">${line(worst[0], "no")}</ul>` : ""}
        <p class="label">${who} ${all.toFixed(1)} fish per trip. Each combo needs at least ${COMBO_MIN} trips; the fewer trips behind it, the more it's treated as a lead, not a rule.</p>`
-    : `<p class="hours-empty">Combos show once at least ${COMBO_MIN} trips share the same conditions and do clearly better than average. Log trips with auto-filled weather and they appear here.</p>`;
+    : `<p class="hours-empty">Best combos show once at least ${COMBO_MIN} trips share the same conditions and do clearly better than average. Log trips with auto-filled weather and they appear here.</p>`;
 }
 
 function tableHTML(rows, head) {
@@ -430,7 +430,7 @@ function catchRow(c = {}) {
   <label class="field"><span class="label">${lU()}</span><input class="c-in" type="number" step="0.5" min="0" inputmode="decimal" value="${esc(lenOut(c.inches) ?? "")}"></label>
   <label class="field lu"><span class="label">Lure</span><input class="c-lu" maxlength="80" list="dlLure" autocomplete="off" value="${esc(c.lure || "")}" placeholder="Curly tail grub"></label>
   <button type="button" class="x" aria-label="Remove this fish">✕</button>
-  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" class="vh-file"><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>fishr ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
+  <div class="c-photo"><span class="thumb" hidden><img alt="Fish photo"></span><label class="photo-btn"><input type="file" accept="image/*" class="vh-file"><span>+ Add photo</span></label><button type="button" class="id-photo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.9 4.2 2.8 6.1 7 7-4.2.9-6.1 2.8-7 7-.9-4.2-2.8-6.1-7-7 4.2-.9 6.1-2.8 7-7z" fill="currentColor"/></svg>Fish ID</button><button type="button" class="linkbtn rm-photo" hidden>Remove photo</button><span class="photo-msg"></span></div>`;
   d.querySelector(".x").onclick = () => d.remove();
   // − / + for the count: big targets, no keyboard needed (typing still works).
   const cn = d.querySelector(".c-n");
@@ -819,7 +819,7 @@ $("importFile").addEventListener("change", async e => {
     save(); render();
     $("backupMsg").hidden = false; $("backupMsg").textContent = `Restored. ${added} new trip${added === 1 ? "" : "s"} added.`;
   } catch (err) {
-    $("backupMsg").hidden = false; $("backupMsg").textContent = "That file isn't a fishr.ai backup. Pick the .json file from “Save backup”.";
+    $("backupMsg").hidden = false; $("backupMsg").textContent = "That file isn't a fishr backup. Pick the .json file from “Save backup”.";
   }
   e.target.value = "";
 });

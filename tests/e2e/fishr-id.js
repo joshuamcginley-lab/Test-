@@ -16,14 +16,14 @@ const S = process.argv[2], URL0 = process.argv[3] || (process.argv[3] || 'http:/
     ok(await p.evaluate(() => !$('fidSheet').hidden && /Identifying/.test($('fidResult').textContent)), 'sheet opens and identifies');
     await p.waitForTimeout(1300);
     let r = await p.evaluate(() => ({ name: $('fidName')?.textContent, log: !$('fidLog').hidden, foot: $('fidFoot').textContent, img: !!$('fidImg').src, alts: document.querySelectorAll('.fid-alt').length }));
-    ok(r.name === 'Smallmouth bass' && r.log && r.img && r.alts === 2 && /free fishr IDs? left today/.test(r.foot), 'result ' + JSON.stringify(r));
+    ok(r.name === 'Smallmouth bass' && r.log && r.img && r.alts === 2 && /free Fish IDs? left today/.test(r.foot), 'result ' + JSON.stringify(r));
     await p.screenshot({ path: `${S}/fid-sheet-${scheme}.png` });
     if (scheme === 'dark') {
       await click('.fid-alt'); ok(await p.evaluate(() => $('fidName').textContent === 'Largemouth bass'), 'tap alternative swaps the name');
       await click('.fid-alt'); // swap back
       await click('#fidLog'); await p.waitForTimeout(500);
       r = await p.evaluate(() => { const row = document.querySelector('#catchRows .catch-row'); return { sheet: !$('sheet').hidden, fid: !$('fidSheet').hidden, sp: row.querySelector('.c-sp').value, thumb: !row.querySelector('.c-photo .thumb').hidden, msg: row.querySelector('.photo-msg').textContent }; });
-      ok(r.sheet && !r.fid && r.sp === 'Smallmouth bass' && r.thumb && /Identified by fishr ID/.test(r.msg), 'Log this catch fills the log form ' + JSON.stringify(r));
+      ok(r.sheet && !r.fid && r.sp === 'Smallmouth bass' && r.thumb && /Identified by Fish ID/.test(r.msg), 'Log this catch fills the log form ' + JSON.stringify(r));
       await p.screenshot({ path: S + '/fid-logform.png' });
       await p.fill('#fWaterIn', 'Keswick River'); await click('#saveBtn'); await p.waitForTimeout(800);
       r = await p.evaluate(() => ({ n: state.sessions.length, sp: state.sessions[0]?.catches[0]?.species, photo: !!state.sessions[0]?.catches[0]?.photo }));
@@ -42,7 +42,7 @@ const S = process.argv[2], URL0 = process.argv[3] || (process.argv[3] || 'http:/
       await p.setInputFiles('#fidSheet .fid-file', S + '/bass.jpg'); await p.waitForTimeout(1300);
       await p.setInputFiles('#fidSheet .fid-file', S + '/bass.jpg'); await p.waitForTimeout(1300);
       r = await p.evaluate(() => ({ err: document.querySelector('.fid-err')?.textContent, log: !$('fidLog').hidden }));
-      ok(/free fishr IDs/.test(r.err || '') && !r.log, 'guest limit message ' + JSON.stringify(r));
+      ok(/free Fish IDs/.test(r.err || '') && !r.log, 'guest limit message ' + JSON.stringify(r));
       await click('#fidClose'); ok(await p.evaluate(() => $('fidSheet').hidden && $('scrim').hidden), 'Close closes');
     }
     await ctx.close();

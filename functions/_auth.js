@@ -181,7 +181,7 @@ export function registrationOptions(request, userId, challenge, name, exclude = 
   const label = String(name || "").trim().slice(0, 40) || "fishr angler";
   return {
     challenge, timeout: 120000, attestation: "none",
-    rp: { name: "fishr.ai", id: new URL(request.url).hostname },
+    rp: { name: "fishr AI", id: new URL(request.url).hostname },
     user: { id: userId, name: label, displayName: label },
     pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
     authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "preferred" },

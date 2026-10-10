@@ -1,6 +1,6 @@
 {
-  "name": "fishr.ai",
-  "short_name": "fishr.ai",
+  "name": "fishr AI",
+  "short_name": "fishr AI",
   "description": "Your AI fishing guide. Log trips, find your patterns, know where they're biting.",
   "start_url": "./",
   "scope": "./",

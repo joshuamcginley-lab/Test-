@@ -1,6 +1,6 @@
 // Offline support: app files are cached on install; fonts are cached the first time they load.
-const VERSION = "fishr-v73";
-const APP = ["./", "index.html", "styles.css?v=73", "app.js?v=73", "forecast.js?v=73", "conditions.js?v=73", "bite-core.js?v=73", "live.js?v=73", "map.js?v=73", "pro.js?v=73", "cloud.js?v=73", "polish.js?v=73", "guide.js?v=73", "ai.js?v=73", "report.js?v=73", "privacy.html", "share.js?v=73", "usage.js?v=73", "alerts.js?v=73", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
+const VERSION = "fishr-v74";
+const APP = ["./", "index.html", "styles.css?v=74", "app.js?v=74", "forecast.js?v=74", "conditions.js?v=74", "bite-core.js?v=74", "live.js?v=74", "map.js?v=74", "pro.js?v=74", "cloud.js?v=74", "polish.js?v=74", "guide.js?v=74", "ai.js?v=74", "report.js?v=74", "privacy.html", "share.js?v=74", "usage.js?v=74", "alerts.js?v=74", "sample.json", "manifest.webmanifest", "icons/favicon-64.png", "icons/mark-128.png", "icons/mark-512.png", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));

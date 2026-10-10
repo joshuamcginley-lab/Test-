@@ -80,7 +80,7 @@ function tripWeather(url) {
   ok(await p.evaluate(() => $('screenTitle').textContent === 'Guide' && /Your guide needs 9 more trips/.test($('advice').textContent) && getComputedStyle(document.querySelector('.verdict'), '::before').content.includes('Your guide')), 'Guide screen: title and training card say "guide"');
   r = await p.evaluate(() => ({ tag: [...document.querySelectorAll('.model-tag')].some(e => e.checkVisibility()), what: document.querySelector('#inputsBox summary span').textContent, card: $('advice').textContent }));
   ok(!r.tag, 'Copilot: the bite-engine tag is hidden on phones');
-  ok(r.what === 'What if?' && !/workspace/.test(r.card) && /1 of 10/i.test(r.card), 'Copilot: plain labels ' + JSON.stringify({ what: r.what }));
+  ok(r.what === 'Plan a trip' && !/workspace/.test(r.card) && /1 of 10/i.test(r.card), 'Copilot: plain labels ' + JSON.stringify({ what: r.what }));
   // Ten trips with a temperature: the strip goes away.
   await p.evaluate(() => { for (let i = 0; i < 9; i++) state.sessions.push({ id: 't-f' + i, date: '2026-07-0' + (i + 1), water: 'Keswick River', catches: [], tempLow: 20, tempHigh: 20, updatedAt: new Date().toISOString() }); save(); render(); });
   ok(await p.evaluate(() => $('trainStrip').hidden), '10 trips: progress strip goes away');

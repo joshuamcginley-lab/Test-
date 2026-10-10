@@ -113,7 +113,7 @@ function renderAdvice() {
     return;
   }
   const tv = $("aTemp").value, tm = $("aTime").value, dt = $("aDate").value;
-  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Turn on live conditions above for today's weather, or open “What if?” and enter a temperature and time.</p>`; return; }
+  if (tv === "" || !tm || !dt) { box.innerHTML = `<p class="status">Turn on live conditions above for today's weather, or open “Plan a trip” and enter a temperature and time.</p>`; return; }
   const pick = id => $(id).querySelector('[aria-pressed="true"]')?.dataset.v || null;
   const q = { temp: tIn(Number(tv)), hour: hourOf(tm), doy: dayOfYear(dt), sky: pick("aSky"), press: pick("aPress"), flow: pick("aFlow") };
   const { res, rows, k } = bestRanking(q);

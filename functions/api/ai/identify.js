@@ -1,4 +1,4 @@
-// fishr ID: name the fish in a photo. The photo isn't stored.
+// Fish ID: name the fish in a photo. The photo isn't stored.
 // GET  /api/ai/identify -> { left, limit, signedIn }   today's allowance
 // POST /api/ai/identify { image: <base64 JPEG/PNG/WebP>, type } -> { isFish, species, confidence, alternatives, reason, left }
 // Anyone can try a few a day (counted by hashed IP); fishr Cloud accounts get more.

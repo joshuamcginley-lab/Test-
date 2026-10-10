@@ -79,7 +79,7 @@ reply = body => ({ status: 200, body: { id: "m", type: "message", role: "assista
 const img = fs.readFileSync(FIX + "bass.jpg").toString("base64");
 r = await V.ident({ image: img, type: "image/jpeg" }); ok(r.status === 200 && r.data.left === 2, "guest gets a few fishr IDs " + JSON.stringify(r.data));
 await V.ident({ image: img, type: "image/jpeg" }); await V.ident({ image: img, type: "image/jpeg" });
-r = await V.ident({ image: img, type: "image/jpeg" }); ok(r.status === 429 && /free fishr IDs/.test(r.data.error), "guest limit " + JSON.stringify(r.data));
+r = await V.ident({ image: img, type: "image/jpeg" }); ok(r.status === 429 && /free Fish IDs/.test(r.data.error), "guest limit " + JSON.stringify(r.data));
 const st = await ident.onRequestGet({ request: new Request(ORIGIN + "/api/ai/identify", { headers: { "cf-connecting-ip": "9.9.9.9" } }), env }); const sj = await st.json();
 ok(sj.signedIn === false && sj.limit === 3 && sj.left === 0, "guest status " + JSON.stringify(sj));
 r = await A.ident({ image: img, type: "image/jpeg" });

@@ -48,7 +48,7 @@ function shareText(link) {
   const d = cardData();
   const size = [d.lb != null ? fmtW(d.lb) : "", d.in != null ? fmtL(d.in) : ""].filter(Boolean).join(", ");
   const what = `${d.ct > 1 ? `${d.ct} ` : ""}${d.sp.toLowerCase()}${size ? ` (${size})` : ""}`;
-  return `${what}${d.lu ? ` on ${aOr(d.lu)} ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it on fishr.ai: ${link || catchLink(d)}`;
+  return `${what}${d.lu ? ` on ${aOr(d.lu)} ${d.lu.toLowerCase()}` : ""}${d.w ? ` at ${d.w}` : ""}, ${fmtDate(d.d)}. See it on fishr AI: ${link || catchLink(d)}`;
 }
 
 function cover(ctx, img, x, y, w, h) {
@@ -97,8 +97,8 @@ async function renderCard(cv, d) {
   if (mark) ctx.drawImage(mark, pad, 50, 48, 48); else { ctx.fillStyle = gradH(ctx, pad, pad + 48); ctx.fillRect(pad, 50, 48, 48); }
   ctx.restore();
   ctx.fillStyle = "#EEF2E8"; ctx.font = `650 34px ${SANS}`; ctx.fillText("fishr", pad + 60, 86);
-  let wx = pad + 60 + ctx.measureText("fishr").width; ctx.fillStyle = "#8C8CA0"; ctx.fillText(".ai", wx, 86);
-  wx += ctx.measureText(".ai").width + 16; ctx.strokeStyle = "rgba(155,240,60,.55)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
+  let wx = pad + 60 + ctx.measureText("fishr").width; ctx.fillStyle = "#8C8CA0"; ctx.fillText(" AI", wx, 86);
+  wx += ctx.measureText(" AI").width + 16; ctx.strokeStyle = "rgba(155,240,60,.55)"; ctx.lineWidth = 2; roundRect(ctx, wx, 60, 72, 32, 16); ctx.stroke();
   ctx.fillStyle = "#9BF03C"; ctx.font = `500 16px ${MONO}`; ctx.fillText("BETA", wx + 15, 82);
 
   // photo panel

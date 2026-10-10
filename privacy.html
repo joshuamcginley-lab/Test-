@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Privacy · fishr.ai</title>
+<title>Privacy · fishr AI</title>
 <meta name="theme-color" content="#070A14">
 <link rel="icon" href="icons/favicon-64.png" type="image/png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
@@ -34,11 +34,11 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
 </head>
 <body>
 <main>
-  <a class="top" href="/"><img src="icons/mark-128.png" alt="">fishr.ai</a>
+  <a class="top" href="/"><img src="icons/mark-128.png" alt="">fishr AI</a>
   <h1>Privacy</h1>
   <p class="meta">Last updated October 8, 2026</p>
 
-  <p>fishr.ai is a fishing log and forecasting app in public beta, built in New Brunswick, Canada. This page explains what the app collects, where it goes, and how to remove it. The short version: <b>your fishing log stays on your phone</b> unless you turn on fishr Cloud, and we only receive what you choose to send us.</p>
+  <p>fishr AI is a fishing log and forecasting app in public beta, built in New Brunswick, Canada. This page explains what the app collects, where it goes, and how to remove it. The short version: <b>your fishing log stays on your phone</b> unless you turn on fishr Cloud, and we only receive what you choose to send us.</p>
 
   <h2>What stays on your device</h2>
   <p>Unless you turn on fishr Cloud, your trips, catches, photos, spots, notes and settings are stored in your browser on your device. They are not sent to us. Backups you save from Settings are files on your device too. Deleting the app's data in Settings, or clearing your browser's site data, removes them.</p>
@@ -47,13 +47,13 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
   <p>Signing in sets one cookie that keeps you signed in on that device for up to a year. It's only used to recognize your account, never for tracking or ads.</p>
   <p>Your cloud data is stored on Cloudflare's servers in eastern North America, which may be in the United States, and only you can read it. Photos are stored privately and are not public links. <b>Delete cloud account</b> in Settings erases your account, trips, notes, settings and photos from our servers right away; Cloudflare's automatic database recovery copies expire within 30 days. Trips on your devices stay there.</p>
 
-  <h2 id="ai">Ask fishr and fishr ID (optional)</h2>
-  <p>These features use Claude, an AI model made by <b>Anthropic</b>. When you ask a question, we send Anthropic your question, your earlier questions in that conversation, the conditions on your Guide screen, and your fishing log from fishr Cloud (trips, catches, waters and spots by name, lures, weather and notes; not GPS coordinates). When you use fishr ID, we send that photo. Anthropic uses this only to produce the answer and does not train its models on it. We don't keep your questions, the answers or the photo; we only count how many you've used today.</p>
-  <p>Questions about the showcase season, and a few fishr IDs a day, don't need an account. To keep them to a few a day per visitor, we count them by a scrambled (hashed) form of your IP address, never the address itself, and delete the counts after a week.</p>
+  <h2 id="ai">Ask fishr and Fish ID (optional)</h2>
+  <p>These features use Claude, an AI model made by <b>Anthropic</b>. When you ask a question, we send Anthropic your question, your earlier questions in that conversation, the conditions on your Guide screen, and your fishing log from fishr Cloud (trips, catches, waters and spots by name, lures, weather and notes; not GPS coordinates). When you use Fish ID, we send that photo. Anthropic uses this only to produce the answer and does not train its models on it. We don't keep your questions, the answers or the photo; we only count how many you've used today.</p>
+  <p>Questions about the showcase season, and a few Fish IDs a day, don't need an account. To keep them to a few a day per visitor, we count them by a scrambled (hashed) form of your IP address, never the address itself, and delete the counts after a week.</p>
   <h2 id="alerts">Bite alerts (optional)</h2>
   <p>If you turn on bite alerts in Settings, we store what's needed to send them: the push address your browser or phone gives us (from Apple, Google, Mozilla or Microsoft, whose service delivers the notification), your approximate location (rounded to about 1 km) and town name if you set one, your time zone, and, if you use fishr Cloud, a link to your account so alerts can use your log. Our server asks <b>Open-Meteo</b> for the weather at that rounded location when an alert might be due. Notification text is encrypted so only your device can read it. Turning alerts off deletes all of this straight away; it's also deleted if the push service tells us the address no longer works.</p>
   <h2 id="usage">Anonymous usage counts</h2>
-  <p>To learn whether fishr is useful, the app reports a few milestones, each once per device: opened fishr, opened the showcase, logged a 1st, 3rd, 5th or 10th trip, unlocked the Guide, still logging 2 and 4 weeks after the first trip, turned on Cloud, used Ask fishr or fishr ID, and (at most once a week) logged a trip that week. We only keep a daily total for each milestone, such as “3 first trips on 12 October”. Nothing about your trips, catches, places, photos or name is sent, and there's no ID or cookie that could tell your device apart from anyone else's. To stop one visitor inflating the totals, reports are capped per day using the same scrambled (hashed) form of your IP address described above. You can turn usage counts off in Settings.</p>
+  <p>To learn whether fishr is useful, the app reports a few milestones, each once per device: opened fishr, opened the showcase, logged a 1st, 3rd, 5th or 10th trip, unlocked the Guide, still logging 2 and 4 weeks after the first trip, turned on Cloud, used Ask fishr or Fish ID, and (at most once a week) logged a trip that week. We only keep a daily total for each milestone, such as “3 first trips on 12 October”. Nothing about your trips, catches, places, photos or name is sent, and there's no ID or cookie that could tell your device apart from anyone else's. To stop one visitor inflating the totals, reports are capped per day using the same scrambled (hashed) form of your IP address described above. You can turn usage counts off in Settings.</p>
   <h2>What reaches our servers, and why</h2>
   <div class="wrap"><table>
     <tr><th>What</th><th>When</th><th>Why, and how long we keep it</th></tr>
@@ -64,14 +64,14 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
     <tr><td>Your approximate location (rounded to about 100 m)</td><td>When the app looks up the nearest river gauge</td><td>To find the gauge. Used for that request and not stored.</td></tr>
     <tr><td>Crash reports: the error message, which file and line, your browser type, screen size and country</td><td>Only if the app hits an error</td><td>To fix bugs. No trips, photos, location or contact details are included. Deleted after 90 days.</td></tr>
     <tr><td>Your fishing log, photos, settings and a passkey public key</td><td>Only if you turn on fishr Cloud</td><td>To back up and sync your log between your devices. Kept until you delete your cloud account in Settings. <a href="#cloud">Details</a></td></tr>
-    <tr><td>Your question, your log and current conditions, or a fish photo</td><td>Only when you use Ask fishr or fishr ID</td><td>Sent to Anthropic to produce the answer, then discarded. We keep only a daily count. <a href="#ai">Details</a></td></tr>
+    <tr><td>Your question, your log and current conditions, or a fish photo</td><td>Only when you use Ask fishr or Fish ID</td><td>Sent to Anthropic to produce the answer, then discarded. We keep only a daily count. <a href="#ai">Details</a></td></tr>
     <tr><td>Anonymous visit counts</td><td>When you open the app</td><td>Cloudflare Web Analytics, which uses no cookies and doesn't track you across sites.</td></tr>
   </table></div>
 
   <h2>Services the app connects to</h2>
   <ul>
     <li><b>Cloudflare</b> hosts the app and stores fishr Cloud accounts, shared catches, the waitlist and crash reports.</li>
-    <li><b>Anthropic</b> runs the Claude AI model behind Ask fishr and fishr ID.</li>
+    <li><b>Anthropic</b> runs the Claude AI model behind Ask fishr and Fish ID.</li>
     <li><b>Open-Meteo</b> provides weather, pressure and forecasts. Your phone sends it approximate coordinates to get local weather, or the town name if you type one instead of sharing your location.</li>
     <li><b>Environment and Climate Change Canada</b> (in Canada) and the <b>U.S. Geological Survey</b> (in the United States) provide river gauge data, fetched by our server.</li>
     <li><b>OpenStreetMap</b> provides map tiles when you open the map.</li>
@@ -90,7 +90,7 @@ button{font:600 15px/1 Geist,system-ui,sans-serif;padding:12px 18px;border-radiu
   <p>Under Canadian privacy law (PIPEDA) you can ask what we hold about you, ask us to correct it, or ask us to delete it, including a shared catch. You can delete a fishr Cloud account yourself in Settings. Use the form above for the waitlist. For anything else, contact us using the details below.</p>
 
   <h2>Children</h2>
-  <p>fishr.ai isn't directed at children under 13, and we don't knowingly collect their information.</p>
+  <p>fishr AI isn't directed at children under 13, and we don't knowingly collect their information.</p>
 
   <h2>Changes</h2>
   <p>If this policy changes, we'll update the date at the top. If a change affects how we use your email, we'll tell waitlist members before it takes effect.</p>
